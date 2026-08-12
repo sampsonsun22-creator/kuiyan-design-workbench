@@ -70,6 +70,39 @@ def main() -> int:
         err.append("inspector missing 采集字段")
     if "未标注" not in app:
         err.append("inspector missing 未标注 fallback")
+
+    # 五层壳：四个页签 + L1/L4/L5 渲染 + 诚实口径
+    for tab in ("intent", "visual", "shortlist", "report"):
+        if f'data-tab="{tab}"' not in html:
+            err.append(f"index.html missing tab {tab}")
+    if 'data-cat="cross"' not in html:
+        err.append("index.html missing 跨界 chip")
+    for fn in ("function renderIntent", "function renderReport", "function renderShortlist"):
+        if fn not in app:
+            err.append(f"app.js missing {fn}")
+    if "ensureShortlist" not in app or "rescreenByComment" not in app:
+        err.append("app.js missing L4 shortlist / 重筛 engine")
+    if "按批注重筛" not in app:
+        err.append("app.js missing 按批注重筛 control")
+    if "不发起新采集" not in app:
+        err.append("重筛 must state it is not a new crawl")
+    if "本轮跨界样本 0，不编造" not in app:
+        err.append("cross chip missing honest empty state")
+    if "本轮未采集" not in app:
+        err.append("app.js missing 本轮未采集 wording for uncollected dimensions")
+    for faked in ("色块与留白节奏可借鉴", "开箱清单"):
+        if faked in app:
+            err.append(f"app.js still ships invented prose {faked!r}")
+    dims = ROOT / "ui-shell" / "data" / "classify-dimensions-v1.json"
+    if not dims.exists():
+        err.append("missing ui-shell/data/classify-dimensions-v1.json (L3 dimension contract)")
+    else:
+        dims_doc = json.loads(dims.read_text(encoding="utf-8"))
+        group_ids = {g.get("id") for g in dims_doc.get("groups") or []}
+        if not {"visual_style", "experience", "commerce"} <= group_ids:
+            err.append("classify-dimensions-v1.json missing 视觉/体验/商业 groups")
+        if not (ROOT / "ship" / "key-vision" / "data" / "classify-dimensions-v1.json").exists():
+            err.append("ship missing classify-dimensions-v1.json")
     if "function wallRole" not in app:
         err.append("app.js missing wallRole")
     if "isUnsafePack" not in app:

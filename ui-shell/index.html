@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KEY 视界 · 设计竞品调研</title>
-  <link rel="stylesheet" href="styles.css?v=452land2" />
+  <link rel="stylesheet" href="styles.css?v=452l5" />
 </head>
 <body>
   <div class="app" id="app">
@@ -58,11 +58,11 @@
       </header>
 
       <nav class="stages" id="stages" aria-label="研究阶段">
-        <button type="button" class="stage done" data-stage="1"><span class="n">✓</span>先听清你要什么</button>
-        <button type="button" class="stage done" data-stage="2"><span class="n">✓</span>去市场上找参考</button>
-        <button type="button" class="stage active" data-stage="3"><span class="n">3</span>一起看版图</button>
-        <button type="button" class="stage" data-stage="4"><span class="n">4</span>商量方向</button>
-        <button type="button" class="stage" data-stage="5"><span class="n">5</span>收成短名单</button>
+        <button type="button" class="stage done" data-stage="1"><span class="n">✓</span>听清 Brief</button>
+        <button type="button" class="stage done" data-stage="2"><span class="n">✓</span>穷尽搜索</button>
+        <button type="button" class="stage active" data-stage="3"><span class="n">3</span>分类拆解</button>
+        <button type="button" class="stage" data-stage="4"><span class="n">4</span>决策筛选</button>
+        <button type="button" class="stage" data-stage="5"><span class="n">5</span>结论报告</button>
       </nav>
 
       <div class="stream" id="activityStream" role="log" aria-live="polite"></div>
@@ -73,7 +73,7 @@
           <button type="button" class="attach" title="表格" data-attach="table">▦</button>
           <button type="button" class="attach" title="证据" data-attach="evidence">📎</button>
         </div>
-        <textarea id="composerInput" rows="1" placeholder="可以说「看市场地图」「看策略卡」或「输出短名单」…"></textarea>
+        <textarea id="composerInput" rows="1" placeholder="可以说「看 Brief」「看版图」「帮我筛选」「出结论报告」…"></textarea>
         <button type="submit" class="send-btn" id="sendBtn">发送</button>
       </form>
     </main>
@@ -82,17 +82,19 @@
     <aside class="right" aria-label="结果画布">
       <div class="right-main" id="rightMain">
         <div class="tabs" role="tablist">
-          <button type="button" class="tab active" role="tab" data-tab="visual" aria-selected="true">视觉素材</button>
-          <button type="button" class="tab" role="tab" data-tab="strategy" aria-selected="false">策略卡</button>
-          <button type="button" class="tab" role="tab" data-tab="shortlist" aria-selected="false">短名单</button>
+          <button type="button" class="tab" role="tab" data-tab="intent" aria-selected="false">Brief</button>
+          <button type="button" class="tab active" role="tab" data-tab="visual" aria-selected="true">竞品版图</button>
+          <button type="button" class="tab" role="tab" data-tab="shortlist" aria-selected="false">决策筛选</button>
+          <button type="button" class="tab" role="tab" data-tab="report" aria-selected="false">结论报告</button>
         </div>
 
         <div class="source-cards" id="sourceChips" aria-label="数据源状态"></div>
 
         <div class="category-chips" id="categoryChips" aria-label="素材类别">
           <button type="button" class="cat-chip active" data-cat="all">全部</button>
-          <button type="button" class="cat-chip" data-cat="primary">主品类</button>
-          <button type="button" class="cat-chip" data-cat="analogy">类比</button>
+          <button type="button" class="cat-chip" data-cat="primary">同类</button>
+          <button type="button" class="cat-chip" data-cat="analogy">不同类</button>
+          <button type="button" class="cat-chip" data-cat="cross">跨界</button>
           <button type="button" class="cat-chip" data-cat="shelf">货架</button>
           <button type="button" class="cat-chip pending-toggle" id="pendingToggle" data-pending="0" aria-pressed="false">含待复核</button>
           <button type="button" class="cat-chip brief-toggle active" id="briefToggle" data-brief="1" aria-pressed="true">只看贴 brief</button>
@@ -136,6 +138,6 @@
   </div>
 
   <div class="toast" id="toast"></div>
-  <script src="app.js?v=452land2"></script>
+  <script src="app.js?v=452l5"></script>
 </body>
 </html>

@@ -3,11 +3,11 @@
  */
 (() => {
   const STAGES = [
-    { id: 1, key: "brief", label: "先听清你要什么", tab: "visual" },
-    { id: 2, key: "crawl", label: "去市场上找参考", tab: "visual" },
-    { id: 3, key: "explore", label: "一起看版图", tab: "visual" },
-    { id: 4, key: "critique", label: "商量方向", tab: "strategy" },
-    { id: 5, key: "output", label: "收成短名单", tab: "shortlist" },
+    { id: 1, key: "intent", label: "听清 Brief", tab: "intent" },
+    { id: 2, key: "search", label: "穷尽搜索", tab: "visual" },
+    { id: 3, key: "classify", label: "分类拆解", tab: "visual" },
+    { id: 4, key: "decide", label: "决策筛选", tab: "shortlist" },
+    { id: 5, key: "report", label: "结论报告", tab: "report" },
   ];
 
   const SOURCE_META = {
@@ -40,19 +40,19 @@
       id: "orchestrator",
       name: "奎燕设计智能体",
       status: "online",
-      lastAction: "正在帮你对齐青绿茶礼盒 Brief",
+      lastAction: "五层跑完：意图 → 穷尽 → 拆解 → 筛选 → 结论",
     },
     {
       id: "crawler",
       name: "采集",
       status: "idle",
-      lastAction: "设计站参考已挂上 · 货架还在开通",
+      lastAction: "同类已铺开 · 跨界未采 · 货架只有 listing 样",
     },
     {
       id: "dotdot",
       name: "点点",
       status: "working",
-      lastAction: "正在帮你铺视觉主墙、准备策略批判",
+      lastAction: "正在铺墙打标，缺值一律写未标注",
     },
   ];
 
@@ -118,7 +118,19 @@
     activeResearchId: "r-green",
     _wallObserver: null,
     _greenBundle: null,
+    houComment: "",
+    shortlistReasons: {},
+    shortlistRemoved: new Set(),
+    shortlistAuto: false,
+    shortlistTouched: false,
+    dims: null,
   };
+
+  const SHORTLIST_TARGET = 12;
+  const SHORTLIST_MIN = 8;
+
+  /** analogy_plan 里明显跨行业的目标；只用于把计划标成「跨界」，不代表已采到样本。 */
+  const CROSS_TARGET_RE = /美妆|护肤|香氛|香水|潮玩|家居|服饰|数码|球鞋|艺术衍生/i;
 
   const $ = (id) => document.getElementById(id);
   const el = {
@@ -465,8 +477,11 @@
   }
 
   function updateFilterRow() {
-    const strategyMode = state.tab === "strategy" || state.tab === "shortlist";
-    if (el.filters) el.filters.classList.toggle("strategy-mode", strategyMode);
+    const strategyMode = state.tab !== "visual";
+    if (el.filters) {
+      el.filters.classList.toggle("strategy-mode", strategyMode);
+      el.filters.style.display = strategyMode ? "none" : "";
+    }
     if (el.categoryChips) el.categoryChips.classList.toggle("strategy-mode", strategyMode);
     const srcFilter = document.querySelector(".filter-source");
     if (srcFilter) srcFilter.hidden = strategyMode;
@@ -483,6 +498,15 @@
     if (dirSel) dirSel.hidden = true;
     if (toneSel) toneSel.hidden = true;
     if (marketSel) marketSel.hidden = true;
+    if (el.categoryChips) {
+      el.categoryChips.style.display = isVisual ? "" : "none";
+    }
+    if (el.sourceChips) {
+      el.sourceChips.style.display = isVisual ? "" : "none";
+    }
+    if (el.wallCountBar) {
+      el.wallCountBar.style.display = isVisual ? "" : "none";
+    }
     if (el.categoryChips) {
       el.categoryChips.style.display = state.tab === "visual" ? "" : "none";
     }
@@ -515,6 +539,7 @@
   }
 
   function switchTab(tab, { fromStage = false } = {}) {
+    if (tab === "strategy") tab = "report";
     state.tab = tab;
     document.querySelectorAll(".tab").forEach((t) => {
       const on = t.dataset.tab === tab;
@@ -524,7 +549,7 @@
     updateFilterRow();
     renderCanvas();
     if (!fromStage) {
-      const map = { visual: 3, strategy: 4, shortlist: 5 };
+      const map = { intent: 1, visual: 3, shortlist: 4, report: 5, strategy: 5 };
       if (map[tab] && map[tab] !== state.stage) {
         state.stage = map[tab];
         syncStageButtons(state.stage);
@@ -816,13 +841,16 @@
 
   function renderRoleChips() {
     if (!el.categoryChips) return;
-    const n = { primary: 0, analogy: 0, shelf: 0 };
+    const n = { primary: 0, analogy: 0, shelf: 0, cross: 0 };
     state.wallItems.forEach((it) => {
-      n[wallRole(it)] = (n[wallRole(it)] || 0) + 1;
+      const scope = searchScope(it);
+      if (scope === "cross") n.cross += 1;
+      else n[wallRole(it)] = (n[wallRole(it)] || 0) + 1;
     });
     const labels = {
-      primary: `主品类 · ${n.primary}`,
-      analogy: `类比 · ${n.analogy}`,
+      primary: `同类 · ${n.primary}`,
+      analogy: `不同类 · ${n.analogy}`,
+      cross: `跨界 · ${n.cross || 0}`,
       shelf: `货架 · ${n.shelf}`,
     };
     el.categoryChips.querySelectorAll(".cat-chip[data-cat]").forEach((chip) => {
@@ -831,8 +859,14 @@
     });
   }
 
-  function isShelfItem(it) {
-    return wallRole(it) === "shelf";
+  function searchScope(it) {
+    const role = wallRole(it);
+    if (role === "shelf") return "shelf";
+    if (role === "analogy") return "adjacent";
+    if (it && (it.search_scope === "cross" || (it.extra && it.extra.search_scope === "cross"))) {
+      return "cross";
+    }
+    return "same";
   }
 
   function isAnalogyItem(it) {
@@ -846,6 +880,84 @@
     if (s === "match") return "贴合";
     if (s === "low") return "弱相关";
     return "跑题/低相关";
+  }
+
+  const SCOPE_ZH = { same: "同类", adjacent: "不同类", cross: "跨界", shelf: "货架" };
+
+  function scopeLabel(it) {
+    return SCOPE_ZH[searchScope(it)] || "同类";
+  }
+
+  /** 三路 + 货架的真实计数，全部来自已落地主墙，不做补数。 */
+  function scopeCounts() {
+    const n = { same: 0, adjacent: 0, cross: 0, shelf: 0 };
+    state.wallItems.forEach((it) => {
+      const s = searchScope(it);
+      if (n[s] != null) n[s] += 1;
+    });
+    return n;
+  }
+
+  async function loadClassifyDims() {
+    if (state.dims) return state.dims;
+    try {
+      const res = await fetch("data/classify-dimensions-v1.json");
+      if (res.ok) state.dims = await res.json();
+    } catch (err) {
+      console.warn("classify dims", err);
+    }
+    return state.dims;
+  }
+
+  /** 取维度字段的真实值；一律不编造，取不到就是 null。 */
+  function dimValue(item, fields) {
+    for (const f of fields || []) {
+      let v = item ? item[f] : null;
+      if (v == null && item && item.extra) v = item.extra[f];
+      if (Array.isArray(v)) {
+        const list = v.filter((x) => x != null && String(x).trim());
+        if (list.length) return list.map((x) => String(x)).join(" / ");
+        continue;
+      }
+      if (typeof v === "string" && v.trim() && v.trim() !== "unknown") return v.trim();
+      if (typeof v === "number") return String(v);
+    }
+    return null;
+  }
+
+  /** 维度取值；货架表现力只认真在售的样本，别让 source_type=inspiration 冒充已覆盖。 */
+  function dimValueZh(item, dim) {
+    if (dim.id === "shelf_impact") {
+      if (String(item.source_type || "").toLowerCase() !== "shelf") return null;
+      const region = Array.isArray(item.market_region) ? item.market_region.join(" / ") : "";
+      return `在售 listing 样${region ? ` · ${region}` : ""}`;
+    }
+    const raw = dimValue(item, dim.fields);
+    if (!raw) return null;
+    if (dim.id === "style_bucket") {
+      return raw
+        .split(" / ")
+        .map((id) => state.bucketIdToZh?.[id] || state.bundle?.bucket_id_to_zh?.[id] || id)
+        .join(" / ");
+    }
+    return raw;
+  }
+
+  /** L5 第 3 段：每个维度在主墙上到底标了多少条。 */
+  function coverageStats() {
+    const groups = (state.dims && state.dims.groups) || [];
+    const total = state.wallItems.length;
+    return groups.map((g) => ({
+      id: g.id,
+      name: g.name_zh,
+      dims: (g.dimensions || []).map((d) => ({
+        id: d.id,
+        name: d.name_zh,
+        notCollected: d.collect_status === "not_collected",
+        labeled: state.wallItems.reduce((acc, it) => acc + (dimValueZh(it, d) ? 1 : 0), 0),
+        total,
+      })),
+    }));
   }
 
   function getFilteredWallItems() {
@@ -871,9 +983,11 @@
       items = pendingFirst.concat(mains);
     }
     if (state.activeCat === "primary") {
-      items = items.filter((it) => wallRole(it) === "primary");
+      items = items.filter((it) => wallRole(it) === "primary" && searchScope(it) !== "cross");
     } else if (state.activeCat === "analogy") {
-      items = items.filter((it) => wallRole(it) === "analogy");
+      items = items.filter((it) => searchScope(it) === "adjacent");
+    } else if (state.activeCat === "cross") {
+      items = items.filter((it) => searchScope(it) === "cross");
     } else if (state.activeCat === "shelf" || state.activeCat === "pack") {
       items = items.filter((it) => wallRole(it) === "shelf");
     } else if (state.activeCat === "case") {
@@ -969,42 +1083,11 @@
     });
   }
 
-  function briefRelation(item) {
+  /** 只回 Brief 里真写过的红线，没有就 null；不替设计师编评语。 */
+  function briefRelation() {
     const input = state.bundle?.l1?.input || {};
-    const tone = input.culture_tone || "中式现代";
-    const buckets = item.suggested_style_buckets || [];
-    const zh = (buckets || [])
-      .map((id) => state.bucketIdToZh?.[id] || state.bundle?.bucket_id_to_zh?.[id] || id)
-      .filter(Boolean);
-    return {
-      match: [
-        `气质靠近 Brief 里说的「${tone}」`,
-        item.bucket ? `正好落在「${item.bucket}」这一桶` : "能当礼赠视觉参照",
-        input.must_have?.[0]
-          ? `能撑住「必须有」：${input.must_have[0]}`
-          : "开箱或主图有机会做出记忆点",
-      ],
-      why: [
-        "你这轮要的是差异化，不是再堆一套金红喜庆",
-        "这张图能帮团队快速对齐「克制外表 + 惊喜开箱」的感觉",
-        "适合拿来当面讨论：留什么、砍什么",
-      ],
-      visual: [
-        zh.length ? `风格线索：${zh.slice(0, 2).join(" / ")}` : "结构层次清楚、材质克制",
-        "色块与留白节奏可借鉴",
-        item.source ? `渠道味道来自 ${humanSource(item.source)}` : "国际简约与中式现代之间的空隙",
-      ],
-      learn: [
-        "外侧克制、内侧做开箱惊喜的分层逻辑",
-        "标题区与主视觉的主次关系",
-        "礼赠感靠材质与结构，而不是堆装饰",
-      ],
-      risk: [
-        (input.must_avoid && input.must_avoid[0]) || "容易滑向金红喜庆 / 仿古堆砌",
-        "直接复刻结构会削弱差异化",
-        "货架墙样本还偏弱，电商深采后再拍板更稳",
-      ],
-    };
+    const avoid = (input.must_avoid || []).filter(Boolean);
+    return { avoid: avoid.length ? avoid.join(" / ") : null };
   }
 
   function mergeFirecrawlIntoWall(rows) {
@@ -1054,6 +1137,30 @@
       .filter(Boolean);
     const struct = (item.structure_tags || []).filter(Boolean);
     const page = item.page_url || "";
+    const groups = (state.dims && state.dims.groups) || [];
+    const groupIco = { visual_style: "◎", experience: "◇", commerce: "¥" };
+    const dimBlocks = groups
+      .map((g) => {
+        const rows = (g.dimensions || [])
+          .map((d) => {
+            const v = dimValueZh(item, d);
+            if (v) {
+              return `<li><span class="dim-k">${escapeHtml(d.name_zh)}</span><span class="dim-v">${escapeHtml(
+                v
+              )}</span></li>`;
+            }
+            const why = d.collect_status === "not_collected" ? "未标注 · 本轮未采集" : "未标注";
+            return `<li class="dim-empty"><span class="dim-k">${escapeHtml(
+              d.name_zh
+            )}</span><span class="dim-v">${escapeHtml(why)}</span></li>`;
+          })
+          .join("");
+        return `<div class="insp-block dims">
+          <h4><span class="ico">${groupIco[g.id] || "·"}</span>${escapeHtml(g.name_zh)}</h4>
+          <ul class="dim-list">${rows}</ul>
+        </div>`;
+      })
+      .join("");
     el.inspectorBody.innerHTML = `
       <div class="inspector-preview"><img referrerpolicy="no-referrer" src="${escapeAttr(imgFor(item))}" alt="" /></div>
       <div class="inspector-title">${escapeHtml(humanTitle(item.title || item.id))}</div>
@@ -1061,28 +1168,25 @@
         item.author_or_brand ? " · " + escapeHtml(item.author_or_brand) : ""
       }</div>
       <p class="insp-summary">${escapeHtml(
-        `这张偏「${item.bucket || "这路气质"}」，和 Brief 要的能对上一点；适合拿来商量开箱记忆，但别整段照搬。`
+        `口径：${scopeLabel(item)} · ${briefRelLabel(item)}${
+          bucketZh.length ? ` · 风格桶 ${bucketZh[0]}` : " · 风格桶未标注"
+        }。下面只写已经采到的字段，没采到的一律「未标注」。`
       )}</p>
       <div class="insp-block match">
-        <h4><span class="ico">✓</span>匹配 Brief</h4>
-        <ul>${rel.match.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>
+        <h4><span class="ico">✓</span>对 Brief 这条</h4>
+        <ul>
+          <li>判定：${escapeHtml(briefRelLabel(item))}${
+            item.extra && item.extra.brief_relevance_v1
+              ? `（${escapeHtml(item.extra.brief_relevance_v1)}）`
+              : ""
+          }</li>
+          <li>路线：${escapeHtml(scopeLabel(item))}${
+            searchScope(item) === "shelf" ? "（在售 listing 样）" : ""
+          }</li>
+          <li>红线提醒：${escapeHtml(rel.avoid || "未标注")}</li>
+        </ul>
       </div>
-      <div class="insp-block why">
-        <h4><span class="ico">?</span>为何重要</h4>
-        <ul>${rel.why.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>
-      </div>
-      <div class="insp-block visual">
-        <h4><span class="ico">◎</span>视觉元素</h4>
-        <ul>${rel.visual.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>
-      </div>
-      <div class="insp-block learn">
-        <h4><span class="ico">→</span>可借鉴</h4>
-        <ul>${rel.learn.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>
-      </div>
-      <div class="insp-block risk">
-        <h4><span class="ico">!</span>差异化风险</h4>
-        <ul>${rel.risk.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>
-      </div>
+      ${dimBlocks}
       <div class="insp-block collect">
         <h4><span class="ico">#</span>采集字段</h4>
         <ul>
@@ -1103,9 +1207,11 @@
         </ul>
       </div>
       <div class="insp-block">
-        <h4><span class="ico">📎</span>支持证据</h4>
+        <h4><span class="ico">📎</span>这条的来历</h4>
         <div class="evidence-tags">
-          <span>Brief 笔记</span><span>开箱清单</span><span>${escapeHtml(item.bucket || "主墙")}</span>
+          <span>${escapeHtml(state.bundle?.l1?.brief_id || "本轮 Brief")}</span>
+          <span>${escapeHtml(item.wall_status === "pending_review" ? "待复核 2680" : "主墙 452")}</span>
+          <span>${escapeHtml(item.collected_at ? String(item.collected_at).slice(0, 10) : "采集时间未标注")}</span>
         </div>
       </div>`;
     updateSelectionBar();
@@ -1178,7 +1284,7 @@
 
   function renderVisual() {
     if (!state.bundle && !state.wallItems.length) {
-      return `<div class="empty"><div class="slogan">墙还在长</div><p class="hint">正在把和 brief 更贴的参考搬上来…</p><button type="button" class="empty-cta" data-empty-action="open-strategy">先去看策略卡</button></div>`;
+      return `<div class="empty"><div class="slogan">墙还在长</div><p class="hint">正在把和 brief 更贴的参考搬上来…</p><button type="button" class="empty-cta" data-empty-action="open-intent">先看这次要搞清的事</button></div>`;
     }
     const filtered = getFilteredWallItems();
     updateWallCountBar();
@@ -1196,6 +1302,17 @@
       ...Object.keys(byBucket).filter((n) => !preferred.includes(n)),
     ];
     if (!order.length) {
+      if (state.activeCat === "cross") {
+        return `<div class="empty"><div class="slogan">本轮跨界样本 0，不编造</div>
+        <p class="hint">Brief 的类比计划里写了香氛、国潮美妆这类跨界目标，但这一轮一张都没采到，所以这里就是空的。<br>缺口已经写进 L5 报告的「风险与下一步」，等开跨界采集再回来看。</p>
+        <button type="button" class="empty-cta" data-empty-action="open-report">看缺口写在哪</button></div>`;
+      }
+      if (state.activeCat === "analogy" || state.activeCat === "shelf") {
+        const zh = state.activeCat === "analogy" ? "不同类" : "货架";
+        return `<div class="empty"><div class="slogan">这一路现在没有样本</div>
+        <p class="hint">${escapeHtml(zh)}这路在本轮很薄，换个筛选条件（来源 / 风格 / 只看贴 brief）可能就有了。</p>
+        <button type="button" class="empty-cta" data-empty-action="show-all">看看全部参考</button></div>`;
+      }
       return `<div class="empty"><div class="slogan">这会儿墙上还空着</div><p class="hint">换个类别或来源再看看，或者打开「含待复核」。</p>
       <button type="button" class="empty-cta" data-empty-action="show-all">看看全部参考</button></div>`;
     }
@@ -1305,8 +1422,7 @@
   function renderStrategy() {
     const cards = state.bundle?.l4_cards || [];
     if (!cards.length) {
-      return `<div class="empty"><div class="slogan">还没有方向卡</div><p class="hint">这轮研究还没写出可批判的方向。青绿茶礼盒那轮有三张示意卡。</p>
-      <button type="button" class="empty-cta" data-empty-action="ask-strategy">去聊聊方向</button></div>`;
+      return `<p class="muted">这轮还没有方向假设卡。青绿茶礼盒那轮有三张（示意 · 非完稿）。</p>`;
     }
     return `<div class="strategy-list">${cards
       .map((c) => {
@@ -1357,55 +1473,665 @@
     return (state.bundle.l4_cards || []).filter((c) => state.decisions[c.card_id] === "keep");
   }
 
-  function renderShortlist() {
-    const kept = keptCards();
-    const visual = state.shortlistVisual;
-    if (!kept.length && !visual.length) {
-      return `<div class="empty"><div class="slogan">短名单还是空的</div>
-        <p class="hint">在策略卡里点「留下」，或在视觉墙勾几张——我们帮你收着。</p>
-        <button type="button" class="empty-cta" data-empty-action="open-strategy">去策略卡看看</button></div>`;
+  function currentResearch() {
+    return RESEARCHES.find((x) => x.id === state.activeResearchId) || RESEARCHES[0];
+  }
+
+  /* ---------- L4 决策筛选：只在已落地主墙上收短名单 ---------- */
+
+  function itemBlob(it) {
+    const zh = (it.suggested_style_buckets || [])
+      .map((id) => state.bucketIdToZh?.[id] || id)
+      .join(" ");
+    return [
+      it.title,
+      it.bucket,
+      zh,
+      it.query_used,
+      Array.isArray(it.raw_tags) ? it.raw_tags.join(" ") : "",
+      it.author_or_brand,
+      humanSource(it.source),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+  }
+
+  function shortlistCandidates() {
+    const briefGate = currentResearch().onlyBriefDefault !== false;
+    return state.wallItems.filter((it) => {
+      if (it.pending || it.qc_status === "pending_review") return false;
+      if (!imgFor(it)) return false;
+      if (state.shortlistRemoved.has(it.id)) return false;
+      if (briefGate && scoreBriefRelevance(it) !== "match") return false;
+      return true;
+    });
+  }
+
+  /** 打分只看已有字段：标得越全越好选，不给没采到的东西加分。 */
+  function pickScore(it) {
+    let s = 0;
+    if ((it.suggested_style_buckets || []).length) s += 3;
+    if ((it.structure_tags || []).length) s += 2;
+    if ((it.color_roles || []).length) s += 2;
+    if ((it.info_hierarchy_tags || []).length) s += 1;
+    if (it.author_or_brand) s += 1;
+    if (!isFragileImageHost(imgFor(it))) s += 1;
+    const pre = it.extra && it.extra.brief_relevance_v1;
+    if (pre === "keep_core" || pre === "pass_brief") s += 2;
+    if (searchScope(it) === "shelf" || searchScope(it) === "adjacent") s += 1;
+    return s;
+  }
+
+  function pickDiverse(cands, limit, scoreFn) {
+    const score = scoreFn || pickScore;
+    const sorted = cands.slice().sort((a, b) => score(b) - score(a));
+    const used = new Set();
+    const picked = [];
+    const take = (it) => {
+      if (!it || used.has(it.id) || picked.length >= limit) return;
+      used.add(it.id);
+      picked.push(it);
+    };
+    // 不同类 / 货架 / 跨界先各留位置：有才收，没有就是没有
+    ["adjacent", "shelf", "cross"].forEach((scope) => {
+      sorted.filter((it) => searchScope(it) === scope).slice(0, 2).forEach(take);
+    });
+    // 同类是核心战场，剩下的位置优先给同类，按风格桶轮转铺开
+    const core = sorted.filter((it) => searchScope(it) === "same");
+    const pool = core.length >= limit ? core : sorted;
+    const lanes = new Map();
+    pool.forEach((it) => {
+      const k = it.bucket || "其他";
+      if (!lanes.has(k)) lanes.set(k, []);
+      lanes.get(k).push(it);
+    });
+    const laneList = [...lanes.values()];
+    let guard = 0;
+    while (picked.length < limit && laneList.some((l) => l.length) && guard < 5000) {
+      laneList.forEach((lane) => {
+        while (lane.length && used.has(lane[0].id)) lane.shift();
+        if (lane.length) take(lane.shift());
+      });
+      guard += 1;
     }
-    let html = "";
-    if (kept.length) {
-      html += kept
-        .map(
-          (c) => `
-      <div class="shortlist-item">
-        <span class="dot"></span>
-        <div>
-          <div class="t">${escapeHtml(c.title)}</div>
-          <div class="s">${escapeHtml(c.one_liner || "")}</div>
+    return picked;
+  }
+
+  function unlabeledDims(it) {
+    const groups = (state.dims && state.dims.groups) || [];
+    const missing = [];
+    groups.forEach((g) => {
+      (g.dimensions || []).forEach((d) => {
+        if (d.collect_status === "not_collected") return;
+        if (!dimValueZh(it, d)) missing.push(d.name_zh);
+      });
+    });
+    return missing;
+  }
+
+  function reasonFor(it, hits) {
+    const bucketZh = dimValueZh(it, { id: "style_bucket", fields: ["suggested_style_buckets"] });
+    const lines = [
+      `路线：${scopeLabel(it)}${searchScope(it) === "shelf" ? "（在售 listing 样）" : ""}`,
+      `贴 brief：${briefRelLabel(it)}${
+        it.extra && it.extra.brief_relevance_v1 ? `（${it.extra.brief_relevance_v1}）` : ""
+      }`,
+      `风格桶：${bucketZh || "未标注"}`,
+      `来源：${humanSource(it.source)} · ${it.source_type || "未标注"}`,
+    ];
+    if (it.query_used) lines.push(`检索词：${String(it.query_used).slice(0, 40)}`);
+    if (hits && hits.length) lines.push(`命中你的批注：${hits.join(" / ")}`);
+    return lines;
+  }
+
+  function setShortlist(items, hitsById) {
+    state.shortlistVisual = items;
+    state.shortlistReasons = {};
+    items.forEach((it) => {
+      state.shortlistReasons[it.id] = reasonFor(it, hitsById && hitsById.get(it.id));
+    });
+  }
+
+  function ensureShortlist() {
+    if (state.shortlistVisual.length || state.shortlistTouched) return;
+    const cands = shortlistCandidates();
+    if (!cands.length) return;
+    setShortlist(pickDiverse(cands, SHORTLIST_TARGET));
+    state.shortlistAuto = true;
+  }
+
+  /** 设计常用说法 → 风格桶。只是词表，不是给样本补数据。 */
+  const COMMENT_BUCKET_HINTS = [
+    { words: ["金红", "金箔", "烫金", "喜庆", "土", "俗"], buckets: ["luxury_gilt"] },
+    { words: ["仿古", "龙凤", "复古", "怀旧"], buckets: ["retro_nostalgia"] },
+    { words: ["留白", "简约", "极简", "干净", "安静", "静奢", "克制"], buckets: ["global_minimal", "minimal_white", "swiss_international"] },
+    { words: ["中式", "东方", "国潮", "新中式"], buckets: ["chinese_modern", "chinese_ceremonial"] },
+    { words: ["礼赠", "礼盒", "仪式", "开箱", "层次"], buckets: ["chinese_ceremonial", "craft_material"] },
+    { words: ["材质", "工艺", "质感", "异形", "结构"], buckets: ["craft_material"] },
+    { words: ["自然", "有机", "纸感", "环保", "可持续", "质朴"], buckets: ["natural_organic", "sustainable_plain"] },
+    { words: ["年轻", "潮", "撞色", "鲜艳", "高饱和"], buckets: ["color_youth", "cartoon_ip"] },
+    { words: ["地域", "文旅", "特产"], buckets: ["regional_culture"] },
+    { words: ["插画", "手绘", "叙事"], buckets: ["illustration_story"] },
+  ];
+
+  function bucketsForWord(w) {
+    const out = new Set();
+    COMMENT_BUCKET_HINTS.forEach((h) => {
+      if (h.words.some((x) => w.includes(x) || x.includes(w))) h.buckets.forEach((b) => out.add(b));
+    });
+    return out;
+  }
+
+  /** 无分词器，就用 2–4 字 n-gram，再用语料把没意义的词滤掉。 */
+  function ngrams(phrase) {
+    const out = [];
+    const runs = (String(phrase).match(/[\u4e00-\u9fa5]+/g) || []).flatMap((r) =>
+      r.split(/[的了和与在是就都也很把给再又还只想能别]/)
+    );
+    runs.forEach((run) => {
+      for (let len = 2; len <= Math.min(4, run.length); len += 1) {
+        for (let i = 0; i + len <= run.length; i += 1) out.push(run.slice(i, i + len));
+      }
+    });
+    (String(phrase).match(/[A-Za-z]{3,}/g) || []).forEach((w) => out.push(w.toLowerCase()));
+    return out;
+  }
+
+  const PARTICLE = "的了和与要多别不只想能走偏个把给再又很就都还也是有把把";
+
+  function trimParticles(w) {
+    let s = w;
+    while (s.length > 2 && PARTICLE.includes(s[0])) s = s.slice(1);
+    while (s.length > 2 && PARTICLE.includes(s[s.length - 1])) s = s.slice(0, -1);
+    return s;
+  }
+
+  /** n-gram 会互相套娃，只留最长的那个，读起来才像人话。 */
+  function dropOverlaps(list) {
+    const out = [];
+    [...new Set(list)]
+      .sort((a, b) => b.length - a.length)
+      .forEach((w) => {
+        if (out.some((k) => k.includes(w) || w.includes(k))) return;
+        out.push(w);
+      });
+    return out;
+  }
+
+  /** 把批注拆成「别要什么 / 想要什么」；只认已有文本与风格桶词表，认不出就说认不出。 */
+  function parseComment(text, corpus) {
+    const t = String(text || "");
+    const negPhrases = [];
+    const NEG_RE = /(?:不要|不想要|别|避开|去掉|少用|不用|拿掉)\s*([^，,。；;、！!？?\s]{1,10})/g;
+    let m;
+    while ((m = NEG_RE.exec(t))) negPhrases.push(m[1]);
+    const rest = t.replace(NEG_RE, "，");
+    const keep = (w) =>
+      w.length >= 2 && (bucketsForWord(w).size > 0 || (corpus && corpus.includes(w)));
+    const prep = (list) => dropOverlaps(list.map(trimParticles).filter(keep)).slice(0, 6);
+    const neg = prep(negPhrases.flatMap(ngrams));
+    const pos = prep(ngrams(rest)).filter((w) => !neg.some((n) => n.includes(w) || w.includes(n)));
+    const resolved = neg.concat(pos);
+    const edge = (w) => PARTICLE.includes(w[0]) || PARTICLE.includes(w[w.length - 1]);
+    const unresolved = dropOverlaps(
+      [...new Set(negPhrases.concat(rest).flatMap(ngrams))]
+        .map(trimParticles)
+        .filter(
+          (w) => w.length >= 2 && !edge(w) && !keep(w) && !resolved.some((r) => r.includes(w))
+        )
+    ).slice(0, 4);
+    return { neg, pos, unresolved };
+  }
+
+  function wordHitsItem(word, it) {
+    if (itemBlob(it).includes(word)) return true;
+    const wanted = bucketsForWord(word);
+    if (!wanted.size) return false;
+    return (it.suggested_style_buckets || []).some((b) => wanted.has(b));
+  }
+
+  function rescreenByComment() {
+    const comment = String(state.houComment || "").trim();
+    if (!comment) {
+      toast("先写一句批注，我再按它重排");
+      return;
+    }
+    const cands = shortlistCandidates();
+    const corpus = cands.map(itemBlob).join(" ");
+    const { neg, pos, unresolved } = parseComment(comment, corpus);
+    if (!neg.length && !pos.length) {
+      toast("这句批注在本轮字段里判不了，先没动短名单");
+      appendEvent({
+        agent: "奎燕设计智能体",
+        time: "现在",
+        tag: "按批注重筛",
+        tagClass: "challenge",
+        dot: "warn",
+        html: `<p>「${escapeHtml(comment.slice(0, 40))}」我在这轮数据里对不上——标题、检索词、风格桶里都没有能对应的词，色彩和开箱又多数未标注。短名单先没动。</p>
+          <div class="event-note">换个说法（例如「留白」「中式」「工艺材质」「礼赠开箱」）我就能在墙上重排；要真按色彩筛，得先把 L3 色彩维度补采。</div>`,
+      });
+      return;
+    }
+    const dropped = [];
+    const kept = cands.filter((it) => {
+      if (neg.some((w) => wordHitsItem(w, it))) {
+        dropped.push(it);
+        return false;
+      }
+      return true;
+    });
+    const hits = new Map();
+    kept.forEach((it) => hits.set(it.id, pos.filter((w) => wordHitsItem(w, it))));
+    const scoreFn = (it) => pickScore(it) + (hits.get(it.id) || []).length * 5;
+    const picked = pickDiverse(kept, SHORTLIST_TARGET, scoreFn);
+    setShortlist(picked, hits);
+    state.shortlistTouched = true;
+    state.shortlistAuto = true;
+    renderCanvas();
+    toast("按批注在已落地的 452 张墙上重排了 · 没有新采集");
+    const hitN = picked.filter((it) => (hits.get(it.id) || []).length).length;
+    appendEvent({
+      agent: "奎燕设计智能体",
+      time: "现在",
+      tag: "按批注重筛",
+      tagClass: "consensus",
+      dot: "ok",
+      html: `<p>按你这句「${escapeHtml(comment.slice(0, 40))}」在墙上重排：认出<strong>${escapeHtml(
+        pos.join("、") || "—"
+      )}</strong>${neg.length ? `，要躲开<strong>${escapeHtml(neg.join("、"))}</strong>` : ""}；短名单里 <strong>${hitN}</strong> 款直接命中，剔除 <strong>${dropped.length}</strong> 款，其余按风格桶铺开凑到 ${picked.length} 款。</p>
+        <div class="event-note">重筛只在已落地的 452 张主墙上重排，没有发起新采集。${
+          unresolved.length
+            ? `「${escapeHtml(unresolved.slice(0, 3).join("、"))}」这类词本轮判不了——色彩、开箱、用户反馈还没采。`
+            : "缺的路（跨界 0 / 用户反馈未采）还是缺。"
+        }</div>`,
+    });
+  }
+
+  /* ---------- L1 意图识别 ---------- */
+
+  function kvRow(label, value) {
+    const v = value == null || value === "" ? "未标注" : value;
+    return `<div class="kv-row"><span class="kv-k">${escapeHtml(label)}</span><span class="kv-v${
+      v === "未标注" ? " kv-empty" : ""
+    }">${escapeHtml(String(v))}</span></div>`;
+  }
+
+  function tagList(list, cls) {
+    const arr = (list || []).filter(Boolean);
+    if (!arr.length) return `<span class="tag-empty">未标注</span>`;
+    return arr.map((t) => `<span class="tag ${cls || ""}">${escapeHtml(String(t))}</span>`).join("");
+  }
+
+  function renderIntent() {
+    const l1 = state.bundle?.l1 || {};
+    const input = l1.input || {};
+    const intent = l1.intent || {};
+    const counts = scopeCounts();
+    const plan = intent.analogy_plan || [];
+    const queries = intent.query_plan || {};
+
+    const laneRows = [
+      { key: "same", zh: "同类", note: "主导品牌 + 设计新锐，核心战场", n: counts.same },
+      { key: "adjacent", zh: "不同类", note: "同行业打开视野（茶礼 → 酒礼 / 滋补礼）", n: counts.adjacent },
+      { key: "cross", zh: "跨界", note: "别的行业做成 IP / 独特风格的包装", n: counts.cross },
+      { key: "shelf", zh: "货架", note: "在售 listing 切片，属于同类里的一层", n: counts.shelf },
+    ];
+
+    const planHtml = plan.length
+      ? plan
+          .map((p) => {
+            const targets = (p.targets || []).map((t) => {
+              const cross = CROSS_TARGET_RE.test(String(t));
+              return `<span class="tag ${cross ? "tag-cross" : "tag-adj"}">${escapeHtml(t)}<em>${
+                cross ? "跨界" : "不同类"
+              }</em></span>`;
+            });
+            return `<div class="plan-row">
+              <div class="plan-name">${escapeHtml(p.label_zh || p.rule_id || "类比线")}</div>
+              <div class="plan-tags">${targets.join("") || '<span class="tag-empty">未标注</span>'}</div>
+            </div>`;
+          })
+          .join("")
+      : `<p class="muted">这轮 Brief 还没写类比计划，先只按同类铺。</p>`;
+
+    const qLine = (label, arr) =>
+      `<div class="kv-row"><span class="kv-k">${escapeHtml(label)}</span><span class="kv-v${
+        (arr || []).length ? "" : " kv-empty"
+      }">${escapeHtml((arr || []).join(" · ") || "未标注")}</span></div>`;
+
+    const briefLoaded = Boolean(
+      l1.raw_brief && (input.channel || input.audience || (input.must_have || []).length)
+    );
+
+    return `
+    <section class="panel intent-panel">
+      <div class="panel-head">
+        <h3>L1 意图识别 · 先钉死分析对象</h3>
+        <p class="panel-sub">没把这页说清之前，别急着说「已经搜穷尽了」。</p>
+      </div>
+      ${
+        briefLoaded
+          ? ""
+          : `<p class="rp-warn">这轮只有落地的墙：Brief 还没录进来，下面除了品名基本都是未标注。别把它当已经问清的分析对象。</p>`
+      }
+
+      <div class="panel-block">
+        <h4>分析对象</h4>
+        <div class="kv">
+          ${kvRow("产品", input.product)}
+          ${kvRow("品类", input.category_text)}
+          ${kvRow("本体域", intent.domain_label_zh ? `${intent.domain_label_zh}${
+            intent.confidence ? `（置信 ${intent.confidence}）` : ""
+          }` : null)}
+          ${kvRow("品牌", input.brand)}
         </div>
-      </div>`
-        )
-        .join("");
+      </div>
+
+      <div class="panel-block">
+        <h4>卖给谁 · 在哪卖 · 什么价</h4>
+        <div class="kv">
+          ${kvRow("客群", input.audience)}
+          ${kvRow("渠道", input.channel)}
+          ${kvRow("价格带", input.price_band)}
+          ${kvRow("场合", input.occasion)}
+        </div>
+      </div>
+
+      <div class="panel-block">
+        <h4>气质与红线</h4>
+        <div class="kv">${kvRow("气质", input.culture_tone)}</div>
+        <div class="tag-line"><span class="tag-label">必须有</span>${tagList(input.must_have, "tag-keep")}</div>
+        <div class="tag-line"><span class="tag-label">必须避开</span>${tagList(input.must_avoid, "tag-kill")}</div>
+        <div class="tag-line"><span class="tag-label">工艺前提</span>${tagList(input.constraints)}</div>
+      </div>
+
+      <div class="panel-block">
+        <h4>奎燕会什么（先验）</h4>
+        <div class="tag-line"><span class="tag-label">过往案例</span>${tagList(input.kuiyan_case_refs)}</div>
+        <div class="tag-line"><span class="tag-label">气质参照</span>${tagList(input.competitors)}</div>
+      </div>
+
+      <div class="panel-block">
+        <h4>搜索往哪扩 · 三路计划</h4>
+        ${planHtml}
+        <div class="kv plan-queries">
+          ${qLine("同类检索", queries.inspiration)}
+          ${qLine("货架检索", queries.shelf)}
+          ${qLine("类比检索", queries.analogy)}
+        </div>
+      </div>
+
+      <div class="panel-block">
+        <h4>计划 vs 已落地</h4>
+        <div class="lane-table">
+          ${laneRows
+            .map(
+              (r) => `<div class="lane-row${r.n ? "" : " lane-zero"}">
+                <span class="lane-zh">${escapeHtml(r.zh)}</span>
+                <span class="lane-n">${r.n}</span>
+                <span class="lane-note">${escapeHtml(r.note)}</span>
+              </div>`
+            )
+            .join("")}
+        </div>
+        <p class="honest-note">本轮跨界 0：计划里写了香氛 / 国潮美妆这类跨界目标，但一张都还没采，UI 里不给你补假的。</p>
+      </div>
+    </section>`;
+  }
+
+  /* ---------- L4 决策筛选 ---------- */
+
+  function renderShortlist() {
+    ensureShortlist();
+    const list = state.shortlistVisual;
+    const comment = state.houComment || "";
+    const commentBox = `
+      <div class="l4-comment">
+        <label class="l4-comment-label" for="houCommentBox">你的批注（我按这句重排）</label>
+        <textarea id="houCommentBox" rows="2" placeholder="例：不要金红，多留白，只要能拍开箱视频的">${escapeHtml(
+          comment
+        )}</textarea>
+        <div class="l4-comment-foot">
+          <span class="muted">重筛 = 在已落地的 452 张主墙上重排，不发起新采集</span>
+          <button type="button" class="l4-rescreen" data-shortlist-action="rescreen">按批注重筛</button>
+        </div>
+      </div>`;
+
+    if (!list.length) {
+      const cands = shortlistCandidates().length;
+      return `<section class="panel l4-panel">
+        <div class="panel-head">
+          <h3>L4 决策筛选 · 短名单</h3>
+          <p class="panel-sub">从主墙里收 ${SHORTLIST_MIN}–${SHORTLIST_TARGET} 款给你拍板，不是 452 张全甩过来。</p>
+        </div>
+        ${commentBox}
+        <div class="empty"><div class="slogan">短名单现在是空的</div>
+        <p class="hint">${
+          cands
+            ? `还有 ${cands} 张可选。要我按 Brief + 风格桶重新收一轮吗？`
+            : "这轮墙上还没有能进短名单的参考。"
+        }</p>
+        <button type="button" class="empty-cta" data-shortlist-action="refill">重新收一轮</button></div>
+      </section>`;
     }
-    if (visual.length) {
-      html += `<div class="bucket-label">视觉短名单 · ${visual.length}</div>`;
-      html += visual
-        .map(
-          (it) => `
-        <div class="shortlist-item">
-          <span class="dot"></span>
-          <div>
-            <div class="t">${escapeHtml(humanTitle(it.title || it.id))}</div>
-            <div class="s">${escapeHtml(humanSource(it.source) || "精选参考")} · 从视觉墙收进来</div>
+
+    const laneN = { same: 0, adjacent: 0, cross: 0, shelf: 0 };
+    list.forEach((it) => {
+      const s = searchScope(it);
+      if (laneN[s] != null) laneN[s] += 1;
+    });
+
+    const cards = list
+      .map((it, i) => {
+        const reasons = state.shortlistReasons[it.id] || reasonFor(it);
+        const missing = unlabeledDims(it);
+        return `
+        <article class="sl-item" data-id="${escapeAttr(it.id)}">
+          <div class="sl-idx">${i + 1}</div>
+          <div class="sl-thumb"><img loading="lazy" referrerpolicy="no-referrer" src="${escapeAttr(
+            imgFor(it)
+          )}" alt="" onerror="this.style.visibility='hidden'" /></div>
+          <div class="sl-body">
+            <div class="sl-title">${escapeHtml(humanTitle(it.title || it.id))}</div>
+            <div class="sl-scope"><span class="scope-pill scope-${escapeAttr(
+              searchScope(it)
+            )}">${escapeHtml(scopeLabel(it))}</span><span class="sl-src">${escapeHtml(
+          humanSource(it.source)
+        )}</span></div>
+            <ul class="sl-reason">${reasons
+              .map((r) => `<li>${escapeHtml(r)}</li>`)
+              .join("")}</ul>
+            <div class="sl-gap">${
+              missing.length
+                ? `还没标：${escapeHtml(missing.join(" / "))}；开箱、用户反馈、成本本轮未采`
+                : "维度已标齐；开箱、用户反馈、成本本轮未采"
+            }</div>
           </div>
+          <div class="sl-actions">
+            ${
+              it.page_url
+                ? `<a class="sl-open" href="${escapeAttr(
+                    it.page_url
+                  )}" target="_blank" rel="noopener noreferrer">原页</a>`
+                : ""
+            }
+            <button type="button" class="sl-remove" data-shortlist-remove="${escapeAttr(
+              it.id
+            )}">拿掉</button>
+          </div>
+        </article>`;
+      })
+      .join("");
+
+    return `<section class="panel l4-panel">
+      <div class="panel-head">
+        <h3>L4 决策筛选 · 短名单 ${list.length} 款</h3>
+        <p class="panel-sub">${
+          state.shortlistAuto
+            ? "先按 Brief 命中 + 风格桶多样性替你收了一轮，留哪个、拿掉哪个你说了算。"
+            : "这是你自己从墙上勾进来的。"
+        }</p>
+      </div>
+      <div class="sl-lanes">同类 ${laneN.same} · 不同类 ${laneN.adjacent} · 货架 ${laneN.shelf} · 跨界 ${
+      laneN.cross
+    }（本轮无跨界样本，不编造）</div>
+      ${commentBox}
+      <div class="sl-list">${cards}</div>
+      <p class="honest-note">推荐理由只引用已采到的字段：贴 brief 判定、路线、风格桶、来源、检索词。色彩、开箱、用户反馈没采到就写「未标注」，不替你编工艺分析。</p>
+    </section>`;
+  }
+
+  /* ---------- L5 结论报告 ---------- */
+
+  function renderReport() {
+    ensureShortlist();
+    const l1 = state.bundle?.l1 || {};
+    const input = l1.input || {};
+    const counts = scopeCounts();
+    const mainN = state.feedCounts.main || 0;
+    const pendN = state.feedCounts.pending || 0;
+    const list = state.shortlistVisual;
+    const cards = state.bundle?.l4_cards || [];
+    const cov = coverageStats();
+
+    const sec1 = `
+      <section class="rp-sec">
+        <h4><span class="rp-n">1</span>分析对象</h4>
+        <div class="kv">
+          ${kvRow("产品 / 品类", [input.product, input.category_text].filter(Boolean).join(" · ") || null)}
+          ${kvRow("渠道", input.channel)}
+          ${kvRow("客群", input.audience)}
+          ${kvRow("价格带", input.price_band)}
+          ${kvRow("气质", input.culture_tone)}
+        </div>
+        <div class="tag-line"><span class="tag-label">必须有</span>${tagList(input.must_have, "tag-keep")}</div>
+        <div class="tag-line"><span class="tag-label">必须避开</span>${tagList(input.must_avoid, "tag-kill")}</div>
+      </section>`;
+
+    const sec2 = `
+      <section class="rp-sec">
+        <h4><span class="rp-n">2</span>样本结构</h4>
+        <div class="lane-table">
+          <div class="lane-row"><span class="lane-zh">同类</span><span class="lane-n">${counts.same}</span><span class="lane-note">核心战场，主墙主体</span></div>
+          <div class="lane-row${counts.adjacent ? "" : " lane-zero"}"><span class="lane-zh">不同类</span><span class="lane-n">${counts.adjacent}</span><span class="lane-note">同行业打开，本轮偏薄</span></div>
+          <div class="lane-row${counts.cross ? "" : " lane-zero"}"><span class="lane-zh">跨界</span><span class="lane-n">${counts.cross}</span><span class="lane-note">本轮未单列采集与打标</span></div>
+          <div class="lane-row${counts.shelf ? "" : " lane-zero"}"><span class="lane-zh">货架</span><span class="lane-n">${counts.shelf}</span><span class="lane-note">在售 listing 样，深采未开通</span></div>
+        </div>
+        <p class="rp-note">主墙 ${mainN} 张已上墙，待复核 ${pendN} 张没算进结论。三路里只有同类算铺开了，不同类和跨界都不够，别把这份报告当「全市场扫描」。</p>
+      </section>`;
+
+    const covRows = cov
+      .map(
+        (g) => `<div class="cov-group">
+          <div class="cov-gname">${escapeHtml(g.name)}</div>
+          ${g.dims
+            .map((d) => {
+              const pct = d.total ? Math.round((d.labeled / d.total) * 100) : 0;
+              const status = d.notCollected
+                ? `<span class="cov-none">本轮未采集</span>`
+                : `<span class="cov-num">${d.labeled}/${d.total}</span>`;
+              return `<div class="cov-row${d.notCollected ? " cov-row-none" : ""}">
+                <span class="cov-name">${escapeHtml(d.name)}</span>
+                <span class="cov-bar"><i style="width:${d.notCollected ? 0 : pct}%"></i></span>
+                ${status}
+              </div>`;
+            })
+            .join("")}
         </div>`
-        )
-        .join("");
-    }
-    return html;
+      )
+      .join("");
+
+    const sec3 = `
+      <section class="rp-sec">
+        <h4><span class="rp-n">3</span>分类覆盖</h4>
+        ${covRows || '<p class="muted">维度合同还没读到（data/classify-dimensions-v1.json）。</p>'}
+        <p class="rp-note">分母是主墙 ${mainN} 张。多数条目的色彩、造型材质、图形排版仍是空的，检查器里一律写「未标注」；开箱、功能、用户反馈、成本这四项本轮压根没采。</p>
+      </section>`;
+
+    const sec4 = list.length
+      ? `<section class="rp-sec">
+          <h4><span class="rp-n">4</span>入选参考 · ${list.length} 款</h4>
+          <ol class="rp-shortlist">
+            ${list
+              .map(
+                (it) => `<li>
+                  <span class="scope-pill scope-${escapeAttr(searchScope(it))}">${escapeHtml(
+                  scopeLabel(it)
+                )}</span>
+                  <strong>${escapeHtml(humanTitle(it.title || it.id))}</strong>
+                  <span class="rp-why">${escapeHtml(
+                    (state.shortlistReasons[it.id] || reasonFor(it)).slice(0, 3).join(" · ")
+                  )}</span>
+                </li>`
+              )
+              .join("")}
+          </ol>
+          ${
+            state.houComment
+              ? `<p class="rp-note">已按你的批注重排过：「${escapeHtml(state.houComment.slice(0, 60))}」。重排只动排序，不动 452 张的边界。</p>`
+              : ""
+          }
+        </section>`
+      : `<section class="rp-sec">
+          <h4><span class="rp-n">4</span>入选参考</h4>
+          <p class="rp-warn">尚未完成筛选：短名单是空的。这份报告先当「覆盖缺口报告」看，别当选型结论。</p>
+          <button type="button" class="empty-cta" data-empty-action="open-shortlist">去 L4 收短名单</button>
+        </section>`;
+
+    const sec5 = `
+      <section class="rp-sec">
+        <h4><span class="rp-n">5</span>差异化机会</h4>
+        <p class="rp-note">相对货架那 ${counts.shelf} 条在售样和同类主墙，能看见的空白：详情页第一眼多是满版热闹，礼赠符号靠平面贴金；开箱结构少有人当内容点做。下面三张是<strong>方向假设</strong>，不是完稿，也还没有用户反馈与成本数据背书。</p>
+        ${
+          cards.length
+            ? `<div class="rp-cards">${renderStrategy()}</div>`
+            : `<p class="muted">这轮研究还没写方向假设卡；青绿茶礼盒那轮有三张。</p>`
+        }
+      </section>`;
+
+    const covBy = {};
+    cov.forEach((g) => g.dims.forEach((d) => (covBy[d.id] = d.labeled)));
+    const sbN = covBy.style_bucket || 0;
+    const colorN = covBy.color || 0;
+    const structN = covBy.form_material || 0;
+
+    const sec6 = `
+      <section class="rp-sec">
+        <h4><span class="rp-n">6</span>风险与下一步</h4>
+        <ul class="rp-risk">
+          <li><b>跨界 0</b>：三路里最缺这一路，本轮没有单列采集与打标，所以造型语言只能从同类里借。</li>
+          <li><b>不同类 ${counts.adjacent}</b>：薄到不足以谈行业趋势，酒礼 / 滋补礼 / 精品咖啡都得补。</li>
+          <li><b>货架 ${counts.shelf}</b>：只有 listing 样，电商深采没开通，「货架表现力」这一维基本是空的。</li>
+          <li><b>用户反馈未采</b>：电商评价与社交槽点一条没抓，「好看但容易漏」这类判断现在给不出。</li>
+          <li><b>成本与定位未采</b>：质感是否配得上中高端价格带，本轮无数据，只能靠人看。</li>
+          <li><b>打标覆盖低</b>：风格桶 ${sbN}/${mainN}、造型 ${structN}/${mainN}、色彩 ${colorN}/${mainN}，其余全是未标注，需要补打标或人工过图。</li>
+          <li><b>待复核 ${pendN}</b>：没进主墙，也没进这份结论。</li>
+        </ul>
+        <p class="rp-note">下一步建议按缺口排序：先补货架深采与用户反馈（直接影响能不能谈体验），再开跨界一路（影响造型语言），最后补成本。</p>
+      </section>`;
+
+    return `<section class="panel report-panel">
+      <div class="panel-head">
+        <h3>L5 结论报告 · 差异化机会</h3>
+        <p class="panel-sub">可复核的决策备忘：只用已落地的主墙 ${mainN} 张和你定的短名单，没有新采集，也没有补数。</p>
+      </div>
+      ${sec1}${sec2}${sec3}${sec4}${sec5}${sec6}
+    </section>`;
   }
 
   function renderCanvas({ preserveScroll = false } = {}) {
-    const prev =
-      preserveScroll && el.canvasBody ? el.canvasBody.scrollTop : 0;
+    const prev = preserveScroll && el.canvasBody ? el.canvasBody.scrollTop : 0;
     if (state.tab === "visual") {
       el.canvasBody.innerHTML = renderVisual();
       attachWallLoader();
-    } else if (state.tab === "strategy") el.canvasBody.innerHTML = renderStrategy();
-    else el.canvasBody.innerHTML = renderShortlist();
+    } else if (state.tab === "intent") {
+      el.canvasBody.innerHTML = renderIntent();
+    } else if (state.tab === "report" || state.tab === "strategy") {
+      el.canvasBody.innerHTML = renderReport();
+    } else {
+      el.canvasBody.innerHTML = renderShortlist();
+    }
     if (preserveScroll && el.canvasBody) el.canvasBody.scrollTop = prev;
   }
 
@@ -1432,175 +2158,152 @@
     const input = state.bundle?.l1?.input || {};
     const counts = state.bundle?.l3?.counts || {};
     const cards = state.bundle?.l4_cards || [];
+    const lanes = scopeCounts();
 
     const mainN = state.feedCounts.main || counts.main_wall || 0;
     const pendN = state.feedCounts.pending || counts.pending_review || 0;
-    const shelfN = counts.shelf || 0;
-    const analogyN = counts.analogy || 0;
-    const product = input.product || "青绿茶礼盒";
+    const product = input.product || currentResearch().title;
     const tone = input.culture_tone || "中式现代";
+    const sbN = state.wallItems.reduce(
+      (a, it) => a + ((it.suggested_style_buckets || []).length ? 1 : 0),
+      0
+    );
 
     appendEvent({
       agent: "奎燕设计智能体",
       time: "11:58",
-      tag: "读 Brief",
+      tag: "L1 意图识别",
       tagClass: "stage",
       dot: "ok",
-      html: `<p>先帮你把 Brief 读明白了——${escapeHtml(product)}，走${escapeHtml(tone)}，礼赠+电商都要站得住。</p>
-        <div class="event-note">必须有：${escapeHtml((input.must_have || []).slice(0, 3).join("、") || "开箱记忆点")}
-        <br>必须避开：${escapeHtml((input.must_avoid || []).slice(0, 2).join("、") || "金红喜庆堆砌")}</div>
+      html: `<p>先把分析对象钉死：<strong>${escapeHtml(product)}</strong>，${escapeHtml(tone)}，${escapeHtml(
+        input.channel || "渠道未标注"
+      )}，客群${escapeHtml(input.audience || "未标注")}。对象没钉住，我不敢说搜穷尽了。</p>
+        <div class="event-note">必须有：${escapeHtml((input.must_have || []).slice(0, 3).join("、") || "未标注")}
+        <br>必须避开：${escapeHtml((input.must_avoid || []).slice(0, 2).join("、") || "未标注")}</div>
         <div class="chips-row">
-          <button type="button" class="artifact-link" data-artifact="brief">Brief 笔记</button>
-          <button type="button" class="artifact-link" data-artifact="brief">研究问题清单</button>
+          <button type="button" class="artifact-link" data-artifact="brief">看分析对象</button>
         </div>`,
     });
 
     appendEvent({
       agent: "采集",
       time: "12:00",
-      tag: "摸样本",
+      tag: "L2 搜索穷尽",
       tagClass: "",
       dot: "yellow",
-      html: `<p>主墙已挂上 <strong>${mainN}</strong> 张可用参考 · 待复核 <strong>${pendN}</strong> · 货架 listing ${shelfN} · 类比 ${analogyN}。</p>
+      html: `<p>三路铺开的真实结果：同类 <strong>${lanes.same}</strong> · 不同类 <strong>${lanes.adjacent}</strong> · 跨界 <strong>${lanes.cross}</strong> · 货架 <strong>${lanes.shelf}</strong>（在售切片）。主墙 ${mainN}，另有 ${pendN} 张待复核没进来。</p>
+        <div class="event-note">说句实话：跨界这一路本轮一张没采，不同类只有 ${lanes.adjacent} 张，货架也只是 listing 样。缺就是缺，我不给你补数。</div>
         <div class="chips-row">
-          <button type="button" class="artifact-link" data-artifact="map">采集清单</button>
-          <button type="button" class="artifact-link" data-artifact="map">市场地图草稿</button>
+          <button type="button" class="artifact-link" data-artifact="map">打开竞品版图</button>
         </div>`,
     });
 
     appendEvent({
       agent: "点点",
       time: "12:01",
-      tag: "补证据",
+      tag: "L3 分类拆解",
       tagClass: "consensus",
       dot: "ok",
-      html: `<p>花瓣有图但 CDN 容易裂，已往后排；小红书/Pinterest 已在主墙。淘宝/京东仍是 listing 样，货架深采还没开通。</p>
+      html: `<p>按视觉与风格 / 交互与体验 / 销售与成本三组打标。目前风格桶标到 <strong>${sbN}/${mainN}</strong>，色彩、造型多数还空着，点开一张会看到「未标注」。</p>
+        <div class="event-note">开箱、功能实用、用户反馈、成本这四项本轮没采，检查器里照实写，不用模板话糊过去。</div>
         <div class="chips-row">
-          <button type="button" class="artifact-link" data-artifact="map">待补源备注</button>
+          <button type="button" class="artifact-link" data-artifact="map">点一张看维度</button>
         </div>`,
     });
 
     appendEvent({
-      agent: "点点",
+      agent: "奎燕设计智能体",
       time: "12:02",
-      tag: "达成共识",
-      tagClass: "consensus",
-      dot: "ok",
-      html: `<p>先盯这几桶：<strong>中式典雅/礼赠 · 中式现代 · 地域文旅 · 国际简约</strong>。右侧点一张，我们一起看它和 Brief 合不合。</p>
+      tag: "L4 决策筛选",
+      tagClass: "challenge",
+      dot: "warn",
+      html: `<p>${mainN} 张不该全甩给你。我按 Brief 命中 + 风格桶多样性先收 ${SHORTLIST_MIN}–${SHORTLIST_TARGET} 款，每款写清为什么进来。不合意就拿掉，或者写句批注让我重筛。</p>
         <div class="chips-row">
-          <button type="button" class="artifact-link" data-artifact="map">打开视觉墙</button>
-          <button type="button" class="artifact-link" data-artifact="map">风格桶说明</button>
+          <button type="button" class="artifact-link" data-artifact="shortlist">看短名单</button>
         </div>`,
     });
 
     const cardLines = cards
       .slice(0, 3)
-      .map(
-        (c) =>
-          `<li><strong>${escapeHtml(c.title)}</strong> — ${escapeHtml(c.one_liner || "")}</li>`
-      )
+      .map((c) => `<li><strong>${escapeHtml(c.title)}</strong> — ${escapeHtml(c.one_liner || "")}</li>`)
       .join("");
 
     appendEvent({
       agent: "奎燕设计智能体",
       time: "12:03",
-      tag: "提出质疑",
-      tagClass: "challenge",
-      dot: "warn",
-      html: `<p>礼赠茶很容易掉进金红仿古——我写了三张方向卡，请你「留下 / 先放下」，咱们再往下收。</p>
-        <ul>${cardLines}</ul>
-        <div class="inline-actions">
-          ${cards
-            .slice(0, 2)
-            .map(
-              (c) =>
-                `<button type="button" class="keep" data-card-action="keep" data-card-id="${c.card_id}">留下 ${escapeHtml(c.title.slice(0, 6))}</button>`
-            )
-            .join("")}
-        </div>
+      tag: "L5 结论报告",
+      tagClass: "consensus",
+      dot: "ok",
+      html: `<p>短名单定了，我再按六段写结论：分析对象 → 样本结构 → 分类覆盖 → 入选参考 → 差异化机会 → 风险与下一步。</p>
+        ${cardLines ? `<p>差异化那段挂三个方向假设（示意 · 非完稿）：</p><ul>${cardLines}</ul>` : ""}
         <div class="chips-row">
-          <button type="button" class="artifact-link" data-artifact="strategy">三张策略卡</button>
-          <button type="button" class="artifact-link" data-artifact="strategy">批判笔记</button>
+          <button type="button" class="artifact-link" data-artifact="report">看结论报告</button>
         </div>`,
-    });
-
-    appendEvent({
-      agent: "奎燕设计智能体",
-      time: "12:04",
-      tag: "协作提示",
-      tagClass: "",
-      dot: "yellow",
-      html: `<p>接下来你可以：勾几张视觉进短名单，或直接对策略卡拍板。我在旁边记着。</p>`,
     });
   }
 
   function pushStageEvent(n) {
+    const lanes = scopeCounts();
+    const mainN = state.feedCounts.main || 0;
     const map = {
       1: () =>
         appendEvent({
           agent: "奎燕设计智能体",
           time: "现在",
-          tag: "回到 Brief",
+          tag: "L1 意图识别",
           tagClass: "stage",
           dot: "yellow",
-          html: `<p>咱们再对一遍 Brief。上面研究问题可以改，must-have / must-avoid 也欢迎补充。</p>
-            <div class="chips-row"><button type="button" class="artifact-link" data-artifact="brief">Brief 笔记</button></div>`,
+          html: `<p>回到分析对象这页。品类、渠道、客群、价格带、红线——哪条不对你直接说，我按新的对象再往下走。</p>
+            <div class="chips-row"><button type="button" class="artifact-link" data-artifact="brief">看分析对象</button></div>`,
         }),
       2: () => {
-        setCap("crawler", "working", "正在帮你拆采集任务…");
+        setCap("crawler", "idle", `同类 ${lanes.same} · 不同类 ${lanes.adjacent} · 跨界 ${lanes.cross} · 货架 ${lanes.shelf}`);
         appendEvent({
           agent: "采集",
           time: "现在",
-          tag: "拆采集",
+          tag: "L2 搜索穷尽",
           tagClass: "",
           dot: "yellow",
-          html: `<p>按计划分灵感 / 货架 / 类比三路去摸。摸完会把有图的先挂上墙。</p>
-            <div class="chips-row"><button type="button" class="artifact-link" data-artifact="map">采集清单</button></div>`,
+          html: `<p>三路的账在这儿：同类 ${lanes.same} · 不同类 ${lanes.adjacent} · 跨界 ${lanes.cross} · 货架 ${lanes.shelf}。本版不发起新采集，穷尽还差跨界那一路。</p>
+            <div class="chips-row"><button type="button" class="artifact-link" data-artifact="map">打开竞品版图</button></div>`,
         });
-        setTimeout(
-          () => setCap("crawler", "idle", `帮你同步好了 ${state.bundle?.l3?.counts?.total || 23} 条`),
-          900
-        );
       },
       3: () => {
-        setCap("dotdot", "working", "正在帮你整理视觉主墙");
+        setCap("dotdot", "idle", "维度标签已就绪，缺值写未标注");
         appendEvent({
           agent: "点点",
           time: "现在",
-          tag: "深度探索",
+          tag: "L3 分类拆解",
           tagClass: "consensus",
           dot: "ok",
-          html: `<p>视觉墙按风格桶铺开了。点一张，右侧会告诉你它和 Brief 亲不亲。</p>
-            <div class="chips-row"><button type="button" class="artifact-link" data-artifact="map">打开视觉墙</button></div>`,
+          html: `<p>墙按风格桶铺开了。点一张，右侧按视觉 / 体验 / 商业三组给你看标了什么、什么还没标。</p>
+            <div class="chips-row"><button type="button" class="artifact-link" data-artifact="map">点一张看维度</button></div>`,
         });
-        setTimeout(() => setCap("dotdot", "idle", "桶标签已就绪，等你点选"), 700);
       },
       4: () => {
-        setCap("dotdot", "working", "正在帮你准备策略批判");
         appendEvent({
           agent: "奎燕设计智能体",
           time: "现在",
-          tag: "策略批判",
+          tag: "L4 决策筛选",
           tagClass: "challenge",
           dot: "warn",
-          html: `<p>三张方向卡在右边。「留下」进短名单，「先放下」我会记下原因，方便回头复盘。</p>
-            <div class="chips-row"><button type="button" class="artifact-link" data-artifact="strategy">打开策略卡</button></div>`,
+          html: `<p>短名单在右边，每款都写了为什么进来。拿掉不合意的，或者写句批注（例如「不要金红，多留白」）让我在这 ${mainN} 张里重排。</p>
+            <div class="chips-row"><button type="button" class="artifact-link" data-artifact="shortlist">打开短名单</button></div>`,
         });
-        setTimeout(() => setCap("dotdot", "idle", "等你留下 / 先放下"), 600);
       },
       5: () => {
-        const kept = keptCards();
+        const n = state.shortlistVisual.length;
         appendEvent({
           agent: "奎燕设计智能体",
           time: "现在",
-          tag: "收短名单",
+          tag: "L5 结论报告",
           tagClass: "consensus",
           dot: "ok",
-          html: kept.length
-            ? `<p>短名单里已有：${kept.map((c) => escapeHtml(c.title)).join("、")}。需要的话我可以帮你整理成交付草稿。</p>
-               <div class="chips-row"><button type="button" class="artifact-link" data-artifact="shortlist">短名单草稿</button></div>`
-            : `<p>短名单还空着。先去策略卡留下一两张，或者从视觉墙勾几张进来。</p>
-               <div class="chips-row"><button type="button" class="artifact-link" data-artifact="strategy">回到策略卡</button></div>`,
+          html: n
+            ? `<p>按 ${n} 款短名单出了六段结论。差异化那段是方向假设，不是完稿；跨界 0、用户反馈未采这些缺口，我都写在最后一段了。</p>
+               <div class="chips-row"><button type="button" class="artifact-link" data-artifact="report">看结论报告</button></div>`
+            : `<p>短名单空着，这份只能算覆盖缺口报告，别当选型结论看。</p>
+               <div class="chips-row"><button type="button" class="artifact-link" data-artifact="shortlist">先去收短名单</button></div>`,
         });
       },
     };
@@ -1616,16 +2319,20 @@
     });
     const card = state.bundle?.l4_cards?.find((c) => c.card_id === cardId);
     const title = card?.title || cardId;
-    toast(decision === "keep" ? `留下了「${title}」· 已放进短名单` : `先放下「${title}」· 以后还能翻回来`);
+    toast(
+      decision === "keep"
+        ? `留下方向假设「${title}」· 记在结论报告里`
+        : `先放下「${title}」· 以后还能翻回来`
+    );
     if (decision === "keep") {
       appendEvent({
         agent: "奎燕设计智能体",
         time: "现在",
-        tag: "达成共识",
+        tag: "L5 方向假设",
         tagClass: "consensus",
         dot: "ok",
-        html: `<p>留下了「${escapeHtml(title)}」。短名单页随时可以再调。</p>
-          <div class="chips-row"><button type="button" class="artifact-link" data-artifact="shortlist">看看短名单</button></div>`,
+        html: `<p>留下方向假设「${escapeHtml(title)}」。它只是结论报告里的一条假设，还得靠短名单和后面补的货架/反馈数据顶住。</p>
+          <div class="chips-row"><button type="button" class="artifact-link" data-artifact="report">回结论报告</button></div>`,
       });
     } else {
       appendEvent({
@@ -1640,16 +2347,18 @@
   }
 
   function handleArtifact(kind) {
-    if (kind === "brief") setStage(1, { appendEvent: false });
-    else if (kind === "map") {
+    if (kind === "brief" || kind === "intent") {
+      setStage(1, { appendEvent: false });
+      switchTab("intent", { fromStage: true });
+    } else if (kind === "map" || kind === "visual") {
       setStage(3, { appendEvent: false });
       switchTab("visual", { fromStage: true });
-    } else if (kind === "strategy") {
-      setStage(4, { appendEvent: false });
-      switchTab("strategy", { fromStage: true });
     } else if (kind === "shortlist") {
-      setStage(5, { appendEvent: false });
+      setStage(4, { appendEvent: false });
       switchTab("shortlist", { fromStage: true });
+    } else if (kind === "report" || kind === "strategy") {
+      setStage(5, { appendEvent: false });
+      switchTab("report", { fromStage: true });
     }
   }
 
@@ -1668,6 +2377,7 @@
     const lower = t.toLowerCase();
     const mainN = state.feedCounts.main || 0;
     const pendN = state.feedCounts.pending || 0;
+    const lanes = scopeCounts();
     const cards = state.bundle?.l4_cards || [];
     const rec = (state.bundle?.l3?.ai_recommended_buckets || [])
       .map((b) => b.name_zh || b.id)
@@ -1676,68 +2386,72 @@
       .join(" / ");
     const cardNames = cards.map((c) => c.title).filter(Boolean).join(" / ");
 
-    if (/市场地图|视觉|探索|看墙|地图/.test(t)) {
-      setCap("orchestrator", "working", "正在帮你汇总视觉墙");
-      setCap("dotdot", "working", "按风格桶重新摆墙");
-      setTimeout(() => {
-        setCap("orchestrator", "online", "视觉墙刷新好了，等你点选");
-        setCap("dotdot", "idle", "桶标签已就绪");
-        setStage(3);
-        appendEvent({
-          agent: "奎燕设计智能体",
-          time: "现在",
-          tag: "市场地图",
-          tagClass: "consensus",
-          dot: "ok",
-          html: `<p>主墙 <strong>${mainN}</strong> · 待复核 ${pendN}。右侧可切「主品类 / 类比 / 货架」。${
-            rec ? `先盯：${escapeHtml(rec)}。` : ""
-          }</p>
-          <div class="chips-row"><button type="button" class="artifact-link" data-artifact="map">打开视觉墙</button></div>`,
-        });
-      }, 400);
+    if (/重筛|重排|按批注/.test(t)) {
+      state.houComment = t;
+      setStage(4, { appendEvent: false });
+      switchTab("shortlist", { fromStage: true });
+      rescreenByComment();
       return;
     }
-    if (/策略|三张|生成.*卡|批判/.test(t)) {
-      setCap("dotdot", "working", "正在帮你写 / 刷新策略卡");
-      setTimeout(() => {
-        setCap("dotdot", "idle", cards.length ? "等你留下 / 先放下" : "这轮还没有方向卡");
-        setStage(4);
-        appendEvent({
-          agent: "奎燕设计智能体",
-          time: "现在",
-          tag: "策略卡",
-          tagClass: cards.length ? "challenge" : "",
-          dot: cards.length ? "warn" : "ok",
-          html: cards.length
-            ? `<p>三张方向卡（示意·非完稿）：<strong>${escapeHtml(cardNames)}</strong>。留下或先放下即可进短名单。</p>`
-            : `<p>这轮研究还没写出方向卡。切回青绿茶礼盒可以看到三张示意卡。</p>`,
-        });
-      }, 450);
+    if (/brief|意图|分析对象|听清/i.test(t)) {
+      setStage(1);
+      switchTab("intent", { fromStage: true });
+      return;
+    }
+    if (/版图|视觉|看墙|地图|穷尽|搜索|跨界|不同类|货架/.test(t)) {
+      setStage(3);
+      switchTab("visual", { fromStage: true });
+      appendEvent({
+        agent: "奎燕设计智能体",
+        time: "现在",
+        tag: "L2 · L3",
+        tagClass: "consensus",
+        dot: "ok",
+        html: `<p>版图在右边：同类 ${lanes.same} · 不同类 ${lanes.adjacent} · 跨界 ${lanes.cross} · 货架 ${lanes.shelf}，主墙共 ${mainN}，待复核 ${pendN} 没算进来。${
+          rec ? `先盯这几桶：${escapeHtml(rec)}。` : ""
+        }</p>
+        ${lanes.cross ? "" : `<div class="event-note">跨界那个 chip 点进去是空的——本轮确实一张没采，不编造。</div>`}
+        <div class="chips-row"><button type="button" class="artifact-link" data-artifact="map">打开竞品版图</button></div>`,
+      });
+      return;
+    }
+    if (/筛选|短名单|选参考|收几张|挑/.test(t)) {
+      setStage(4);
+      switchTab("shortlist", { fromStage: true });
+      return;
+    }
+    if (/报告|结论|差异化|机会|下一步/.test(t)) {
+      setStage(5);
+      switchTab("report", { fromStage: true });
+      return;
+    }
+    if (/方向|策略|三张|卡/.test(t)) {
+      setStage(5);
+      switchTab("report", { fromStage: true });
+      appendEvent({
+        agent: "奎燕设计智能体",
+        time: "现在",
+        tag: "方向假设",
+        tagClass: cards.length ? "challenge" : "",
+        dot: cards.length ? "warn" : "ok",
+        html: cards.length
+          ? `<p>方向卡挂在结论报告第 5 段「差异化机会」里：<strong>${escapeHtml(cardNames)}</strong>。都是方向假设 · 非完稿，先看前面的样本结构再决定留哪张。</p>`
+          : `<p>这轮还没有方向假设卡；青绿茶礼盒那轮有三张。</p>`,
+      });
       return;
     }
     if (/crawler|采集|同步/.test(lower) || /同步|采集/.test(t)) {
-      setCap("crawler", "working", "正在帮你核对包装参考…");
-      setTimeout(() => {
-        setCap(
-          "crawler",
-          "idle",
-          `主墙 ${mainN} · 待复核 ${pendN}`
-        );
-        setStage(2);
-        switchTab("visual", { fromStage: true });
-        appendEvent({
-          agent: "采集",
-          time: "现在",
-          tag: "同步",
-          tagClass: "consensus",
-          dot: "ok",
-          html: `<p>本版不发起新采集。已落地主墙 ${mainN} · 待复核 ${pendN}。货架深采仍待开通，不假装连上了。</p>`,
-        });
-      }, 600);
-      return;
-    }
-    if (/短名单|交付|输出/.test(t)) {
-      setStage(5);
+      setCap("crawler", "idle", `主墙 ${mainN} · 待复核 ${pendN}`);
+      setStage(2);
+      switchTab("visual", { fromStage: true });
+      appendEvent({
+        agent: "采集",
+        time: "现在",
+        tag: "L2 搜索穷尽",
+        tagClass: "consensus",
+        dot: "ok",
+        html: `<p>本版不发起新采集。已落地主墙 ${mainN} · 待复核 ${pendN}；跨界 ${lanes.cross}、货架 ${lanes.shelf} 都还是缺口，我不假装连上了。</p>`,
+      });
       return;
     }
     appendEvent({
@@ -1746,7 +2460,7 @@
       tag: "回复",
       tagClass: "consensus",
       dot: "ok",
-      html: `<p>收到。可以说「看市场地图」「看策略卡」或「输出短名单」——我按墙上的 ${mainN} 张参考跟你走。</p>`,
+      html: `<p>收到。可以说「看 Brief」「看版图」「帮我筛选」「出结论报告」，也可以直接写批注让我重筛——我只在墙上这 ${mainN} 张里给你排。</p>`,
     });
   }
 
@@ -1757,6 +2471,11 @@
     state.activeResearchId = id;
     state.selectedIds.clear();
     state.shortlistVisual = [];
+    state.shortlistReasons = {};
+    state.shortlistRemoved = new Set();
+    state.shortlistTouched = false;
+    state.shortlistAuto = false;
+    state.houComment = "";
     state.decisions = {};
     state.activeCat = "all";
     state.activeSource = null;
@@ -1803,14 +2522,16 @@
         if (!state._greenBundle && state.bundle?.l4_cards?.length) {
           state._greenBundle = state.bundle;
         }
+        // 白酒/滋补只有落地墙：L1 除了品名都还没填，L4/L5 一律不借用茶礼那轮的卡
         state.bundle = {
           bucket_id_to_zh: (state.bundle && state.bundle.bucket_id_to_zh) || {},
           l1: {
             brief_id: r.id,
             raw_brief: r.question,
-            input: { product: r.title, culture_tone: "中式现代", channel: "礼赠 + 电商" },
+            input: { product: r.title.replace(/竞品调研|调研|开箱记忆点/g, "").trim() || r.title },
+            intent: {},
           },
-          l3: { counts: {}, ai_recommended_buckets: [], l1_summary: { tone: "中式现代", channel: "礼赠+电商" } },
+          l3: { counts: {}, ai_recommended_buckets: [], l1_summary: {} },
           l4_cards: [],
         };
       }
@@ -1827,8 +2548,8 @@
         tagClass: "stage",
         dot: "ok",
         html: r.onlyBriefDefault
-          ? `<p>已切回青绿茶礼盒。主墙 <strong>${state.feedCounts.main}</strong> · 待复核 <strong>${state.feedCounts.pending}</strong>。</p>`
-          : `<p>已打开「${escapeHtml(r.title)}」落地主墙 <strong>${state.feedCounts.main}</strong> 张。这轮还没有策略卡；贴 brief 筛选已关掉，避免用茶礼规则误杀。</p>`,
+          ? `<p>已切回青绿茶礼盒。主墙 <strong>${state.feedCounts.main}</strong> · 待复核 <strong>${state.feedCounts.pending}</strong>，短名单和批注都已清空重来。</p>`
+          : `<p>已打开「${escapeHtml(r.title)}」落地主墙 <strong>${state.feedCounts.main}</strong> 张。这轮只有墙：L1 除品名外未填，也没有方向假设卡——茶礼那轮的三张卡不会跟过来。贴 brief 筛选已关掉，避免用茶礼规则误杀。</p>`,
       });
     } catch (err) {
       console.warn(err);
@@ -1939,7 +2660,39 @@
       });
     }
 
+    el.canvasBody.addEventListener("input", (e) => {
+      const box = e.target.closest("#houCommentBox");
+      if (box) state.houComment = box.value;
+    });
+
     el.canvasBody.addEventListener("click", (e) => {
+      const slAction = e.target.closest("[data-shortlist-action]");
+      if (slAction) {
+        const act = slAction.dataset.shortlistAction;
+        if (act === "rescreen") rescreenByComment();
+        else if (act === "refill") {
+          state.shortlistRemoved = new Set();
+          state.shortlistTouched = false;
+          state.shortlistVisual = [];
+          state.shortlistReasons = {};
+          ensureShortlist();
+          renderCanvas();
+          toast(`又收了 ${state.shortlistVisual.length} 款 · 还是那 452 张墙`);
+        }
+        return;
+      }
+      const remove = e.target.closest("[data-shortlist-remove]");
+      if (remove) {
+        const id = remove.dataset.shortlistRemove;
+        const it = findWallItem(id);
+        state.shortlistRemoved.add(id);
+        state.shortlistTouched = true;
+        state.shortlistVisual = state.shortlistVisual.filter((x) => x.id !== id);
+        delete state.shortlistReasons[id];
+        renderCanvas({ preserveScroll: true });
+        toast(`拿掉了「${humanTitle(it?.title || id).slice(0, 12)}」· 重筛时不会再来`);
+        return;
+      }
       const rec = e.target.closest("[data-rec-bucket]");
       if (rec) {
         const name = rec.dataset.recBucket;
@@ -2001,26 +2754,30 @@
         return;
       }
       if (act === "shortlist") {
+        ensureShortlist();
         const seen = new Set(state.shortlistVisual.map((x) => x.id));
         let added = 0;
         ids.forEach((id) => {
           const it = findWallItem(id);
           if (!it || it.pending || it.qc_status === "pending_review") return;
           if (seen.has(it.id)) return;
+          state.shortlistRemoved.delete(it.id);
           state.shortlistVisual.push(it);
+          state.shortlistReasons[it.id] = reasonFor(it).concat("你自己从墙上勾进来的");
           seen.add(it.id);
           added += 1;
         });
         if (!added) toast(n ? "这些已在短名单里了（或还不能收）" : "先勾几张再收");
         else {
+          state.shortlistTouched = true;
           toast(`已收进短名单 ${added} 张 · 共 ${state.shortlistVisual.length}`);
           appendEvent({
             agent: "奎燕设计智能体",
             time: "现在",
-            tag: "达成共识",
+            tag: "L4 决策筛选",
             tagClass: "consensus",
             dot: "ok",
-            html: `<p>视觉墙勾的 ${added} 张已收进短名单。随时去「短名单」页看看。</p>
+            html: `<p>你从墙上勾的 ${added} 张已进短名单，现在一共 ${state.shortlistVisual.length} 款。理由那栏我按字段补好了，写句批注还能再重排。</p>
               <div class="chips-row"><button type="button" class="artifact-link" data-artifact="shortlist">看看短名单</button></div>`,
           });
         }
@@ -2042,9 +2799,7 @@
       const btn = e.target.closest("[data-card-action]");
       if (btn) {
         setDecision(btn.dataset.cardId, btn.dataset.cardAction);
-        switchTab(btn.dataset.cardAction === "keep" ? "shortlist" : "strategy", {
-          fromStage: true,
-        });
+        switchTab("report", { fromStage: true });
       }
     });
 
@@ -2115,9 +2870,15 @@
         toast("已显示全部参考");
         renderCanvas();
         updateWallCountBar();
-      } else if (act === "ask-strategy" || act === "open-strategy") {
+      } else if (act === "open-intent") {
+        setStage(1);
+        switchTab("intent", { fromStage: true });
+      } else if (act === "open-shortlist") {
         setStage(4);
-        switchTab("strategy", { fromStage: true });
+        switchTab("shortlist", { fromStage: true });
+      } else if (act === "open-report" || act === "ask-strategy" || act === "open-strategy") {
+        setStage(5);
+        switchTab("report", { fromStage: true });
       }
     });
   }
@@ -2146,9 +2907,12 @@
     updateQCount();
     updateFilterRow();
     if (el.canvasBody) {
-      el.canvasBody.innerHTML = `<div class="empty"><div class="slogan">墙还在长</div><p class="hint">正在把和 brief 更贴的参考搬上来…</p><button type="button" class="empty-cta" data-empty-action="open-strategy">先去看策略卡</button></div>`;
+      el.canvasBody.innerHTML = `<div class="empty"><div class="slogan">墙还在长</div><p class="hint">正在把和 brief 更贴的参考搬上来…</p><button type="button" class="empty-cta" data-empty-action="open-intent">先看这次要搞清的事</button></div>`;
     }
     try {
+      // 0) L3 维度合同：检查器与 L5 覆盖表都靠它，缺了就只能写未标注
+      await loadClassifyDims();
+
       // 1) Live feeds first for the visual wall
       let feedsOk = false;
       try {
@@ -2165,7 +2929,7 @@
       } catch (bundleErr) {
         console.warn("product bundle", bundleErr);
         state.bundle = { l4_cards: [], l1: {}, l3: { counts: {} } };
-        toast("策略卡暂时读不到，先看主墙");
+        toast("Brief 与方向假设暂时读不到，先看主墙");
       }
       state._greenBundle = state.bundle;
       (state.bundle.l4_cards || []).forEach((c) => {
