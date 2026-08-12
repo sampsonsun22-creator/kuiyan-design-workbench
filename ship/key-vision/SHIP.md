@@ -10,4 +10,4 @@
 python3 -m http.server 8767 --bind 0.0.0.0
 ```
 
-部署：整目录静态托管（见 `vercel.json`）。
+部署：将本目录同步到 GitHub 仓库 `key-vision` 根目录后，Vercel 会更新 https://key-vision.vercel.app/ 。本工作台仓库因权限无法直接 push 到 `key-vision`。
