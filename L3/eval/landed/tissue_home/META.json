@@ -1,0 +1,21 @@
+{
+  "brief_id": "tissue_home",
+  "name": "纸品日清",
+  "domain": "paper_tissue",
+  "summary": "抽纸/湿巾/日清纸品包装",
+  "brief_text": "抽纸/湿巾/日清纸品包装",
+  "main_wall": 2,
+  "pending_review": 2953,
+  "pool_size": 2955,
+  "buckets": {
+    "soft_pack_only": 2038,
+    "kill_noise": 908,
+    "keep_core": 2,
+    "kill_unrelated": 7
+  },
+  "rule_version": "brief_relevance_v1_strict",
+  "gate": "brief_relevance_v1",
+  "shell_write": false,
+  "generated_at": "2026-08-12T14:16:53Z",
+  "path": "L3/eval/landed/tissue_home"
+}

@@ -1,0 +1,17 @@
+{
+  "brief_id": "brief-beauty",
+  "name": "美妆个护",
+  "domain": "beauty",
+  "main_wall": 221,
+  "pending_review": 2733,
+  "buckets": {
+    "soft_pack_only": 1797,
+    "kill_noise": 929,
+    "keep_core": 220,
+    "keep_analogy": 1,
+    "kill_unrelated": 7
+  },
+  "shell_default": false,
+  "updated_at": "2026-08-12T14:17:20Z",
+  "directed_new": 0
+}

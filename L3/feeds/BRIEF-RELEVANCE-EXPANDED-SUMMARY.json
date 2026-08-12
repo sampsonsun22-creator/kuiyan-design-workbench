@@ -1,0 +1,21 @@
+{
+  "generated_at": "2026-08-12T15:20:19Z",
+  "shell_untouched": true,
+  "shell_main": 452,
+  "expanded_main": 741,
+  "expanded_pending": 2680,
+  "contract_ok": true,
+  "tea_directed_new": 0,
+  "thin_directed_new": {
+    "brief-tissue-home": 0,
+    "brief-dairy-gift": 0,
+    "brief-tonic-gift": 0
+  },
+  "skip_collect": true,
+  "publish": false,
+  "base": "unlock",
+  "expanded_paths": {
+    "main": "/workspace/kuiyan-design-workbench/L3/feeds/l2_main_wall_brief_relevance_expanded_v20260812T152018.jsonl",
+    "pending": "/workspace/kuiyan-design-workbench/L3/feeds/l2_pending_review_brief_relevance_expanded_v20260812T152018.jsonl"
+  }
+}

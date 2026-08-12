@@ -1,0 +1,52 @@
+{
+  "id": "packagingoftheworld:you-ming-tang-tea-gift-box",
+  "image_url": "https://packagingoftheworld.com/wp-content/uploads/2023/12/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20231229095315.png",
+  "page_url": "https://packagingoftheworld.com/2023/12/you-ming-tang-tea-gift-box-packaging.html",
+  "thumbnail_url": "https://packagingoftheworld.com/wp-content/uploads/2023/12/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20231226142922.png",
+  "source": "packagingoftheworld",
+  "source_type": "inspiration",
+  "title": "You Ming Tang Tea Gift Box",
+  "author_or_brand": "You Ming Tang",
+  "category_domain_id": "tea_beverage",
+  "category_label": "茶与即饮/新茶饮相关包装",
+  "is_on_market": "unknown",
+  "market_region": [
+    "CN"
+  ],
+  "raw_tags": [
+    "tea",
+    "gift box",
+    "Chinese design",
+    "symmetrical"
+  ],
+  "suggested_style_buckets": [
+    "chinese_ceremonial",
+    "chinese_modern"
+  ],
+  "structure_tags": [
+    "box_type:gift_box",
+    "open_structure:symmetrical_lid",
+    "material:paperboard"
+  ],
+  "info_hierarchy_tags": [
+    "ritual_gift",
+    "brand_first"
+  ],
+  "color_roles": [
+    {
+      "role": "primary",
+      "value": "deep_red"
+    },
+    {
+      "role": "accent",
+      "value": "gold"
+    }
+  ],
+  "analogy_from": null,
+  "query_used": "green tea packaging design gift box site:packagingoftheworld.com",
+  "collected_at": "2026-08-12T11:51:43Z",
+  "license_or_rights_note": "Public gallery page; attribution required",
+  "extra": {
+    "style_bucket_namespace": "style_buckets_v1"
+  }
+}

@@ -1,0 +1,468 @@
+{
+  "generated_at": "2026-08-12T14:10:12Z",
+  "gate": "brief_relevance_v1_generic",
+  "labeling": "silver=core|analogy terms + packaging cue (heuristic until human gold)",
+  "pool_paths": [
+    "ui-shell/data/l2_main_wall.jsonl",
+    "ui-shell/data/l2_pending_review.jsonl",
+    "demo/e2e-green-tea-gift/l2-from-pipeline-all.jsonl"
+  ],
+  "pool_size": 2948,
+  "briefs_path": "L3/fixtures/brief_matrix_v1.json",
+  "shell_write": false,
+  "results": [
+    {
+      "brief_id": "brief-green-tea-gift",
+      "name": "青绿茶礼盒",
+      "domain": "tea_beverage",
+      "summary": "中式现代青绿茶礼包装",
+      "pool_size": 2948,
+      "main_wall": 285,
+      "pending_review": 2663,
+      "buckets": {
+        "keep_core": 281,
+        "soft_pack_only": 1901,
+        "keep_analogy": 4,
+        "kill_noise": 756,
+        "kill_unrelated": 6
+      },
+      "reasons": {
+        "brief_low_relevance": 1901,
+        "brief_offtopic": 756,
+        "brief_unrelated": 6
+      },
+      "silver_positive": 285,
+      "precision_at_main": 1.0,
+      "recall_silver": 1.0,
+      "false_kill_rate": 0.0,
+      "sample_main_ids": [
+        "huaban:5658928823",
+        "pinterest:26458716564243319",
+        "behance:253704105",
+        "behance:252654541",
+        "huaban:6275837016",
+        "huaban:6889470086",
+        "pinterest:30610472462729830",
+        "huaban:6335837832",
+        "pinterest:492649951774529",
+        "pinterest:4595360603604924416",
+        "behance:251095885",
+        "xiaohongshu:6a753410000000003301d737",
+        "huaban:6914939965",
+        "behance:254110269",
+        "huaban:6618230900",
+        "pinterest:AQHGibWQQznBlntd6mQLqY90_f0oG39-GL7qjGqeFdLmwLWLGV9njxR38nH6rS4mfxVV5KrRAKSZUdY5BXaYnZ4",
+        "huaban:6170753523",
+        "huaban:6200093097",
+        "behance:249806985",
+        "huaban:6044514002"
+      ],
+      "sample_false_kill_ids": []
+    },
+    {
+      "brief_id": "brief-dairy-gift",
+      "name": "乳品礼盒",
+      "domain": "dairy",
+      "summary": "乳品/酸奶/奶粉礼盒包装",
+      "pool_size": 2948,
+      "main_wall": 22,
+      "pending_review": 2926,
+      "buckets": {
+        "soft_pack_only": 2004,
+        "kill_noise": 915,
+        "keep_core": 22,
+        "kill_unrelated": 7
+      },
+      "reasons": {
+        "brief_low_relevance": 2004,
+        "brief_offtopic": 915,
+        "brief_unrelated": 7
+      },
+      "silver_positive": 22,
+      "precision_at_main": 1.0,
+      "recall_silver": 1.0,
+      "false_kill_rate": 0.0,
+      "sample_main_ids": [
+        "xiaohongshu:6a633c55000000002201ba7e",
+        "xiaohongshu:6a7c4a0f0000000035017b08",
+        "huaban:6268041595",
+        "xiaohongshu:69fc0590000000002301d9f2",
+        "behance:253987367",
+        "huaban:3661539474",
+        "huaban:6877040148",
+        "xiaohongshu:6a734dde000000002402e0e9",
+        "huaban:5681620043",
+        "xiaohongshu:6a7bd33200000000290330dd",
+        "xiaohongshu:6a7a911100000000250058b9",
+        "behance:252528513",
+        "xiaohongshu:67e63b31000000001a004406",
+        "behance:235351837",
+        "behance:254164269",
+        "pinterest:317996423712563735",
+        "xiaohongshu:68231bca000000000f0387a1",
+        "xiaohongshu:6a7c2f260000000028032391",
+        "xiaohongshu:681d83dd00000000230126e5",
+        "behance:250324403"
+      ],
+      "sample_false_kill_ids": []
+    },
+    {
+      "brief_id": "brief-alcohol-gift",
+      "name": "酒类礼盒",
+      "domain": "alcohol",
+      "summary": "白酒/黄酒/葡萄酒礼盒包装",
+      "pool_size": 2948,
+      "main_wall": 212,
+      "pending_review": 2736,
+      "buckets": {
+        "soft_pack_only": 2011,
+        "keep_core": 193,
+        "keep_analogy": 19,
+        "kill_noise": 718,
+        "kill_unrelated": 7
+      },
+      "reasons": {
+        "brief_low_relevance": 2011,
+        "brief_offtopic": 718,
+        "brief_unrelated": 7
+      },
+      "silver_positive": 213,
+      "precision_at_main": 1.0,
+      "recall_silver": 0.9953,
+      "false_kill_rate": 0.0047,
+      "sample_main_ids": [
+        "behance:251862689",
+        "pinterest:1147221705057311816",
+        "behance:254028515",
+        "pinterest:777504323201632455",
+        "huaban:3524949512",
+        "behance:246585973",
+        "zcool:ZNjI3ODQ4MTI-lvyecachi",
+        "huaban:4999938920",
+        "behance:252894543",
+        "huaban:4999928980",
+        "behance:252879815",
+        "behance:253856163",
+        "huaban:5769365146",
+        "behance:250849669",
+        "pinterest:208924870210232779",
+        "behance:251095885-taiwan-tea-packaging",
+        "behance:144767149",
+        "pinterest:914862421912462",
+        "behance:254052563",
+        "xiaohongshu:6a6c8b410000000005023d8e"
+      ],
+      "sample_false_kill_ids": [
+        "huaban:6787483571"
+      ]
+    },
+    {
+      "brief_id": "brief-pet-food",
+      "name": "宠物食品",
+      "domain": "pet",
+      "summary": "猫狗粮/宠物零食包装",
+      "pool_size": 2948,
+      "main_wall": 56,
+      "pending_review": 2892,
+      "buckets": {
+        "soft_pack_only": 1994,
+        "keep_core": 51,
+        "kill_noise": 891,
+        "keep_analogy": 5,
+        "kill_unrelated": 7
+      },
+      "reasons": {
+        "brief_low_relevance": 1994,
+        "brief_offtopic": 891,
+        "brief_unrelated": 7
+      },
+      "silver_positive": 57,
+      "precision_at_main": 1.0,
+      "recall_silver": 0.9825,
+      "false_kill_rate": 0.0175,
+      "sample_main_ids": [
+        "xiaohongshu:6a5d8e8f0000000004028cfc",
+        "behance:52651799",
+        "behance:253625581",
+        "behance:251590149",
+        "xiaohongshu:6a713eef0000000021020b4e",
+        "xiaohongshu:6a6ffec90000000022030b2b",
+        "huaban:6529416622",
+        "xiaohongshu:6a33df290000000006031415",
+        "huaban:6437648404",
+        "huaban:6824123108",
+        "xiaohongshu:684026c5000000002100d9dd",
+        "xiaohongshu:692e5a22000000000d038c9b",
+        "xiaohongshu:693eb517000000001b031738",
+        "huaban:6383105516",
+        "xiaohongshu:6a3ce1ea000000001502556b",
+        "xiaohongshu:69492e42000000001e03bec9",
+        "behance:227715519",
+        "behance:253627777",
+        "xiaohongshu:68cd2f78000000000b010c46",
+        "xiaohongshu:6a55475d000000001101002a"
+      ],
+      "sample_false_kill_ids": [
+        "xiaohongshu:6a6add71000000002201ac8e"
+      ]
+    },
+    {
+      "brief_id": "brief-tissue-home",
+      "name": "纸品日清",
+      "domain": "paper_tissue",
+      "summary": "抽纸/湿巾/日清纸品包装",
+      "pool_size": 2948,
+      "main_wall": 2,
+      "pending_review": 2946,
+      "buckets": {
+        "soft_pack_only": 2047,
+        "kill_noise": 892,
+        "keep_core": 2,
+        "kill_unrelated": 7
+      },
+      "reasons": {
+        "brief_low_relevance": 2047,
+        "brief_offtopic": 892,
+        "brief_unrelated": 7
+      },
+      "silver_positive": 2,
+      "precision_at_main": 1.0,
+      "recall_silver": 1.0,
+      "false_kill_rate": 0.0,
+      "sample_main_ids": [
+        "xiaohongshu:6a61e752000000000f014edf",
+        "xiaohongshu:699ebd0b000000002801fc07"
+      ],
+      "sample_false_kill_ids": []
+    },
+    {
+      "brief_id": "brief-tonic-gift",
+      "name": "滋补礼盒",
+      "domain": "tonic",
+      "summary": "阿胶/人参/滋补礼盒包装",
+      "pool_size": 2948,
+      "main_wall": 26,
+      "pending_review": 2922,
+      "buckets": {
+        "soft_pack_only": 2194,
+        "keep_analogy": 19,
+        "keep_core": 7,
+        "kill_noise": 721,
+        "kill_unrelated": 7
+      },
+      "reasons": {
+        "brief_low_relevance": 2194,
+        "brief_offtopic": 721,
+        "brief_unrelated": 7
+      },
+      "silver_positive": 27,
+      "precision_at_main": 1.0,
+      "recall_silver": 0.963,
+      "false_kill_rate": 0.037,
+      "sample_main_ids": [
+        "packagingoftheworld:taitea-tea-box",
+        "jd:listing-longjing-gift-empty-box-xinzongshi",
+        "jd:listing-baisha-green-tea-gift",
+        "firecrawl:behance:11-senseasia-tea-packaging",
+        "behance:172938413-qianshan-cui-green-tea-gift",
+        "huaban:6863374972",
+        "huaban:6627251761",
+        "xiaohongshu:6a7b2b99000000002c001b33",
+        "huaban:7060183356",
+        "huaban:7122198407",
+        "huaban:6969606544",
+        "zcool:ZNzA2MjU2ODA-jipusen-new-chinese-tea",
+        "huaban:6801551179",
+        "huaban:6084958305",
+        "jd:listing-anjibaicha-gift-flagship",
+        "behance:171967461-tenren-gift-box",
+        "behance:251095885-taiwan-tea-packaging",
+        "huaban:6995221915",
+        "packagingoftheworld:you-ming-tang-tea-gift-box",
+        "behance:216540701-theory-of-tea"
+      ],
+      "sample_false_kill_ids": [
+        "huaban:6787483571"
+      ]
+    },
+    {
+      "brief_id": "brief-snacks",
+      "name": "零食烘焙",
+      "domain": "snacks_bakery",
+      "summary": "休闲零食/烘焙包装",
+      "pool_size": 2948,
+      "main_wall": 55,
+      "pending_review": 2893,
+      "buckets": {
+        "soft_pack_only": 2088,
+        "keep_core": 55,
+        "kill_noise": 799,
+        "kill_unrelated": 6
+      },
+      "reasons": {
+        "brief_low_relevance": 2088,
+        "brief_offtopic": 799,
+        "brief_unrelated": 6
+      },
+      "silver_positive": 55,
+      "precision_at_main": 1.0,
+      "recall_silver": 1.0,
+      "false_kill_rate": 0.0,
+      "sample_main_ids": [
+        "xiaohongshu:6a6093290000000014007647",
+        "pinterest:603904631328688105",
+        "behance:221084497",
+        "huaban:6875825182",
+        "behance:252947535",
+        "behance:248576699",
+        "behance:252273477",
+        "pinterest:2674081026493929",
+        "pinterest:1110981801856216525",
+        "huaban:7187601125",
+        "huaban:6662912763",
+        "huaban:6824123108",
+        "pinterest:967148088749604102",
+        "huaban:5723780072",
+        "huaban:5302312507",
+        "behance:254112281",
+        "behance:245942603",
+        "behance:254162485",
+        "behance:250813975",
+        "behance:246113293"
+      ],
+      "sample_false_kill_ids": []
+    },
+    {
+      "brief_id": "brief-beauty",
+      "name": "美妆个护",
+      "domain": "beauty",
+      "summary": "美妆/护肤包装",
+      "pool_size": 2948,
+      "main_wall": 221,
+      "pending_review": 2727,
+      "buckets": {
+        "soft_pack_only": 1804,
+        "kill_noise": 916,
+        "keep_core": 220,
+        "keep_analogy": 1,
+        "kill_unrelated": 7
+      },
+      "reasons": {
+        "brief_low_relevance": 1804,
+        "brief_offtopic": 916,
+        "brief_unrelated": 7
+      },
+      "silver_positive": 221,
+      "precision_at_main": 1.0,
+      "recall_silver": 1.0,
+      "false_kill_rate": 0.0,
+      "sample_main_ids": [
+        "xiaohongshu:6847f68e0000000012002037",
+        "behance:254053137",
+        "behance:253955707",
+        "behance:235159937",
+        "behance:248055481",
+        "pinterest:914862418178207",
+        "huaban:5681620043",
+        "huaban:6282972520",
+        "behance:254142933",
+        "pinterest:4598597530586312704",
+        "huaban:6744056470",
+        "pinterest:1082271354228995728",
+        "behance:254109611",
+        "behance:253981447",
+        "pinterest:109493834685482834",
+        "pinterest:16466354885198799",
+        "huaban:7130295591",
+        "behance:254024237",
+        "huaban:6974634953",
+        "behance:247027979"
+      ],
+      "sample_false_kill_ids": []
+    }
+  ],
+  "table_md": "| brief | domain | main | pending | precision@main | false_kill | silver |\n|---|---|---:|---:|---:|---:|---:|\n| 青绿茶礼盒 | tea_beverage | 285 | 2663 | 100.00% | 0.00% | 285 |\n| 乳品礼盒 | dairy | 22 | 2926 | 100.00% | 0.00% | 22 |\n| 酒类礼盒 | alcohol | 212 | 2736 | 100.00% | 0.47% | 213 |\n| 宠物食品 | pet | 56 | 2892 | 100.00% | 1.75% | 57 |\n| 纸品日清 | paper_tissue | 2 | 2946 | 100.00% | 0.00% | 2 |\n| 滋补礼盒 | tonic | 26 | 2922 | 100.00% | 3.70% | 27 |\n| 零食烘焙 | snacks_bakery | 55 | 2893 | 100.00% | 0.00% | 55 |\n| 美妆个护 | beauty | 221 | 2727 | 100.00% | 0.00% | 221 |",
+  "caveat": "precision@main / false_kill 使用与闸门同构的 silver 关键词启发式，数值偏乐观；请用 cross_brief_pollution 与后续人工金标校准。今日可出表。",
+  "cross_brief_pollution_of_main": {
+    "brief-green-tea-gift": {
+      "乳品礼盒": 0.007,
+      "酒类礼盒": 0.0842,
+      "宠物食品": 0.007,
+      "纸品日清": 0.0,
+      "滋补礼盒": 0.0772,
+      "零食烘焙": 0.007,
+      "美妆个护": 0.0035
+    },
+    "brief-dairy-gift": {
+      "青绿茶礼盒": 0.0909,
+      "酒类礼盒": 0.0455,
+      "宠物食品": 0.0,
+      "纸品日清": 0.0,
+      "滋补礼盒": 0.0,
+      "零食烘焙": 0.0,
+      "美妆个护": 0.0909
+    },
+    "brief-alcohol-gift": {
+      "青绿茶礼盒": 0.1132,
+      "乳品礼盒": 0.0047,
+      "宠物食品": 0.0047,
+      "纸品日清": 0.0,
+      "滋补礼盒": 0.0896,
+      "零食烘焙": 0.0047,
+      "美妆个护": 0.0
+    },
+    "brief-pet-food": {
+      "青绿茶礼盒": 0.0357,
+      "乳品礼盒": 0.0,
+      "酒类礼盒": 0.0179,
+      "纸品日清": 0.0,
+      "滋补礼盒": 0.0179,
+      "零食烘焙": 0.1429,
+      "美妆个护": 0.0
+    },
+    "brief-tissue-home": {
+      "青绿茶礼盒": 0.0,
+      "乳品礼盒": 0.0,
+      "酒类礼盒": 0.0,
+      "宠物食品": 0.0,
+      "滋补礼盒": 0.0,
+      "零食烘焙": 0.0,
+      "美妆个护": 0.0
+    },
+    "brief-tonic-gift": {
+      "青绿茶礼盒": 0.8462,
+      "乳品礼盒": 0.0,
+      "酒类礼盒": 0.7308,
+      "宠物食品": 0.0385,
+      "纸品日清": 0.0,
+      "零食烘焙": 0.0,
+      "美妆个护": 0.0
+    },
+    "brief-snacks": {
+      "青绿茶礼盒": 0.0364,
+      "乳品礼盒": 0.0,
+      "酒类礼盒": 0.0182,
+      "宠物食品": 0.1455,
+      "纸品日清": 0.0,
+      "滋补礼盒": 0.0,
+      "美妆个护": 0.0
+    },
+    "brief-beauty": {
+      "青绿茶礼盒": 0.0045,
+      "乳品礼盒": 0.009,
+      "酒类礼盒": 0.0,
+      "宠物食品": 0.0,
+      "纸品日清": 0.0,
+      "滋补礼盒": 0.0,
+      "零食烘焙": 0.0
+    }
+  },
+  "ready_today": true,
+  "paths": {
+    "eval_script": "L3/eval_brief_relevance.py",
+    "brief_spec": "L3/brief_spec.py",
+    "fixtures": "L3/fixtures/brief_matrix_v1.json",
+    "report_json": "L3/feeds/BRIEF-RELEVANCE-EVAL.json",
+    "report_md": "L3/feeds/BRIEF-RELEVANCE-EVAL.md"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "card_id": "card-cc-03-v2",
+  "brief_id": "brief-green-tea-gift-20260812",
+  "title": "开箱仪式",
+  "one_liner": "礼赠仪式感做在结构开箱，而不是贴金箔龙凤。",
+  "advantage": "开箱视频/详情页天然内容点。",
+  "differentiation": "电商页常靠图案喊「礼」；本方向把仪式感做进开箱结构与层次（可拍短视频），区隔平面贴金的货架套路。",
+  "recommended_style_buckets": [
+    "chinese_ceremonial",
+    "regional_culture"
+  ],
+  "reference_montage": [
+    {
+      "item_id": "packagingoftheworld:you-ming-tang-tea-gift-box",
+      "why": "开箱/层次可读，礼赠仪式感样本",
+      "wall": "primary"
+    },
+    {
+      "item_id": "packagingoftheworld:barg-tea-uzbekistan",
+      "why": "产地/节庆叙事可借，但要翻译成中国礼赠语境、避免异域符号照搬",
+      "wall": "primary"
+    }
+  ],
+  "verbal_directions": [
+    "主视觉围绕「开箱仪式」展开",
+    "品名层级大于品牌纹样",
+    "礼盒外侧克制，内侧给开箱惊喜"
+  ],
+  "sketch_directions": [
+    "外盒色块构成草图",
+    "开箱分层结构示意"
+  ],
+  "demo_prompt": "Premium Chinese green tea gift box packaging, direction \"开箱仪式\", style 中式典雅/礼赠, 地域文旅, modern not antique, elegant unboxing, studio product photography, high-end FMCG packaging mockup, not a final artwork",
+  "demo_disclaimer": "Demo only — 非完稿，供侯总遴选方向",
+  "hou_decision": "pending",
+  "merge_into": null,
+  "created_at": "2026-08-12T12:00:08Z",
+  "extra_note": "v2：补强参考 why，原 card-cc-03.json 保留",
+  "updated_at": "2026-08-12T12:03:09Z"
+}

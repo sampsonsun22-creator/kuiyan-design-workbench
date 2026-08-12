@@ -1,0 +1,620 @@
+{
+  "version": "1.0",
+  "count": 20,
+  "id_rules": {
+    "format": "snake_case English slug",
+    "pattern": "^[a-z][a-z0-9_]{1,39}$",
+    "display": "UI/侯总话术用 name_zh；机器字段只用 id",
+    "multilabel": "1-3 buckets per item",
+    "compat_v0": "Collectors MAY temporarily emit v0 Chinese names; adapter maps via migration_from_v0. Prefer ids immediately."
+  },
+  "updated_at": "2026-08-12T11:56:49.370815+00:00",
+  "buckets": [
+    {
+      "id": "chinese_modern",
+      "name_zh": "中式现代",
+      "name_aliases": [
+        "国潮现代",
+        "新中式包装"
+      ],
+      "hou_speak": "中式现代，不是仿古堆砌",
+      "signals": [
+        "水墨/几何中式符号现代化",
+        "宋体或当代中文字体秩序",
+        "留白+一点朱红/靛蓝点睛",
+        "非仿古堆砌"
+      ],
+      "anti_signals": [
+        "满版龙凤金箔仿古",
+        "纯欧美无衬线无中式符号"
+      ],
+      "typical_categories": [
+        "tea_beverage",
+        "alcohol",
+        "health_tcm",
+        "cultural_gift"
+      ],
+      "default_weight_hints": {
+        "tea_beverage": 1.4,
+        "alcohol": 1.2,
+        "coffee": 0.7
+      }
+    },
+    {
+      "id": "chinese_ceremonial",
+      "name_zh": "中式典雅/礼赠",
+      "name_aliases": [
+        "礼赠典雅",
+        "中式礼盒"
+      ],
+      "hou_speak": "礼赠感、仪式感强的中式典雅",
+      "signals": [
+        "礼盒层次/开合仪式",
+        "对称构图",
+        "节庆/送礼话术",
+        "锦盒、提袋、腰封"
+      ],
+      "anti_signals": [
+        "日销便携小包装主视觉",
+        "强功能成分表主导"
+      ],
+      "typical_categories": [
+        "tea_beverage",
+        "alcohol",
+        "snacks_bakery",
+        "health_tcm",
+        "cultural_gift"
+      ],
+      "default_weight_hints": {
+        "tea_beverage": 1.5,
+        "cultural_gift": 1.4,
+        "pet": 0.4
+      }
+    },
+    {
+      "id": "global_minimal",
+      "name_zh": "国际简约",
+      "name_aliases": [
+        "国际极简",
+        "简洁国际风"
+      ],
+      "hou_speak": "国际简约，干净利落",
+      "signals": [
+        "干净留白",
+        "少色",
+        "国际无衬线",
+        "产品即主视觉"
+      ],
+      "anti_signals": [
+        "高饱和撞色潮玩",
+        "密铺纹样"
+      ],
+      "typical_categories": [
+        "coffee",
+        "beauty_fashion",
+        "dairy_drinks"
+      ],
+      "default_weight_hints": {
+        "coffee": 1.3,
+        "beauty_fashion": 1.2,
+        "cultural_gift": 0.6
+      }
+    },
+    {
+      "id": "swiss_international",
+      "name_zh": "瑞士国际主义",
+      "name_aliases": [
+        "瑞士感",
+        "国际主义排版"
+      ],
+      "hou_speak": "瑞士感：网格、无衬线、信息秩序",
+      "signals": [
+        "强网格",
+        "字号层级清晰",
+        "非对称平衡",
+        "信息图表感"
+      ],
+      "anti_signals": [
+        "手绘随意排版",
+        "装饰纹样淹没信息"
+      ],
+      "typical_categories": [
+        "coffee",
+        "beauty_fashion",
+        "dairy_drinks",
+        "condiment_sauce"
+      ],
+      "default_weight_hints": {
+        "coffee": 1.3,
+        "dairy_drinks": 1.1
+      }
+    },
+    {
+      "id": "natural_organic",
+      "name_zh": "自然有机",
+      "name_aliases": [
+        "有机质朴",
+        "天然风"
+      ],
+      "hou_speak": "自然有机，纸感/植物感",
+      "signals": [
+        "纸感/植物/泥土色",
+        "未漂白材质暗示",
+        "手作纹理"
+      ],
+      "anti_signals": [
+        "高光炫彩金属",
+        "赛博霓虹"
+      ],
+      "typical_categories": [
+        "tea_beverage",
+        "grain_staple",
+        "health_tcm",
+        "coffee"
+      ],
+      "default_weight_hints": {
+        "tea_beverage": 1.2,
+        "grain_staple": 1.3
+      }
+    },
+    {
+      "id": "luxury_gilt",
+      "name_zh": "奢华金饰",
+      "name_aliases": [
+        "奢华金箔",
+        "高端金饰"
+      ],
+      "hou_speak": "奢华金饰，贵而不俗",
+      "signals": [
+        "金/银烫印",
+        "深底浅字",
+        "高对比光泽",
+        "稀缺感构图"
+      ],
+      "anti_signals": [
+        "廉价金黄满版",
+        "卡通贴纸风"
+      ],
+      "typical_categories": [
+        "alcohol",
+        "health_tcm",
+        "beauty_fashion",
+        "cultural_gift"
+      ],
+      "default_weight_hints": {
+        "alcohol": 1.4,
+        "health_tcm": 1.3
+      }
+    },
+    {
+      "id": "minimal_white",
+      "name_zh": "极简白盒",
+      "name_aliases": [
+        "白盒极简",
+        "留白包装"
+      ],
+      "hou_speak": "极简白盒，大留白",
+      "signals": [
+        "大面积白",
+        "细线框",
+        "极少元素",
+        "高级药房/实验室感可兼容"
+      ],
+      "anti_signals": [
+        "彩色插画铺满",
+        "强食欲摄影占满"
+      ],
+      "typical_categories": [
+        "beauty_fashion",
+        "health_tcm",
+        "baby_maternal"
+      ],
+      "default_weight_hints": {
+        "beauty_fashion": 1.4,
+        "baby_maternal": 1.2
+      }
+    },
+    {
+      "id": "color_youth",
+      "name_zh": "色彩冲击/年轻潮",
+      "name_aliases": [
+        "年轻潮色",
+        "高饱和潮流"
+      ],
+      "hou_speak": "色彩冲击，年轻潮",
+      "signals": [
+        "高饱和撞色",
+        "粗字体",
+        "潮流图形",
+        "年轻渠道感"
+      ],
+      "anti_signals": [
+        "低饱和礼赠典雅",
+        "严肃药盒"
+      ],
+      "typical_categories": [
+        "snacks_bakery",
+        "alcohol",
+        "tea_beverage",
+        "pet"
+      ],
+      "default_weight_hints": {
+        "snacks_bakery": 1.4,
+        "alcohol": 1.2
+      }
+    },
+    {
+      "id": "cartoon_ip",
+      "name_zh": "卡通IP趣味",
+      "name_aliases": [
+        "IP卡通",
+        "萌趣角色"
+      ],
+      "hou_speak": "卡通IP趣味",
+      "signals": [
+        "角色IP",
+        "表情包化",
+        "圆润描边"
+      ],
+      "anti_signals": [
+        "严肃无人物系统",
+        "纯摄影无角色"
+      ],
+      "typical_categories": [
+        "snacks_bakery",
+        "pet",
+        "baby_maternal",
+        "dairy_drinks"
+      ],
+      "default_weight_hints": {
+        "pet": 1.5,
+        "baby_maternal": 1.3
+      }
+    },
+    {
+      "id": "retro_nostalgia",
+      "name_zh": "复古怀旧",
+      "name_aliases": [
+        "复古",
+        "怀旧包装"
+      ],
+      "hou_speak": "复古怀旧",
+      "signals": [
+        "复古印刷",
+        "旧海报色",
+        "怀旧字体/徽章"
+      ],
+      "anti_signals": [
+        "纯扁平互联网风"
+      ],
+      "typical_categories": [
+        "snacks_bakery",
+        "alcohol",
+        "condiment_sauce",
+        "cultural_gift"
+      ],
+      "default_weight_hints": {
+        "condiment_sauce": 1.2,
+        "alcohol": 1.1
+      }
+    },
+    {
+      "id": "craft_material",
+      "name_zh": "工艺材质感",
+      "name_aliases": [
+        "材质工艺",
+        "特种工艺"
+      ],
+      "hou_speak": "工艺材质感拉满",
+      "signals": [
+        "专注目视材质/工艺特写",
+        "压纹/开窗/异形",
+        "触感叙事"
+      ],
+      "anti_signals": [
+        "纯平面矢量无材质"
+      ],
+      "typical_categories": [
+        "alcohol",
+        "tea_beverage",
+        "beauty_fashion",
+        "cultural_gift"
+      ],
+      "default_weight_hints": {
+        "alcohol": 1.3,
+        "tea_beverage": 1.2
+      }
+    },
+    {
+      "id": "appetite_photo",
+      "name_zh": "摄影食欲风",
+      "name_aliases": [
+        "食欲摄影",
+        "食物大片"
+      ],
+      "hou_speak": "摄影食欲风",
+      "signals": [
+        "食物大片",
+        "蒸汽/切口/倾倒瞬间",
+        "食欲色温"
+      ],
+      "anti_signals": [
+        "抽象几何无产品",
+        "空盒陈列无内容物"
+      ],
+      "typical_categories": [
+        "snacks_bakery",
+        "meat_prepared",
+        "dairy_drinks",
+        "condiment_sauce"
+      ],
+      "default_weight_hints": {
+        "meat_prepared": 1.5,
+        "snacks_bakery": 1.4
+      }
+    },
+    {
+      "id": "illustration_story",
+      "name_zh": "插画叙事",
+      "name_aliases": [
+        "插画包装",
+        "故事插画"
+      ],
+      "hou_speak": "插画叙事",
+      "signals": [
+        "手绘/矢量叙事插画",
+        "场景故事",
+        "非写实摄影主导"
+      ],
+      "anti_signals": [
+        "纯实拍产品棚拍"
+      ],
+      "typical_categories": [
+        "tea_beverage",
+        "cultural_gift",
+        "snacks_bakery",
+        "coffee"
+      ],
+      "default_weight_hints": {
+        "tea_beverage": 1.3,
+        "cultural_gift": 1.3
+      }
+    },
+    {
+      "id": "efficacy_hammer",
+      "name_zh": "成分科学/功效锤",
+      "name_aliases": [
+        "功效锤",
+        "成分科学",
+        "视觉锤功效"
+      ],
+      "hou_speak": "功效锤/视觉锤：一眼记住卖点（如炖5’炒3’）",
+      "signals": [
+        "一句功效/速度/成分超级符号",
+        "数字或动词锤",
+        "信息锤优先于氛围"
+      ],
+      "anti_signals": [
+        "只有氛围无卖点",
+        "卖点淹没在小字"
+      ],
+      "typical_categories": [
+        "meat_prepared",
+        "dairy_drinks",
+        "health_tcm",
+        "beauty_fashion"
+      ],
+      "default_weight_hints": {
+        "meat_prepared": 1.6,
+        "dairy_drinks": 1.3
+      }
+    },
+    {
+      "id": "regional_culture",
+      "name_zh": "地域文旅",
+      "name_aliases": [
+        "文旅地域",
+        "地方特色"
+      ],
+      "hou_speak": "地域文旅",
+      "signals": [
+        "地名/地貌/非遗符号",
+        "产地叙事",
+        "风土色"
+      ],
+      "anti_signals": [
+        "无地域指称的全球通用包装"
+      ],
+      "typical_categories": [
+        "tea_beverage",
+        "alcohol",
+        "cultural_gift",
+        "grain_staple"
+      ],
+      "default_weight_hints": {
+        "cultural_gift": 1.5,
+        "tea_beverage": 1.3
+      }
+    },
+    {
+      "id": "pet_cute",
+      "name_zh": "宠物萌感",
+      "name_aliases": [
+        "萌宠",
+        "宠物亲和"
+      ],
+      "hou_speak": "宠物萌感",
+      "signals": [
+        "萌宠摄影/插画",
+        "圆润亲和",
+        "拟人互动"
+      ],
+      "anti_signals": [
+        "工业冷淡无生命感"
+      ],
+      "typical_categories": [
+        "pet"
+      ],
+      "default_weight_hints": {
+        "pet": 1.8
+      }
+    },
+    {
+      "id": "maternal_safe",
+      "name_zh": "母婴安全感",
+      "name_aliases": [
+        "母婴安心",
+        "柔护感"
+      ],
+      "hou_speak": "母婴安全感",
+      "signals": [
+        "柔色",
+        "安全感圆角",
+        "亲肤/洁净暗示",
+        "低刺激视觉"
+      ],
+      "anti_signals": [
+        "尖锐高对比恐怖谷",
+        "酒精夜场霓虹"
+      ],
+      "typical_categories": [
+        "baby_maternal",
+        "paper_homecare",
+        "dairy_drinks"
+      ],
+      "default_weight_hints": {
+        "baby_maternal": 1.8,
+        "paper_homecare": 1.2
+      }
+    },
+    {
+      "id": "nightlife_trend",
+      "name_zh": "夜场潮流",
+      "name_aliases": [
+        "夜场",
+        "潮饮酒氛围"
+      ],
+      "hou_speak": "夜场潮流",
+      "signals": [
+        "夜光/霓虹/暗调",
+        "潮饮夜场",
+        "雪浪/电音等氛围符号"
+      ],
+      "anti_signals": [
+        "早餐乳品日光感",
+        "中式礼盒红金"
+      ],
+      "typical_categories": [
+        "alcohol",
+        "tea_beverage"
+      ],
+      "default_weight_hints": {
+        "alcohol": 1.7
+      }
+    },
+    {
+      "id": "sustainable_plain",
+      "name_zh": "可持续质朴",
+      "name_aliases": [
+        "环保质朴",
+        "可持续"
+      ],
+      "hou_speak": "可持续质朴",
+      "signals": [
+        "裸装/再生纸",
+        "减塑叙事",
+        "朴素印刷"
+      ],
+      "anti_signals": [
+        "过度金箔礼盒"
+      ],
+      "typical_categories": [
+        "paper_homecare",
+        "tea_beverage",
+        "grain_staple",
+        "beauty_fashion"
+      ],
+      "default_weight_hints": {
+        "paper_homecare": 1.3,
+        "grain_staple": 1.2
+      }
+    },
+    {
+      "id": "art_collab",
+      "name_zh": "跨界艺术限量",
+      "name_aliases": [
+        "艺术跨界",
+        "限量联名"
+      ],
+      "hou_speak": "跨界艺术限量",
+      "signals": [
+        "艺术家联名",
+        "限量编号",
+        "展览/跨界语气"
+      ],
+      "anti_signals": [
+        "常规货架日销版"
+      ],
+      "typical_categories": [
+        "beauty_fashion",
+        "alcohol",
+        "cultural_gift",
+        "snacks_bakery"
+      ],
+      "default_weight_hints": {
+        "beauty_fashion": 1.3,
+        "cultural_gift": 1.2
+      }
+    }
+  ],
+  "migration_from_v0": {
+    "中式现代": "chinese_modern",
+    "中式典雅/礼赠": "chinese_ceremonial",
+    "国际简约": "global_minimal",
+    "瑞士国际主义": "swiss_international",
+    "自然有机": "natural_organic",
+    "奢华金饰": "luxury_gilt",
+    "极简白盒": "minimal_white",
+    "色彩冲击/年轻潮": "color_youth",
+    "卡通IP趣味": "cartoon_ip",
+    "复古怀旧": "retro_nostalgia",
+    "工艺材质感": "craft_material",
+    "摄影食欲风": "appetite_photo",
+    "插画叙事": "illustration_story",
+    "成分科学/功效锤": "efficacy_hammer",
+    "地域文旅": "regional_culture",
+    "宠物萌感": "pet_cute",
+    "母婴安全感": "maternal_safe",
+    "夜场潮流": "nightlife_trend",
+    "可持续质朴": "sustainable_plain",
+    "跨界艺术限量": "art_collab"
+  },
+  "ids": [
+    "chinese_modern",
+    "chinese_ceremonial",
+    "global_minimal",
+    "swiss_international",
+    "natural_organic",
+    "luxury_gilt",
+    "minimal_white",
+    "color_youth",
+    "cartoon_ip",
+    "retro_nostalgia",
+    "craft_material",
+    "appetite_photo",
+    "illustration_story",
+    "efficacy_hammer",
+    "regional_culture",
+    "pet_cute",
+    "maternal_safe",
+    "nightlife_trend",
+    "sustainable_plain",
+    "art_collab"
+  ],
+  "notes": {
+    "principle": "品类只调 default_weight_hints，不新增桶；多标签 1–3",
+    "visual_hammer_note": "味知香「炖5’/炒3’」、尊乐笑脸肠等超级符号/视觉锤，优先挂 efficacy_hammer；若同时强摄影食欲可叠 appetite_photo",
+    "name_zh_locked_to_v0": true
+  },
+  "status": "canonical"
+}

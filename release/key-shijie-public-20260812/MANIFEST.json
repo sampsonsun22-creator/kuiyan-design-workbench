@@ -1,0 +1,47 @@
+{
+  "product": "KEY 视界",
+  "caliber": "brief_relevance_v1",
+  "shell_default": "strict",
+  "main_wall": 452,
+  "pending_review": 2680,
+  "frozen_at": "2026-08-12T14:56:02Z",
+  "restore_source": "ui-shell/data mirror @452",
+  "next_unlock_gate": ">452",
+  "forbid_rollback": [
+    410,
+    401,
+    304,
+    274,
+    1820
+  ],
+  "files": {
+    "l2_main_wall.jsonl": {
+      "bytes": 544983,
+      "sha256_16": "e7333d673c9fa74c",
+      "lines": 452
+    },
+    "l2_pending_review.jsonl": {
+      "bytes": 3570859,
+      "sha256_16": "c5cc20a7d319f496",
+      "lines": 2680
+    },
+    "FEED-STATUS.json": {
+      "bytes": 534,
+      "sha256_16": "2dccc840c44d742f",
+      "lines": null
+    },
+    "style-buckets-v1.json": {
+      "bytes": 14805,
+      "sha256_16": "0e20552a94553363",
+      "lines": null
+    },
+    "SHELL-DEFAULT.lock.md": {
+      "bytes": 384,
+      "sha256_16": "bcb96a7c3ac55aa1",
+      "lines": null
+    }
+  },
+  "backup_dir": "release/backups/shell-452-20260812T145602Z",
+  "publish_dir": "release/key-shijie-public-20260812",
+  "countersign": "奎燕平台资源专家"
+}

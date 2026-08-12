@@ -1,0 +1,22 @@
+{
+  "brief_id": "baijiu_gift",
+  "name": "白酒礼盒",
+  "domain": "baijiu",
+  "summary": "白酒/黄酒礼盒包装；中式礼赠；类比茶礼与滋补礼盒",
+  "brief_text": "白酒/黄酒礼盒包装；中式礼赠；类比茶礼与滋补礼盒",
+  "main_wall": 213,
+  "pending_review": 2742,
+  "pool_size": 2955,
+  "buckets": {
+    "soft_pack_only": 2000,
+    "kill_noise": 735,
+    "keep_core": 187,
+    "keep_analogy": 26,
+    "kill_unrelated": 7
+  },
+  "rule_version": "brief_relevance_v1_strict",
+  "gate": "brief_relevance_v1",
+  "shell_write": false,
+  "generated_at": "2026-08-12T14:16:52Z",
+  "path": "L3/eval/landed/baijiu_gift"
+}

@@ -1,0 +1,22 @@
+{
+  "brief_id": "ejiao_gift",
+  "name": "阿胶滋补礼盒",
+  "domain": "tonic",
+  "summary": "阿胶/人参/燕窝等滋补礼盒包装",
+  "brief_text": "阿胶/人参/燕窝等滋补礼盒包装",
+  "main_wall": 33,
+  "pending_review": 2922,
+  "pool_size": 2955,
+  "buckets": {
+    "soft_pack_only": 2185,
+    "kill_noise": 730,
+    "keep_analogy": 26,
+    "keep_core": 7,
+    "kill_unrelated": 7
+  },
+  "rule_version": "brief_relevance_v1_strict",
+  "gate": "brief_relevance_v1",
+  "shell_write": false,
+  "generated_at": "2026-08-12T14:16:53Z",
+  "path": "L3/eval/landed/ejiao_gift"
+}

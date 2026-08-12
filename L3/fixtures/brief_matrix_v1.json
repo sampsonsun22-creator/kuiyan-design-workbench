@@ -1,0 +1,243 @@
+{
+  "version": "brief_matrix_v1",
+  "note": "Seed matrix for category-agnostic eval. Design may extend terms/gold.",
+  "briefs": [
+    {
+      "brief_id": "brief-green-tea-gift",
+      "name": "青绿茶礼盒",
+      "domain": "tea_beverage",
+      "summary": "中式现代青绿茶礼包装",
+      "core_terms": [
+        "茶",
+        "tea",
+        "绿茶",
+        "青茶",
+        "matcha",
+        "green tea",
+        "龙井",
+        "茶叶"
+      ],
+      "analogy_terms": [
+        "黄酒",
+        "滋补",
+        "阿胶",
+        "酒礼盒",
+        "sake",
+        "tonic gift",
+        "国际简约"
+      ],
+      "noise_terms": [
+        "咖啡",
+        "coffee",
+        "美妆",
+        "口红",
+        "宠物",
+        "狗粮",
+        "保健品",
+        "维生素"
+      ]
+    },
+    {
+      "brief_id": "brief-dairy-gift",
+      "name": "乳品礼盒",
+      "domain": "dairy_drinks",
+      "summary": "乳品/酸奶/奶粉礼盒包装",
+      "core_terms": [
+        "乳",
+        "奶",
+        "酸奶",
+        "牛奶",
+        "奶粉",
+        "dairy",
+        "milk",
+        "yogurt",
+        "cheese"
+      ],
+      "analogy_terms": [
+        "饮料礼盒",
+        "儿童营养",
+        "蛋白饮"
+      ],
+      "noise_terms": [
+        "茶",
+        "咖啡",
+        "酒",
+        "宠物",
+        "美妆"
+      ]
+    },
+    {
+      "brief_id": "brief-alcohol-gift",
+      "name": "酒类礼盒",
+      "domain": "alcohol",
+      "summary": "白酒/黄酒/葡萄酒礼盒包装",
+      "core_terms": [
+        "酒",
+        "白酒",
+        "黄酒",
+        "葡萄酒",
+        "beer",
+        "wine",
+        "sake",
+        "白酒包装",
+        "酒盒"
+      ],
+      "analogy_terms": [
+        "茶礼",
+        "滋补礼盒"
+      ],
+      "noise_terms": [
+        "咖啡",
+        "美妆",
+        "宠物",
+        "纸尿裤"
+      ]
+    },
+    {
+      "brief_id": "brief-pet-food",
+      "name": "宠物食品",
+      "domain": "pet",
+      "summary": "猫狗粮/宠物零食包装",
+      "core_terms": [
+        "宠物",
+        "猫粮",
+        "狗粮",
+        "猫砂",
+        "宠物零食",
+        "pet food",
+        "cat food",
+        "dog food",
+        "pet treat",
+        "猫狗"
+      ],
+      "analogy_terms": [
+        "零食包装",
+        "宠物罐头包装"
+      ],
+      "noise_terms": [
+        "茶",
+        "酒",
+        "美妆",
+        "母婴",
+        "PET瓶",
+        "PET塑料",
+        "PET膜",
+        "polyethylene terephthalate",
+        "塑料瓶坯"
+      ]
+    },
+    {
+      "brief_id": "brief-tissue-home",
+      "name": "纸品日清",
+      "domain": "paper_homecare",
+      "summary": "抽纸/湿巾/日清纸品包装",
+      "core_terms": [
+        "抽纸",
+        "纸巾",
+        "湿巾",
+        "卫生纸",
+        "纸品",
+        "tissue",
+        "wet wipe",
+        "kitchen towel",
+        "面巾纸",
+        "手帕纸",
+        "纸盒"
+      ],
+      "analogy_terms": [
+        "日化包装",
+        "家清包装",
+        "清洁用品包装"
+      ],
+      "noise_terms": [
+        "茶",
+        "酒",
+        "宠物粮",
+        "美妆彩妆",
+        "咖啡"
+      ]
+    },
+    {
+      "brief_id": "brief-tonic-gift",
+      "name": "滋补礼盒",
+      "domain": "health_tcm",
+      "summary": "阿胶/人参/滋补礼盒包装",
+      "core_terms": [
+        "滋补",
+        "阿胶",
+        "人参",
+        "燕窝",
+        "枸杞",
+        "膏方",
+        "tonic",
+        "herbal gift",
+        "阿胶糕",
+        "养生礼盒"
+      ],
+      "analogy_terms": [
+        "茶礼",
+        "酒礼盒",
+        "保健礼盒"
+      ],
+      "noise_terms": [
+        "咖啡",
+        "宠物",
+        "美妆口红"
+      ]
+    },
+    {
+      "brief_id": "brief-snacks",
+      "name": "零食烘焙",
+      "domain": "snacks_bakery",
+      "summary": "休闲零食/烘焙包装",
+      "core_terms": [
+        "零食",
+        "薯片",
+        "饼干",
+        "烘焙",
+        "面包",
+        "snack",
+        "chips",
+        "bakery",
+        "cookie"
+      ],
+      "analogy_terms": [
+        "糖果包装",
+        "礼盒零食"
+      ],
+      "noise_terms": [
+        "茶礼",
+        "酒",
+        "宠物",
+        "纸品"
+      ]
+    },
+    {
+      "brief_id": "brief-beauty",
+      "name": "美妆个护",
+      "domain": "beauty",
+      "summary": "美妆/护肤包装",
+      "core_terms": [
+        "美妆",
+        "护肤",
+        "化妆品",
+        "面膜",
+        "口红",
+        "skincare",
+        "cosmetic",
+        "beauty",
+        "serum"
+      ],
+      "analogy_terms": [
+        "日化包装",
+        "香水包装"
+      ],
+      "noise_terms": [
+        "茶",
+        "酒",
+        "宠物",
+        "猫粮"
+      ]
+    }
+  ]
+}

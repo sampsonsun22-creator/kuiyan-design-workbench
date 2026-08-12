@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 40" role="img" aria-label="KEY 奎燕品牌创新社">
+  <style>
+    .k { font: 700 16px "American Typewriter", "Courier New", Courier, "Noto Serif SC", serif; letter-spacing: 0.6px; fill: #F4F1EA; }
+    .brace { fill: #C8B9A1; font: 700 16px "American Typewriter", "Courier New", Courier, serif; }
+    .zh { font: 500 10px "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", sans-serif; fill: #F4F1EA; letter-spacing: 1.5px; }
+    .en { font: 500 8px "Helvetica Neue", Arial, sans-serif; fill: #8A8580; letter-spacing: 1.2px; }
+  </style>
+  <text x="2" y="16" class="brace">{</text>
+  <text x="14" y="16" class="k">KEY</text>
+  <text x="52" y="16" class="brace">}</text>
+  <text x="68" y="15" class="zh">奎燕品牌创新社</text>
+  <text x="68" y="28" class="en">KEY BRAND DESIGN</text>
+</svg>

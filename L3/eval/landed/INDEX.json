@@ -1,0 +1,125 @@
+{
+  "generated_at": "2026-08-12T15:20:19Z",
+  "shell_default": "brief-green-tea-gift@184",
+  "briefs": [
+    {
+      "brief_id": "baijiu_gift",
+      "main_wall": 213,
+      "pending_review": 2742,
+      "path": "L3/eval/landed/baijiu_gift",
+      "shell_default": false
+    },
+    {
+      "brief_id": "brief-alcohol-gift",
+      "main_wall": 216,
+      "pending_review": 2738,
+      "path": "L3/eval/landed/brief-alcohol-gift",
+      "shell_default": false
+    },
+    {
+      "brief_id": "brief-beauty",
+      "main_wall": 221,
+      "pending_review": 2733,
+      "path": "L3/eval/landed/brief-beauty",
+      "shell_default": false
+    },
+    {
+      "brief_id": "brief-dairy-gift",
+      "main_wall": 37,
+      "pending_review": 3434,
+      "path": "L3/eval/landed/brief-dairy-gift",
+      "shell_default": false
+    },
+    {
+      "brief_id": "brief-green-tea-gift",
+      "main_wall": 452,
+      "pending_review": 2680,
+      "path": "L3/eval/landed/brief-green-tea-gift",
+      "shell_default": true
+    },
+    {
+      "brief_id": "brief-green-tea-gift-20260812",
+      "main_wall": 274,
+      "pending_review": 2680,
+      "path": "L3/eval/landed/brief-green-tea-gift-20260812",
+      "shell_default": true
+    },
+    {
+      "brief_id": "brief-pet-food",
+      "main_wall": 40,
+      "pending_review": 3431,
+      "path": "L3/eval/landed/brief-pet-food",
+      "shell_default": false
+    },
+    {
+      "brief_id": "brief-snacks",
+      "main_wall": 55,
+      "pending_review": 2899,
+      "path": "L3/eval/landed/brief-snacks",
+      "shell_default": false
+    },
+    {
+      "brief_id": "brief-tissue-home",
+      "main_wall": 32,
+      "pending_review": 3439,
+      "path": "L3/eval/landed/brief-tissue-home",
+      "shell_default": false
+    },
+    {
+      "brief_id": "brief-tonic-gift",
+      "main_wall": 168,
+      "pending_review": 3303,
+      "path": "L3/eval/landed/brief-tonic-gift",
+      "shell_default": false
+    },
+    {
+      "brief_id": "dairy_kids",
+      "main_wall": 17,
+      "pending_review": 2938,
+      "path": "L3/eval/landed/dairy_kids",
+      "shell_default": false
+    },
+    {
+      "brief_id": "ejiao_gift",
+      "main_wall": 33,
+      "pending_review": 2922,
+      "path": "L3/eval/landed/ejiao_gift",
+      "shell_default": false
+    },
+    {
+      "brief_id": "green_tea_gift",
+      "main_wall": 452,
+      "pending_review": 2680,
+      "path": "L3/eval/landed/green_tea_gift",
+      "shell_default": true
+    },
+    {
+      "brief_id": "low_alcohol",
+      "main_wall": 178,
+      "pending_review": 2777,
+      "path": "L3/eval/landed/low_alcohol",
+      "shell_default": false
+    },
+    {
+      "brief_id": "pet_food",
+      "main_wall": 46,
+      "pending_review": 2909,
+      "path": "L3/eval/landed/pet_food",
+      "shell_default": false
+    },
+    {
+      "brief_id": "snack_nut",
+      "main_wall": 59,
+      "pending_review": 2896,
+      "path": "L3/eval/landed/snack_nut",
+      "shell_default": false
+    },
+    {
+      "brief_id": "tissue_home",
+      "main_wall": 2,
+      "pending_review": 2953,
+      "path": "L3/eval/landed/tissue_home",
+      "shell_default": false
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-08-12T14:25:41Z",
+  "qc_mode": "brief_relevance_v1",
+  "main_wall": 274,
+  "pending_review": 2680,
+  "shell_kept": 184,
+  "delta_added": 90,
+  "delta_demoted": 14,
+  "contract_ok": true,
+  "unlock_files": [
+    "L3/feeds/l2_main_wall_brief_relevance_expanded_clean274.jsonl",
+    "L3/feeds/l2_pending_review_brief_relevance_expanded_clean274.jsonl"
+  ],
+  "note": "canonical unlock = clean274; raw288 archived; do not overwrite clean with raw skip-collect"
+}

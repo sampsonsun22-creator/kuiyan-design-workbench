@@ -1,0 +1,100 @@
+{
+  "generated_at": "2026-08-12T14:17:20Z",
+  "shell_write": false,
+  "tea_proposal_main": 0,
+  "tea_proposal_pending": 2952,
+  "directed_new_total": 6,
+  "directed_by_brief": {
+    "brief-green-tea-gift": 4,
+    "brief-tissue-home": 2,
+    "brief-dairy-gift": 0,
+    "brief-tonic-gift": 0
+  },
+  "landed": [
+    {
+      "brief_id": "brief-green-tea-gift",
+      "name": "青绿茶礼盒",
+      "domain": "tea_beverage",
+      "main_wall": 0,
+      "pending_review": 2952,
+      "path": "L3/eval/landed/brief-green-tea-gift",
+      "shell_default": true,
+      "directed_new": 4
+    },
+    {
+      "brief_id": "brief-dairy-gift",
+      "name": "乳品礼盒",
+      "domain": "dairy_drinks",
+      "main_wall": 22,
+      "pending_review": 2932,
+      "path": "L3/eval/landed/brief-dairy-gift",
+      "shell_default": false,
+      "directed_new": 0
+    },
+    {
+      "brief_id": "brief-alcohol-gift",
+      "name": "酒类礼盒",
+      "domain": "alcohol",
+      "main_wall": 216,
+      "pending_review": 2738,
+      "path": "L3/eval/landed/brief-alcohol-gift",
+      "shell_default": false,
+      "directed_new": 0
+    },
+    {
+      "brief_id": "brief-pet-food",
+      "name": "宠物食品",
+      "domain": "pet",
+      "main_wall": 43,
+      "pending_review": 2911,
+      "path": "L3/eval/landed/brief-pet-food",
+      "shell_default": false,
+      "directed_new": 0
+    },
+    {
+      "brief_id": "brief-tissue-home",
+      "name": "纸品日清",
+      "domain": "paper_homecare",
+      "main_wall": 4,
+      "pending_review": 2950,
+      "path": "L3/eval/landed/brief-tissue-home",
+      "shell_default": false,
+      "directed_new": 2
+    },
+    {
+      "brief_id": "brief-tonic-gift",
+      "name": "滋补礼盒",
+      "domain": "health_tcm",
+      "main_wall": 30,
+      "pending_review": 2924,
+      "path": "L3/eval/landed/brief-tonic-gift",
+      "shell_default": false,
+      "directed_new": 0
+    },
+    {
+      "brief_id": "brief-snacks",
+      "name": "零食烘焙",
+      "domain": "snacks_bakery",
+      "main_wall": 55,
+      "pending_review": 2899,
+      "path": "L3/eval/landed/brief-snacks",
+      "shell_default": false,
+      "directed_new": 0
+    },
+    {
+      "brief_id": "brief-beauty",
+      "name": "美妆个护",
+      "domain": "beauty",
+      "main_wall": 221,
+      "pending_review": 2733,
+      "path": "L3/eval/landed/brief-beauty",
+      "shell_default": false,
+      "directed_new": 0
+    }
+  ],
+  "proposal_paths": {
+    "main": "/workspace/kuiyan-design-workbench/L3/feeds/l2_main_wall_brief_relevance_proposed.jsonl",
+    "pending": "/workspace/kuiyan-design-workbench/L3/feeds/l2_pending_review_brief_relevance_proposed.jsonl"
+  },
+  "note": "Hand tea proposal to platform for unlock replace; shell locks untouched"
+}

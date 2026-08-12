@@ -1,0 +1,40 @@
+{
+  "card_id": "card-cm-01-v2",
+  "brief_id": "brief-green-tea-gift-20260812",
+  "title": "青绿新中轴",
+  "one_liner": "以「青绿」做现代色锤，中式结构去仿古，一眼茶、二眼礼。",
+  "advantage": "礼赠体面但不土；电商主图有色识别。",
+  "differentiation": "相对京东/淘宝常见绿茶礼盒的金红喜庆与特产堆砌主图，用青绿现代色锤+克制中式结构做详情页第一眼差异；不走仿古龙凤。",
+  "recommended_style_buckets": [
+    "chinese_modern",
+    "craft_material"
+  ],
+  "reference_montage": [
+    {
+      "item_id": "packagingoftheworld:you-ming-tang-tea-gift-box",
+      "why": "对称中式礼盒但去繁——可借「现代中轴」结构，慎学金红",
+      "wall": "primary"
+    },
+    {
+      "item_id": "packagingoftheworld:genmai-soup-gift-box",
+      "why": "仪式感来自层次与材质，不是纹样堆砌；对齐「不仿古」",
+      "wall": "primary"
+    }
+  ],
+  "verbal_directions": [
+    "主视觉围绕「青绿新中轴」展开",
+    "品名层级大于品牌纹样",
+    "礼盒外侧克制，内侧给开箱惊喜"
+  ],
+  "sketch_directions": [
+    "外盒色块构成草图",
+    "开箱分层结构示意"
+  ],
+  "demo_prompt": "Premium Chinese green tea gift box packaging, direction \"青绿新中轴\", style 中式现代, 工艺材质感, modern not antique, elegant unboxing, studio product photography, high-end FMCG packaging mockup, not a final artwork",
+  "demo_disclaimer": "Demo only — 非完稿，供侯总遴选方向",
+  "hou_decision": "pending",
+  "merge_into": null,
+  "created_at": "2026-08-12T12:00:08Z",
+  "extra_note": "v2：补强参考 why，原 card-cm-01.json 保留",
+  "updated_at": "2026-08-12T12:03:09Z"
+}

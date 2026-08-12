@@ -1,0 +1,143 @@
+{
+  "brief_id": "brief-green-tea-gift-20260812",
+  "brief": "新品牌青绿茶礼盒包装；礼赠+电商；中式现代；类比允许：茶礼、黄酒礼盒、滋补礼盒、国际简约茶包装",
+  "gate": "brief_relevance_v1",
+  "rules": {
+    "pass_brief": "tea + (packaging|gift) OR explicit analogs (黄酒/滋补/阿胶礼盒等) with packaging",
+    "pending_low_relevance": "generic packaging only (no tea / allowed analogy)",
+    "pending_offtopic": "visual hammer / VI / coffee / pet / cosmetics / tool-hammer without tea",
+    "promote_from_pending": false,
+    "accuracy_over_volume": true
+  },
+  "shell_before": {
+    "main_wall": 1820,
+    "pending_review": 1127
+  },
+  "layer_on_current_main": {
+    "pass_brief": 173,
+    "pending_low_relevance": 1235,
+    "pending_offtopic": 412
+  },
+  "layer_on_current_pending": {
+    "pass_brief": 99,
+    "pending_low_relevance": 537,
+    "pending_offtopic": 491
+  },
+  "proposal_after": {
+    "main_wall_pass_brief": 173,
+    "pending_review": 2774,
+    "demoted_from_main": 1647
+  },
+  "counts": {
+    "pass_brief": 173,
+    "pending_proposed": 2774,
+    "pending_low_relevance_on_main": 1235,
+    "pending_offtopic_on_main": 412
+  },
+  "samples": {
+    "pass_brief": [
+      {
+        "id": "pinterest:443745369558406550",
+        "title": "88+ Creative Tea Box Packaging Design Ideas",
+        "query_used": "packaging design"
+      },
+      {
+        "id": "pinterest:443745369558370009",
+        "title": "372+ Green Tea Box Packaging Design",
+        "query_used": "packaging design"
+      },
+      {
+        "id": "pinterest:4591912497729385856",
+        "title": "TEA Takeaway Bag Mockup - Commercial",
+        "query_used": "product packaging"
+      },
+      {
+        "id": "pinterest:452259987605316953",
+        "title": "Green Tea Bags",
+        "query_used": "tea packaging"
+      },
+      {
+        "id": "pinterest:AZhYAgL8jIpOeJmuxvdk5zZSi59ZBxpk_AK3bwNeV6g5-QULiHkT0XjkMc1dDsWU6g6TBw6Z3LABT3nnpGNJ990",
+        "title": "Kit 6 Blends Chá Hábito Vida 90 Sachês Linha Premium Natural",
+        "query_used": "tea packaging"
+      },
+      {
+        "id": "pinterest:2322237302875170",
+        "title": "Tea Pouch",
+        "query_used": "tea packaging"
+      }
+    ],
+    "pending_low_relevance": [
+      {
+        "id": "pinterest:AaRLKu2dlWlDYpbNksIQ1O5nIsk5dr3YPy6-ltNVLrfzH9sxwwic_SqobnfBBZOVjB6Xx7Q4C0TjePLBUOnJ8Hw",
+        "title": "Portfólio fácil de fazer",
+        "query_used": "packaging design"
+      },
+      {
+        "id": "pinterest:1109504058227623882",
+        "title": "Premium Can Packaging Mockup PSD",
+        "query_used": "packaging design"
+      },
+      {
+        "id": "pinterest:211174978862825",
+        "title": "Minimalism As A Design Trend Lets The Packaging Speak Volumes For A Brand - Design & Paper",
+        "query_used": "packaging design"
+      },
+      {
+        "id": "pinterest:443745369558434318",
+        "title": "185+ Premium Candle Box Packaging Design Ideas",
+        "query_used": "packaging design"
+      },
+      {
+        "id": "pinterest:Afc0v6WT0-Xj02a5MLnazYROG6sF7D_xdQgSkOxhGMrMGHFcXfdHMERZSiaY-VAaGt2hG5c9lBhrzHKqUAUrZkQ",
+        "title": "Adesivo Etiqueta Lacre para Caixa Embalagem Cliente",
+        "query_used": "packaging design"
+      },
+      {
+        "id": "pinterest:80501912086383605",
+        "title": "Howdy Orange Jam – Packaging Of The World",
+        "query_used": "packaging design"
+      }
+    ],
+    "pending_offtopic": [
+      {
+        "id": "pinterest:1011972978792587905",
+        "title": "Luxury Coffee Packaging Bags | Custom Coffee Pouch Manufacturer | Coffee Bag Supplier",
+        "query_used": "packaging design"
+      },
+      {
+        "id": "pinterest:1082271354228995728",
+        "title": "Luxury Skincare Packaging Design | Premium Cosmetic Branding | Mockup",
+        "query_used": "product packaging"
+      },
+      {
+        "id": "pinterest:326933254204808774",
+        "title": "Dalgona Coffee Packaging",
+        "query_used": "product packaging"
+      },
+      {
+        "id": "pinterest:914862418178207",
+        "title": "Reva skincare brand and packaging design by MindMuse",
+        "query_used": "product packaging"
+      },
+      {
+        "id": "pinterest:20547742048354015",
+        "title": "pH Shifting Lip Product!",
+        "query_used": "cosmetic packaging"
+      },
+      {
+        "id": "pinterest:AW-VAGjjL5lmKk_NXvZBiN8o-svvpqQTRm2oi1nL2zSovq6f2H_w8wtw1OtJUhNnli0-JDIFqz6eFzZTD4sKsOg",
+        "title": "Skkn By Kim Skincare | Skkn By Kim Full Set | Color: Cream | Size: Os",
+        "query_used": "cosmetic packaging"
+      }
+    ]
+  },
+  "outputs": {
+    "main": "/workspace/kuiyan-design-workbench/L3/feeds/l2_main_wall_proposed_brief_v1.jsonl",
+    "pending": "/workspace/kuiyan-design-workbench/L3/feeds/l2_pending_review_proposed_brief_v1.jsonl",
+    "summary": "/workspace/kuiyan-design-workbench/L3/feeds/BRIEF-RELEVANCE-PROPOSAL.json"
+  },
+  "shell_write": false,
+  "do_not_touch_until_unlock": true,
+  "note": "Proposal only — locked ui-shell jsonl untouched; shell may client-filter via「只看贴 brief」"
+}

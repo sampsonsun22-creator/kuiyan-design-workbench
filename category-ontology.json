@@ -1,0 +1,526 @@
+{
+  "version": "0.2",
+  "principle": "引擎品类无关；brief 进来先映射到品类节点，再展开主搜+类比+货架。下一客户未知，故覆盖奎燕历史赛道 + 快消包装常见宇宙。",
+  "primary_domains": [
+    {
+      "id": "dairy_drinks",
+      "name": "乳品与植物蛋白饮",
+      "kuiyan_fit": "high",
+      "examples": [
+        "鲜奶",
+        "酸奶",
+        "酪乳",
+        "核桃乳",
+        "儿童水替",
+        "植物奶"
+      ],
+      "kuiyan_cases": [
+        "光明优倍/畅优/如实/赏味/有格",
+        "味全",
+        "卫岗",
+        "七小七"
+      ],
+      "analogy_seeds": [
+        "果汁",
+        "功能饮料",
+        "咖啡即饮",
+        "儿童零食",
+        "母婴营养"
+      ]
+    },
+    {
+      "id": "alcohol",
+      "name": "酒类",
+      "kuiyan_fit": "high",
+      "examples": [
+        "黄酒",
+        "白酒",
+        "啤酒",
+        "低度潮饮酒",
+        "预调酒",
+        "苏打酒"
+      ],
+      "kuiyan_cases": [
+        "石库门/上海么糖",
+        "和酒",
+        "金色年华",
+        "谷和",
+        "厚雪",
+        "空卡",
+        "盒马螃友"
+      ],
+      "analogy_seeds": [
+        "茶饮礼盒",
+        "香水",
+        "高端饮品",
+        "滋补口服液",
+        "文创礼盒"
+      ]
+    },
+    {
+      "id": "meat_prepared",
+      "name": "肉制品与预制菜",
+      "kuiyan_fit": "high",
+      "examples": [
+        "香肠",
+        "低温肉",
+        "牛肉制品",
+        "快手菜",
+        "卤味",
+        "罐头"
+      ],
+      "kuiyan_cases": [
+        "双汇",
+        "雨润",
+        "尊乐",
+        "五洲牛肉",
+        "味知香",
+        "紫燕",
+        "梅林"
+      ],
+      "analogy_seeds": [
+        "方便面",
+        "调味酱",
+        "冷冻食品",
+        "轻食沙拉",
+        "外卖餐饮品牌"
+      ]
+    },
+    {
+      "id": "pet",
+      "name": "宠物食品与养宠清洁",
+      "kuiyan_fit": "high",
+      "examples": [
+        "主粮",
+        "零食",
+        "湿粮",
+        "猫砂",
+        "宠物清洁"
+      ],
+      "kuiyan_cases": [
+        "麦富迪",
+        "比瑞吉",
+        "好命天生",
+        "再三"
+      ],
+      "analogy_seeds": [
+        "母婴",
+        "个护",
+        "家清",
+        "人用零食",
+        "保健品"
+      ]
+    },
+    {
+      "id": "paper_homecare",
+      "name": "纸品 / 家清 / 家纺",
+      "kuiyan_fit": "high",
+      "examples": [
+        "纸巾",
+        "气垫纸",
+        "洗衣护理",
+        "酒店家纺"
+      ],
+      "kuiyan_cases": [
+        "唯洁雅",
+        "清风",
+        "悠派柔品",
+        "careSEEN"
+      ],
+      "analogy_seeds": [
+        "美妆护肤",
+        "母婴纸尿裤",
+        "日用百货",
+        "酒店用品"
+      ]
+    },
+    {
+      "id": "health_tcm",
+      "name": "滋补保健与药企周边",
+      "kuiyan_fit": "high",
+      "examples": [
+        "阿胶糕",
+        "膏方",
+        "口服液",
+        "轻滋补",
+        "保健食品"
+      ],
+      "kuiyan_cases": [
+        "东阿阿胶桃花姬",
+        "上药雷氏十全膏",
+        "扬子江药业"
+      ],
+      "analogy_seeds": [
+        "高端茶礼",
+        "化妆品",
+        "功能性饮料",
+        "母婴营养"
+      ]
+    },
+    {
+      "id": "snacks_bakery",
+      "name": "休闲零食与烘焙糕点",
+      "kuiyan_fit": "high",
+      "examples": [
+        "坚果",
+        "糖果",
+        "巧克力",
+        "饼干",
+        "糕点礼盒",
+        "抹茶零食"
+      ],
+      "kuiyan_cases": [
+        "天喔",
+        "华味亨",
+        "阿明",
+        "唐饼家",
+        "吾茶白"
+      ],
+      "analogy_seeds": [
+        "咖啡",
+        "茶礼",
+        "文创礼盒",
+        "美妆小样",
+        "酒伴手礼"
+      ]
+    },
+    {
+      "id": "tea_beverage",
+      "name": "茶与即饮/新茶饮相关包装",
+      "kuiyan_fit": "medium_high",
+      "examples": [
+        "原叶茶",
+        "冷泡茶",
+        "青绿茶",
+        "柚茶/果汁茶",
+        "瓶装茶"
+      ],
+      "kuiyan_cases": [
+        "中宝琯柚汁/琯柚茶",
+        "吾茶白"
+      ],
+      "analogy_seeds": [
+        "咖啡",
+        "酒",
+        "中式滋补",
+        "矿泉水",
+        "香氛"
+      ]
+    },
+    {
+      "id": "condiment_sauce",
+      "name": "调味酿造",
+      "kuiyan_fit": "medium",
+      "examples": [
+        "酱油醋",
+        "复合调味",
+        "酱料"
+      ],
+      "kuiyan_cases": [
+        "宝鼎酿造"
+      ],
+      "analogy_seeds": [
+        "预制菜",
+        "火锅底料",
+        "油盐米面",
+        "餐饮供应链"
+      ]
+    },
+    {
+      "id": "beauty_fashion",
+      "name": "美妆个护 / 时尚鞋服内衣",
+      "kuiyan_fit": "medium",
+      "examples": [
+        "国货美妆",
+        "鞋履",
+        "内衣",
+        "个护"
+      ],
+      "kuiyan_cases": [
+        "家化双妹",
+        "盼喜Pansy",
+        "轻简内衣"
+      ],
+      "analogy_seeds": [
+        "香氛",
+        "珠宝配饰",
+        "生活方式家居",
+        "精品礼盒"
+      ]
+    },
+    {
+      "id": "baby_maternal",
+      "name": "母婴",
+      "kuiyan_fit": "medium",
+      "examples": [
+        "纸尿裤",
+        "母婴电器",
+        "儿童食品",
+        "奶粉辅食"
+      ],
+      "kuiyan_cases": [
+        "新贝",
+        "任性袋鼠",
+        "七小七儿童线"
+      ],
+      "analogy_seeds": [
+        "宠物",
+        "医疗器械简约包装",
+        "玩具",
+        "家清"
+      ]
+    },
+    {
+      "id": "grain_staple",
+      "name": "米面粮油与主食",
+      "kuiyan_fit": "medium",
+      "examples": [
+        "大米",
+        "杂粮",
+        "食用油"
+      ],
+      "kuiyan_cases": [
+        "蛙稻米"
+      ],
+      "analogy_seeds": [
+        "茶礼",
+        "有机食品",
+        "地方特产礼盒"
+      ]
+    },
+    {
+      "id": "coffee",
+      "name": "咖啡",
+      "kuiyan_fit": "medium",
+      "examples": [
+        "挂耳",
+        "豆罐",
+        "即饮咖啡",
+        "咖啡礼盒"
+      ],
+      "kuiyan_cases": [
+        "拓米咖啡"
+      ],
+      "analogy_seeds": [
+        "茶",
+        "巧克力",
+        "酒",
+        "香氛"
+      ]
+    },
+    {
+      "id": "cultural_gift",
+      "name": "文创与区域特产礼赠",
+      "kuiyan_fit": "medium",
+      "examples": [
+        "城市文创",
+        "老字号礼盒",
+        "节庆礼赠"
+      ],
+      "kuiyan_cases": [
+        "豫园/老城隍庙相关",
+        "唐饼家新春礼"
+      ],
+      "analogy_seeds": [
+        "酒礼",
+        "茶礼",
+        "美妆礼盒",
+        "博物馆文创"
+      ]
+    },
+    {
+      "id": "other_fmcg",
+      "name": "其他快消与新奇特包装",
+      "kuiyan_fit": "catch_all",
+      "examples": [
+        "功能食品",
+        "植物基新品",
+        "跨境引入品",
+        "尚未归类新品类"
+      ],
+      "kuiyan_cases": [],
+      "analogy_seeds": [
+        "邻近感官品类",
+        "同渠道爆品",
+        "同价格带标杆",
+        "同人群生活方式品牌"
+      ]
+    }
+  ],
+  "cross_analogy_rules": [
+    {
+      "when": "主品类感官接近（甜/苦/香）",
+      "pull": [
+        "巧克力↔糖果↔咖啡↔茶"
+      ]
+    },
+    {
+      "when": "礼赠/节庆场景",
+      "pull": [
+        "酒↔茶礼↔糕点↔滋补↔文创"
+      ]
+    },
+    {
+      "when": "健康/无糖诉求",
+      "pull": [
+        "低度酒↔无糖茶↔功能饮料↔轻滋补"
+      ]
+    },
+    {
+      "when": "家庭清洁/养宠",
+      "pull": [
+        "家清↔宠物清洁↔母婴纸品"
+      ]
+    },
+    {
+      "when": "中式现代叙事",
+      "pull": [
+        "黄酒↔茶↔滋补↔国潮美妆↔地方特产"
+      ]
+    },
+    {
+      "when": "国际简约/瑞士感",
+      "pull": [
+        "巧克力↔咖啡↔美妆↔高端水↔药妆"
+      ]
+    },
+    {
+      "when": "电商货架效率",
+      "pull": [
+        "任意品类 ↔ 同渠道爆款信息锤与主视觉"
+      ]
+    }
+  ],
+  "style_buckets_v0": [
+    "中式现代",
+    "中式典雅/礼赠",
+    "国际简约",
+    "瑞士国际主义",
+    "自然有机",
+    "奢华金饰",
+    "极简白盒",
+    "色彩冲击/年轻潮",
+    "卡通IP趣味",
+    "复古怀旧",
+    "工艺材质感",
+    "摄影食欲风",
+    "插画叙事",
+    "成分科学/功效锤",
+    "地域文旅",
+    "宠物萌感",
+    "母婴安全感",
+    "夜场潮流",
+    "可持续质朴",
+    "跨界艺术限量"
+  ],
+  "engine_invariant": {
+    "L1": "任意 brief → 映射 primary_domain + 细类 + 约束",
+    "L2": "主品类穷尽 + 按规则展开类比 + 货架对照（源站通用，检索词随品类变）",
+    "L3": "同一套风格桶/结构/信息层级标签；品类只影响默认权重",
+    "L4": "策略卡模板固定；内容随 brief 与入选参考生成"
+  },
+  "style_buckets_v0_deprecated": [
+    "中式现代",
+    "中式典雅/礼赠",
+    "国际简约",
+    "瑞士国际主义",
+    "自然有机",
+    "奢华金饰",
+    "极简白盒",
+    "色彩冲击/年轻潮",
+    "卡通IP趣味",
+    "复古怀旧",
+    "工艺材质感",
+    "摄影食欲风",
+    "插画叙事",
+    "成分科学/功效锤",
+    "地域文旅",
+    "宠物萌感",
+    "母婴安全感",
+    "夜场潮流",
+    "可持续质朴",
+    "跨界艺术限量"
+  ],
+  "style_buckets_v1": [
+    {
+      "id": "chinese_modern",
+      "name_zh": "中式现代"
+    },
+    {
+      "id": "chinese_ceremonial",
+      "name_zh": "中式典雅/礼赠"
+    },
+    {
+      "id": "global_minimal",
+      "name_zh": "国际简约"
+    },
+    {
+      "id": "swiss_international",
+      "name_zh": "瑞士国际主义"
+    },
+    {
+      "id": "natural_organic",
+      "name_zh": "自然有机"
+    },
+    {
+      "id": "luxury_gilt",
+      "name_zh": "奢华金饰"
+    },
+    {
+      "id": "minimal_white",
+      "name_zh": "极简白盒"
+    },
+    {
+      "id": "color_youth",
+      "name_zh": "色彩冲击/年轻潮"
+    },
+    {
+      "id": "cartoon_ip",
+      "name_zh": "卡通IP趣味"
+    },
+    {
+      "id": "retro_nostalgia",
+      "name_zh": "复古怀旧"
+    },
+    {
+      "id": "craft_material",
+      "name_zh": "工艺材质感"
+    },
+    {
+      "id": "appetite_photo",
+      "name_zh": "摄影食欲风"
+    },
+    {
+      "id": "illustration_story",
+      "name_zh": "插画叙事"
+    },
+    {
+      "id": "efficacy_hammer",
+      "name_zh": "成分科学/功效锤"
+    },
+    {
+      "id": "regional_culture",
+      "name_zh": "地域文旅"
+    },
+    {
+      "id": "pet_cute",
+      "name_zh": "宠物萌感"
+    },
+    {
+      "id": "maternal_safe",
+      "name_zh": "母婴安全感"
+    },
+    {
+      "id": "nightlife_trend",
+      "name_zh": "夜场潮流"
+    },
+    {
+      "id": "sustainable_plain",
+      "name_zh": "可持续质朴"
+    },
+    {
+      "id": "art_collab",
+      "name_zh": "跨界艺术限量"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KEY 视界</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="KEY 视界">
+        <img class="brand-mark" src="assets/brand/logo-key-mark.svg" width="72" height="22" alt="{KEY}" />
+        <span class="brand-product">KEY 视界</span><span class="brand-subtag">设计竞品调研</span>
+      </a>
+      <span id="briefKey" class="brand-brief" hidden>KEY</span>
+      <div class="demo-pill">演示 · 青绿茶礼盒</div>
+    </header>
+
+    <nav class="stepper" id="stepper" aria-label="步骤">
+      <button class="step-btn active" data-step="brief"><span class="step-num">1</span>Brief</button>
+      <span class="step-sep">→</span>
+      <button class="step-btn" data-step="map"><span class="step-num">2</span>市场地图</button>
+      <span class="step-sep">→</span>
+      <button class="step-btn" data-step="cards"><span class="step-num">3</span>策略卡</button>
+      <span class="step-sep">→</span>
+      <button class="step-btn" data-step="shortlist"><span class="step-num">4</span>短名单</button>
+    </nav>
+
+    <div class="shell">
+      <main class="main" id="main"></main>
+      <aside class="basket" id="basket"></aside>
+    </div>
+
+    <footer class="footer" id="footer">Demo · 非完稿 · 数据来自青绿茶 e2e 真样</footer>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" id="modal"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

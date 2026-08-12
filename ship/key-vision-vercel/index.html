@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta name="referrer" content="no-referrer" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KEY 视界 · 设计竞品调研</title>
+  <link rel="stylesheet" href="styles.css?v=452wall1" />
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- LEFT -->
+    <aside class="left" aria-label="导航与能力栈">
+      <div class="brand-brick" aria-label="KEY 视界">
+        <div class="brand-mark">{KEY}</div>
+        <div class="brand-name">KEY 视界</div>
+        <div class="brand-sub">奎燕 AI 研究室</div>
+      </div>
+
+      <button type="button" class="btn-new" id="btnNewResearch">
+        <span class="plus">+</span> 新建研究
+      </button>
+
+      <section class="left-section">
+        <h3 class="left-h">能力栈</h3>
+        <ul class="cap-list" id="capList"></ul>
+      </section>
+
+      <section class="left-section saved">
+        <h3 class="left-h">已保存的研究</h3>
+        <ul class="research-list" id="researchList"></ul>
+      </section>
+    </aside>
+
+    <!-- CENTER -->
+    <main class="center" aria-label="协作室">
+      <header class="center-head">
+        <div class="center-title-row">
+          <h1>协作室</h1>
+          <span class="center-sub" id="researchTitle">青绿茶礼盒 · 竞品调研</span>
+        </div>
+        <div class="question-card">
+          <div class="question-card-head">
+            <span class="q-label">这次要搞清的事</span>
+            <span class="q-edit" aria-hidden="true">✎</span>
+          </div>
+          <textarea
+            id="researchQuestion"
+            rows="3"
+            maxlength="200"
+          >新品牌青绿茶礼盒：中式现代气质下，礼赠+电商渠道如何做出开箱记忆点与差异化？</textarea>
+          <div class="question-card-foot">
+            <span class="q-hint">随便改 · 我们按这个对齐</span>
+            <span class="q-count" id="qCount">58/200</span>
+          </div>
+        </div>
+      </header>
+
+      <nav class="stages" id="stages" aria-label="研究阶段">
+        <button type="button" class="stage done" data-stage="1"><span class="n">✓</span>先听清你要什么</button>
+        <button type="button" class="stage done" data-stage="2"><span class="n">✓</span>去市场上找参考</button>
+        <button type="button" class="stage active" data-stage="3"><span class="n">3</span>一起看版图</button>
+        <button type="button" class="stage" data-stage="4"><span class="n">4</span>商量方向</button>
+        <button type="button" class="stage" data-stage="5"><span class="n">5</span>收成短名单</button>
+      </nav>
+
+      <div class="stream" id="activityStream" role="log" aria-live="polite"></div>
+
+      <form class="composer" id="composer">
+        <div class="attach-row" aria-label="附件">
+          <button type="button" class="attach" title="图片" data-attach="image">🖼</button>
+          <button type="button" class="attach" title="表格" data-attach="table">▦</button>
+          <button type="button" class="attach" title="证据" data-attach="evidence">📎</button>
+        </div>
+        <textarea id="composerInput" rows="1" placeholder="补充一句你在意的事，或直接拍板…"></textarea>
+        <button type="submit" class="send-btn" id="sendBtn">发送</button>
+      </form>
+    </main>
+
+    <!-- RIGHT -->
+    <aside class="right" aria-label="结果画布">
+      <div class="right-main" id="rightMain">
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab active" role="tab" data-tab="visual" aria-selected="true">视觉素材</button>
+          <button type="button" class="tab" role="tab" data-tab="strategy" aria-selected="false">策略卡</button>
+          <button type="button" class="tab" role="tab" data-tab="shortlist" aria-selected="false">短名单</button>
+        </div>
+
+        <div class="source-cards" id="sourceChips" aria-label="数据源状态"></div>
+
+        <div class="category-chips" id="categoryChips" aria-label="素材类别">
+          <button type="button" class="cat-chip active" data-cat="all">全部</button>
+          <button type="button" class="cat-chip" data-cat="pack">包装实物</button>
+          <button type="button" class="cat-chip" data-cat="case">设计案例</button>
+          <button type="button" class="cat-chip pending-toggle" id="pendingToggle" data-pending="0" aria-pressed="false">含待复核</button>
+          <button type="button" class="cat-chip brief-toggle active" id="briefToggle" data-brief="1" aria-pressed="true">只看贴 brief</button>
+        </div>
+        <div class="wall-count-bar" id="wallCountBar" aria-live="polite">主墙 — · 待复核 —</div>
+
+        <div class="filters" id="filters">
+          <select aria-label="风格" data-filter="style"><option value="">风格 · 全部</option><option>中式现代</option><option>国际简约</option><option>工艺材质感</option></select>
+          <select aria-label="来源" data-filter="source" class="filter-source"><option value="">来源 · 全部</option><option>Behance</option><option>站酷</option><option>Packaging of the World</option></select>
+          <select aria-label="方向" data-filter="direction" class="filter-direction" hidden><option>方向 · 全部</option><option>开箱记忆</option><option>货架识别</option><option>礼赠仪式</option></select>
+          <select aria-label="气质" data-filter="tone" class="filter-tone" hidden><option>气质 · 全部</option><option>中式现代</option><option>国际简约</option><option>地域文旅</option></select>
+          <select aria-label="市场" data-filter="market"><option value="">市场 · 礼赠+电商</option><option>礼赠</option><option>电商</option></select>
+          <select aria-label="年份" data-filter="year"><option value="">年份 · 近 3 年</option><option>2024–2026</option><option>全部</option></select>
+        </div>
+
+        <div class="canvas-wrap">
+          <div class="canvas-body" id="canvasBody"></div>
+          <div class="selection-bar hidden" id="selectionBar" aria-live="polite">
+            <span class="sel-count" id="selCount">先看这 0 张</span>
+            <div class="sel-actions">
+              <button type="button" data-sel-action="compare">对比一下</button>
+              <button type="button" data-sel-action="shortlist">收进短名单</button>
+              <button type="button" class="sel-primary" data-sel-action="open">打开原页</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="inspector hidden" id="inspector" aria-label="这张和你要的，对得上吗">
+        <div class="inspector-inner">
+          <div class="inspector-head">
+            <h3>这张和你要的，对得上吗</h3>
+            <button type="button" class="inspector-close" id="inspectorToggle" title="关闭">×</button>
+          </div>
+          <div id="inspectorBody" class="inspector-body">
+            <p class="muted">点一张图，我帮你对照 Brief 说人话。</p>
+          </div>
+        </div>
+      </aside>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="app.js?v=452wall1"></script>
+</body>
+</html>

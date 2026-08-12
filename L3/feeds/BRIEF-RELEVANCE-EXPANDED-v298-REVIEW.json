@@ -1,0 +1,123 @@
+{
+  "generated_at": "2026-08-12T14:46:13Z",
+  "input_main": "/workspace/kuiyan-design-workbench/L3/feeds/l2_main_wall_brief_relevance_expanded_v20260812T144033.jsonl",
+  "input_pending": "/workspace/kuiyan-design-workbench/L3/feeds/l2_pending_review_brief_relevance_expanded_v20260812T144033.jsonl",
+  "shell_floor": "/workspace/kuiyan-design-workbench/L3/feeds/l2_main_wall_brief_relevance_expanded_clean274.jsonl",
+  "shell_floor_note": "Locked clean274 (274). Live ui-shell path currently drifted; not used as floor; ui-shell not written by this review.",
+  "live_shell_path": "/workspace/kuiyan-design-workbench/ui-shell/data/l2_main_wall.jsonl",
+  "live_shell_n": 304,
+  "live_shell_ids_missing_from_v298": 6,
+  "main": 298,
+  "pending": 2680,
+  "demoted": 0,
+  "shell_kept": 274,
+  "shell_floor_n": 274,
+  "shell_noise_kept": 12,
+  "shell_noise_kept_samples": [
+    {
+      "id": "pinterest:ARfSbjT6HPHu8D_ZZL48VTI0dpEGXGpzYABBvQYVT6fmnmWV1k_uXnPkT8pVP_wWQqOa9iOLfkTmi99GZJWYHU8",
+      "title": "Soda / Beer Packaging Mockup by Renderteam | Creative Market",
+      "reasons": [
+        "soda_beer_mockup"
+      ],
+      "query_used": "packaging design"
+    },
+    {
+      "id": "pinterest:AU03YKHTkV_XIdzvMBhdQGZz0NwqPcSBehrL41zPGeoKPdDtOsv3vX9ENlgBiN1IPjcC0jH1S5gy5sA0kQvavXE",
+      "title": "Paper Box Mockup Set by Renderteam | Creative Market",
+      "reasons": [
+        "paper_box_mockup"
+      ],
+      "query_used": "packaging design"
+    },
+    {
+      "id": "pinterest:ASFTFQaMt_ycZj8pDOigLk_XL8zx1GsrA81t5BUbsRGMacmG8W511-Zc9Xlt4SgwTc92nk_UhGbIYCZPfkIOJ5o",
+      "title": "Paper Box Mockup Set by Renderteam | Creative Market",
+      "reasons": [
+        "paper_box_mockup"
+      ],
+      "query_used": "product packaging"
+    },
+    {
+      "id": "pinterest:47850814784639231",
+      "title": "pin:47850814784639231",
+      "reasons": [
+        "empty_or_pin_title"
+      ],
+      "query_used": "tea packaging"
+    },
+    {
+      "id": "pinterest:969329519830125984",
+      "title": "pin:969329519830125984",
+      "reasons": [
+        "empty_or_pin_title"
+      ],
+      "query_used": "tea packaging"
+    },
+    {
+      "id": "pinterest:1060034831056981116",
+      "title": "pin:1060034831056981116",
+      "reasons": [
+        "empty_or_pin_title"
+      ],
+      "query_used": "tea packaging"
+    },
+    {
+      "id": "pinterest:AT1PCeQ49TYsCXRKfyp463oJ1b3Pkvp5Yn1G1EktZZKdrMKtSkD61j2xhnCV4bXbxDt8I58tIL2i3f5ve_OKDLw",
+      "title": "Soda / Beer Packaging Mockup by Renderteam | Creative Market",
+      "reasons": [
+        "soda_beer_mockup"
+      ],
+      "query_used": "food packaging"
+    },
+    {
+      "id": "pinterest:AQHGibWQQznBlntd6mQLqY90_f0oG39-GL7qjGqeFdLmwLWLGV9njxR38nH6rS4mfxVV5KrRAKSZUdY5BXaYnZ4",
+      "title": "Paper Box Mockup Set by Renderteam | Creative Market",
+      "reasons": [
+        "paper_box_mockup"
+      ],
+      "query_used": "brand packaging"
+    },
+    {
+      "id": "pinterest:AXRs9ducmbPHp_OBdgii7E-7J3lWe_q3gJSHUoQqCt8dmfKtMyXV3sPrT5oHT_AApShk6vqs4tYzMnLvtqZ5BTU",
+      "title": "Soda / Beer Packaging Mockup by Renderteam | Creative Market",
+      "reasons": [
+        "soda_beer_mockup"
+      ],
+      "query_used": "beverage packaging design"
+    },
+    {
+      "id": "pinterest:AczQ7YFhrI1vV6_x-g2mKLr3bpBS5MU7xcrX2BhASF2nrprOuVKM9wUARJy8SL8t7FROQdMhA6u8lgMVSG_jbcY",
+      "title": "Paper Box Mockup Set by Renderteam | Creative Market",
+      "reasons": [
+        "paper_box_mockup"
+      ],
+      "query_used": "gift box packaging design"
+    },
+    {
+      "id": "xiaohongshu:67cfab03000000000703497e",
+      "title": "BASAO康普茶",
+      "reasons": [
+        "kombucha"
+      ],
+      "query_used": "品牌包装设计"
+    },
+    {
+      "id": "huaban:7053030264",
+      "title": "原创 美团小象康普茶包装设计 - 小红书",
+      "reasons": [
+        "kombucha"
+      ],
+      "query_used": "饮料包装"
+    }
+  ],
+  "demoted_samples": [],
+  "contract_ok": true,
+  "missing_shell_ids": [],
+  "note": "Light-demote noise MAIN→PENDING; floor ids never demoted. clean274/ui-shell untouched by writer. image_gate_1820 not restored.",
+  "outputs": {
+    "main": "/workspace/kuiyan-design-workbench/L3/feeds/l2_main_wall_brief_relevance_expanded_v20260812T144033_clean.jsonl",
+    "pending": "/workspace/kuiyan-design-workbench/L3/feeds/l2_pending_review_brief_relevance_expanded_v20260812T144033_clean.jsonl",
+    "meta": "/workspace/kuiyan-design-workbench/L3/feeds/BRIEF-RELEVANCE-EXPANDED-v298-REVIEW.json"
+  }
+}

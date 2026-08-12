@@ -1,0 +1,21 @@
+{
+  "brief_id": "snack_nut",
+  "name": "零食坚果",
+  "domain": "snacks_bakery",
+  "summary": "休闲零食/坚果包装",
+  "brief_text": "休闲零食/坚果包装",
+  "main_wall": 59,
+  "pending_review": 2896,
+  "pool_size": 2955,
+  "buckets": {
+    "soft_pack_only": 2141,
+    "kill_noise": 749,
+    "keep_core": 59,
+    "kill_unrelated": 6
+  },
+  "rule_version": "brief_relevance_v1_strict",
+  "gate": "brief_relevance_v1",
+  "shell_write": false,
+  "generated_at": "2026-08-12T14:16:53Z",
+  "path": "L3/eval/landed/snack_nut"
+}

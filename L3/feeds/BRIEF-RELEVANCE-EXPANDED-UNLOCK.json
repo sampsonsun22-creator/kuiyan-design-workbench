@@ -1,0 +1,13 @@
+{
+  "main_wall": 304,
+  "pending_review": 2680,
+  "shell_kept": 274,
+  "demoted_delta": 0,
+  "source": "l2_main_wall_brief_relevance_expanded_v20260812T144329.jsonl",
+  "unlock_files": [
+    "/workspace/kuiyan-design-workbench/L3/feeds/l2_main_wall_brief_relevance_expanded_unlock.jsonl",
+    "/workspace/kuiyan-design-workbench/L3/feeds/l2_pending_review_brief_relevance_expanded_unlock.jsonl"
+  ],
+  "contract_ok": true,
+  "generated_at": "2026-08-12T14:43:51.598421+00:00"
+}

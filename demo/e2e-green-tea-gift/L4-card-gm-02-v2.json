@@ -1,0 +1,40 @@
+{
+  "card_id": "card-gm-02-v2",
+  "brief_id": "brief-green-tea-gift-20260812",
+  "title": "静奢留白",
+  "one_liner": "国际简约骨架 + 一点点东方材质，把礼盒做成「安静的贵」。",
+  "advantage": "新中产审美友好，跨礼赠/自用。",
+  "differentiation": "货架 listing 多为热闹满版；本方向用国际简约留白与材质感拉开，适合怕「土」、要体面但不喧闹的新中产礼赠。",
+  "recommended_style_buckets": [
+    "global_minimal",
+    "minimal_white"
+  ],
+  "reference_montage": [
+    {
+      "item_id": "packagingoftheworld:genmai-soup-gift-box",
+      "why": "留白+材质即可传达礼赠，验证「安静的贵」",
+      "wall": "primary"
+    },
+    {
+      "item_id": "behance:search-tea-ology",
+      "why": "国际简约茶包装气质参照（listing 级，Phase B 需深链）",
+      "wall": "primary"
+    }
+  ],
+  "verbal_directions": [
+    "主视觉围绕「静奢留白」展开",
+    "品名层级大于品牌纹样",
+    "礼盒外侧克制，内侧给开箱惊喜"
+  ],
+  "sketch_directions": [
+    "外盒色块构成草图",
+    "开箱分层结构示意"
+  ],
+  "demo_prompt": "Premium Chinese green tea gift box packaging, direction \"静奢留白\", style 国际简约, 极简白盒, modern not antique, elegant unboxing, studio product photography, high-end FMCG packaging mockup, not a final artwork",
+  "demo_disclaimer": "Demo only — 非完稿，供侯总遴选方向",
+  "hou_decision": "pending",
+  "merge_into": null,
+  "created_at": "2026-08-12T12:00:08Z",
+  "extra_note": "v2：补强参考 why，原 card-gm-02.json 保留",
+  "updated_at": "2026-08-12T12:03:09Z"
+}

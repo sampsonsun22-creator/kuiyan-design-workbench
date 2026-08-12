@@ -1,0 +1,16 @@
+{
+  "brief_id": "brief-snacks",
+  "name": "零食烘焙",
+  "domain": "snacks_bakery",
+  "main_wall": 55,
+  "pending_review": 2899,
+  "buckets": {
+    "soft_pack_only": 2081,
+    "kill_noise": 812,
+    "keep_core": 55,
+    "kill_unrelated": 6
+  },
+  "shell_default": false,
+  "updated_at": "2026-08-12T14:17:20Z",
+  "directed_new": 0
+}

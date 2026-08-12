@@ -1,0 +1,41 @@
+{
+  "updated_at": "2026-08-12T15:01:16Z",
+  "shell_default": "strict",
+  "qc_mode": "brief_relevance_v1",
+  "main_wall": 452,
+  "pending_review": 2680,
+  "pass_main": 452,
+  "truth_source": "kuiyan_image_gate_v1+brief_relevance_v1",
+  "brief_id": "brief-green-tea-gift-20260812",
+  "stability": "LOCKED_brief_relevance_v1_unlock452",
+  "forbid": [
+    "rollback_to_410",
+    "image_gate",
+    "<=410",
+    "<=401",
+    "<=304",
+    "274",
+    "1820",
+    "wide",
+    "structural"
+  ],
+  "previous_strict": {
+    "main_wall": 184,
+    "pending_review": 2763
+  },
+  "applied_from": {
+    "main": "L3/feeds/l2_main_wall_brief_relevance_expanded_unlock.jsonl",
+    "pending": "L3/feeds/l2_pending_review_brief_relevance_expanded_unlock.jsonl",
+    "meta": "L3/feeds/BRIEF-RELEVANCE-EXPANDED-UNLOCK.json"
+  },
+  "ui_shell_feeds": {
+    "l2_main_wall.jsonl": 274,
+    "l2_pending_review.jsonl": 2680
+  },
+  "lock": "ui-shell/data/SHELL-DEFAULT.lock.md",
+  "note": "Patrol must NEVER restore 410. Dated *_20260812 must match 452.",
+  "restore_source": "ui-shell/data shell mirror @452 ONLY",
+  "next_unlock_gate": "main_wall > 452 with valid pending",
+  "backup_unlock": "L3/feeds/l2_*_brief_relevance_expanded_unlock.jsonl",
+  "source_version": "v20260812T144724"
+}

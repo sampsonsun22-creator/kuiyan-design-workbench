@@ -1,0 +1,31 @@
+{
+  "pass_main": 2935,
+  "main_wall": 2935,
+  "pending_review": 16,
+  "total_adapted": 2925,
+  "source_distribution_main": {
+    "huaban": 669,
+    "pinterest": 644,
+    "behance": 783,
+    "xiaohongshu": 827,
+    "packagingoftheworld": 5,
+    "zcool": 3,
+    "jd": 3,
+    "taobao": 1
+  },
+  "source_distribution_pending": {
+    "pinterest": 13,
+    "zcool": 3
+  },
+  "fail_reasons": {
+    "title_too_long": 13,
+    "missing_image": 3
+  },
+  "firecrawl": 15,
+  "firecrawl_on_wall": 15,
+  "pipeline_adapted": 2925,
+  "bundle": "/workspace/kuiyan-design-workbench/ui-shell/data/demo-bundle.json",
+  "data_live": "/workspace/kuiyan-design-workbench/DATA-LIVE.md",
+  "elapsed_s": 0.6,
+  "deduped": 2951
+}

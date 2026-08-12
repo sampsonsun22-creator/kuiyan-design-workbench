@@ -1,0 +1,31 @@
+{
+  "action": "reclassify_huaban_gd_hbimg_edge_to_pending",
+  "count": 48,
+  "from_main": 1868,
+  "to_main": 1820,
+  "to_pending": 1127,
+  "reason": "image_cdn_blocked_huaban (403/567 on gd-hbimg-edge.huaban.com)",
+  "requires": "platform unlock of ui-shell/data/l2_main_wall.jsonl + l2_pending_review.jsonl",
+  "recommendation": "YES — demote 48 from pass_main to pending_review; new shell default 1820/1127 (±)",
+  "do_not_touch_until_unlock": true,
+  "ids_sample": [
+    "huaban:6434836463",
+    "huaban:6437648404",
+    "huaban:2329315588",
+    "huaban:5348423488",
+    "huaban:7103201409",
+    "huaban:6941456058",
+    "huaban:6364405170",
+    "huaban:6941456421",
+    "huaban:5406921131",
+    "huaban:6443079702"
+  ],
+  "proposed_main_count": 1820,
+  "proposed_pending_count": 1127,
+  "proposal_paths": {
+    "main": "/workspace/kuiyan-design-workbench/L3/feeds/l2_main_wall_proposed_no_huaban_edge.jsonl",
+    "pending": "/workspace/kuiyan-design-workbench/L3/feeds/l2_pending_review_proposed_with_huaban_edge.jsonl"
+  },
+  "cdn_risk_manifest": "L3/feeds/HUABAN-EDGE-CDN-RISK.json",
+  "prior_delivery_sample50_missed_huaban": true
+}

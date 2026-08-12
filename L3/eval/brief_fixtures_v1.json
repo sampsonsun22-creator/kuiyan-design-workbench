@@ -1,0 +1,112 @@
+{
+  "version": "brief_fixtures_v1",
+  "rule_version": "brief_relevance_v1_strict",
+  "note": "Landable briefs for main-wall switcher. Accuracy > volume. Shell default stays green tea.",
+  "briefs": [
+    {
+      "brief_id": "green_tea_gift",
+      "name": "青绿茶礼盒",
+      "domain": "tea_beverage",
+      "summary": "新品牌青绿茶礼盒包装；礼赠+电商；中式现代；类比允许：茶礼、黄酒礼盒、滋补礼盒、国际简约茶包装",
+      "shell_default": true,
+      "align_shell_main": 184,
+      "core_terms": [
+        "茶", "绿茶", "青茶", "红茶", "白茶", "乌龙", "普洱", "龙井", "碧螺春",
+        "铁观音", "茉莉花茶", "茶叶", "matcha", "green tea", "oolong", "tea"
+      ],
+      "analogy_terms": [
+        "黄酒", "滋补礼", "阿胶礼", "阿胶", "人参礼", "保健礼盒", "酒礼盒",
+        "sake", "huangjiu", "tonic gift", "herbal gift", "国际简约", "新中式养生滋补"
+      ],
+      "noise_terms": [
+        "咖啡", "coffee", "美妆", "口红", "宠物", "狗粮", "猫粮", "母婴",
+        "维生素", "视觉锤", "Paper Box Mockup", "Soda / Beer"
+      ]
+    },
+    {
+      "brief_id": "baijiu_gift",
+      "name": "白酒礼盒",
+      "domain": "baijiu",
+      "summary": "白酒/黄酒礼盒包装；中式礼赠；类比茶礼与滋补礼盒",
+      "core_terms": [
+        "白酒", "黄酒", "酒盒", "酒礼盒", "酒包装", "baijiu", "huangjiu",
+        "米酒", "清酒", "sake", "wine", "葡萄酒", "红酒", "酒"
+      ],
+      "analogy_terms": ["茶礼", "滋补礼盒", "礼盒酒"],
+      "noise_terms": ["咖啡", "美妆", "宠物", "纸尿裤", "Soda / Beer", "soda", "软饮"]
+    },
+    {
+      "brief_id": "pet_food",
+      "name": "宠物食品",
+      "domain": "pet",
+      "summary": "猫狗粮/宠物零食包装（排除 PET 塑料瓶罐误杀）",
+      "core_terms": [
+        "猫粮", "狗粮", "宠物", "宠物零食", "宠物食品",
+        "cat food", "dog food", "pet food", "pet care", "pet treat",
+        "猫", "狗"
+      ],
+      "analogy_terms": ["零食包装", "罐头包装"],
+      "noise_terms": ["茶", "酒", "美妆", "母婴", "PET bottle", "Garrafas PET", "PET Cans"]
+    },
+    {
+      "brief_id": "tissue_home",
+      "name": "纸品日清",
+      "domain": "paper_tissue",
+      "summary": "抽纸/湿巾/日清纸品包装",
+      "core_terms": [
+        "抽纸", "纸巾", "湿巾", "卫生纸", "纸品", "餐巾纸",
+        "tissue", "wet wipe", "kitchen towel", "paper towel"
+      ],
+      "analogy_terms": ["日化包装", "家清包装"],
+      "noise_terms": ["茶", "酒", "宠物粮", "美妆彩妆"]
+    },
+    {
+      "brief_id": "ejiao_gift",
+      "name": "阿胶滋补礼盒",
+      "domain": "tonic",
+      "summary": "阿胶/人参/燕窝等滋补礼盒包装",
+      "core_terms": [
+        "阿胶", "滋补", "人参", "燕窝", "枸杞", "膏方",
+        "tonic", "herbal gift", "养生滋补"
+      ],
+      "analogy_terms": ["茶礼", "酒礼盒", "保健礼盒"],
+      "noise_terms": ["咖啡", "宠物", "美妆口红", "Soda / Beer"]
+    },
+    {
+      "brief_id": "snack_nut",
+      "name": "零食坚果",
+      "domain": "snacks_bakery",
+      "summary": "休闲零食/坚果包装",
+      "core_terms": [
+        "零食", "坚果", "薯片", "饼干", "烘焙", "每日坚果",
+        "snack", "nuts", "nut", "chips", "cookie", "bakery"
+      ],
+      "analogy_terms": ["糖果包装", "礼盒零食"],
+      "noise_terms": ["茶礼", "白酒", "宠物", "纸品"]
+    },
+    {
+      "brief_id": "dairy_kids",
+      "name": "儿童乳品",
+      "domain": "dairy",
+      "summary": "儿童奶/酸奶/奶粉等乳品包装",
+      "core_terms": [
+        "奶粉", "酸奶", "牛奶", "乳品", "儿童奶", "成长奶",
+        "dairy", "milk", "yogurt", "儿童", "kids", "宝宝"
+      ],
+      "analogy_terms": ["饮料礼盒", "儿童营养", "蛋白饮", "儿童零食"],
+      "noise_terms": ["茶", "咖啡", "白酒", "宠物", "美妆"]
+    },
+    {
+      "brief_id": "low_alcohol",
+      "name": "低度酒微醺",
+      "domain": "low_alcohol",
+      "summary": "低度酒/果酒/鸡尾酒/微醺场景包装",
+      "core_terms": [
+        "低度", "果酒", "气泡酒", "微醺", "鸡尾酒", "米酒", "利口酒", "开胃酒",
+        "cocktail", "hard seltzer", "sparkling wine", "liqueur", "aperitif"
+      ],
+      "analogy_terms": ["酒包装", "酒礼盒", "wine", "黄酒"],
+      "noise_terms": ["咖啡", "美妆", "宠物", "Soda / Beer", "碳酸饮料", "软饮"]
+    }
+  ]
+}

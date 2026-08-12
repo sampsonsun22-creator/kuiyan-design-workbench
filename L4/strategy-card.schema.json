@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kuiyan-design-workbench/L4/strategy-card",
+  "title": "StrategyCard",
+  "type": "object",
+  "required": [
+    "card_id",
+    "brief_id",
+    "one_liner",
+    "advantage",
+    "differentiation",
+    "reference_montage",
+    "demo_prompt",
+    "recommended_style_buckets",
+    "hou_decision"
+  ],
+  "properties": {
+    "card_id": {
+      "type": "string"
+    },
+    "brief_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string",
+      "description": "方向短名"
+    },
+    "one_liner": {
+      "type": "string",
+      "description": "一句话概念"
+    },
+    "advantage": {
+      "type": "string",
+      "description": "优势：为何值得做"
+    },
+    "differentiation": {
+      "type": "string",
+      "description": "区隔：和货架/竞品如何不同"
+    },
+    "recommended_style_buckets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "桶 id"
+    },
+    "reference_montage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "item_id",
+          "why"
+        ],
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "description": "L2 collection item id"
+          },
+          "why": {
+            "type": "string"
+          },
+          "wall": {
+            "type": "string",
+            "enum": [
+              "primary",
+              "analogy",
+              "shelf"
+            ]
+          }
+        }
+      }
+    },
+    "verbal_directions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sketch_directions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "demo_prompt": {
+      "type": "string",
+      "description": "演示用生图/情绪板 prompt；明确非完稿"
+    },
+    "demo_disclaimer": {
+      "type": "string",
+      "default": "Demo only — 非完稿，供侯总遴选方向"
+    },
+    "hou_decision": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "keep",
+        "kill",
+        "merge"
+      ]
+    },
+    "merge_into": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

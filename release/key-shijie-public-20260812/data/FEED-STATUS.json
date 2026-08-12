@@ -1,0 +1,22 @@
+{
+  "updated_at": "2026-08-12T14:56:02Z",
+  "shell_default": "strict",
+  "qc_mode": "brief_relevance_v1",
+  "main_wall": 452,
+  "pending_review": 2680,
+  "pass_main": 452,
+  "stability": "LOCKED_brief_relevance_v1_unlock452",
+  "source": "v145456 dedup for ship",
+  "next_unlock_gate": "main_wall > 452 with valid pending",
+  "forbid": [
+    "image_gate",
+    "<=410",
+    "<=401",
+    "<=304",
+    "274",
+    "1820",
+    "wide",
+    "structural"
+  ],
+  "restore_source": "ui-shell/data shell mirror (authoritative after unlock452)"
+}

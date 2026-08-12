@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KEY 视界</title>
+  <style>
+    :root {
+      --bg: #0E1012;
+      --panel: #161A1E;
+      --line: #2A3036;
+      --text: #E8E4DC;
+      --mute: #6E6A63;
+      --dim: #A39E94;
+      --accent: #FFE900;
+      --accent-ink: #FFE900;
+      --paper: #1F1C18;
+      --paper-line: #3A342C;
+      --paper-text: #E4D8C8;
+      --warn: #B8955A;
+      --font-serif: "Noto Serif CJK SC", "Noto Serif SC", "Songti SC", serif;
+      --font: "Noto Sans CJK SC", "Noto Sans SC", "PingFang SC", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font-family: var(--font); color: var(--text);
+      background: var(--bg);
+      display: flex; flex-direction: column; align-items: center;
+      padding: 36px 24px 48px;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-family: var(--font-serif);
+      font-size: 28px; font-weight: 600; letter-spacing: 0.03em;
+    }
+    .sub {
+      color: var(--mute); font-size: 13px; margin-bottom: 28px;
+      text-align: center; max-width: 640px; line-height: 1.6;
+    }
+    .shot {
+      width: min(1080px, 100%);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .tb {
+      height: 48px; display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--bg);
+      font-size: 13px;
+    }
+    .tb-title { font-family: var(--font-serif); font-weight: 600; }
+    .phases { font-size: 12px; color: var(--mute); }
+    .phases .on { color: var(--accent-ink); border-bottom: 1px solid var(--accent); }
+    .pill {
+      font-size: 12px; color: var(--dim);
+      border: 1px solid var(--line); padding: 3px 9px; border-radius: 999px;
+    }
+    .cols {
+      display: grid; grid-template-columns: 22% 40% 38%; min-height: 520px;
+    }
+    .col { border-right: 1px solid var(--line); padding: 14px; position: relative; }
+    .col:last-child { border-right: 0; }
+    .label {
+      position: absolute; top: 10px; left: 10px; right: 10px;
+      text-align: center; font-size: 11px; letter-spacing: 0.08em;
+      color: var(--mute);
+      background: rgba(14,16,18,0.85); border: 1px dashed var(--line);
+      border-radius: 6px; padding: 6px 8px; z-index: 2;
+    }
+    .col-body { margin-top: 42px; }
+    .agent {
+      display: grid; grid-template-columns: 8px 1fr; gap: 10px;
+      padding: 8px; border-radius: 6px; margin-bottom: 4px;
+      align-items: start;
+    }
+    .agent.on { background: rgba(61,57,0,0.85); }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%; margin-top: 6px;
+      background: var(--mute);
+    }
+    .agent.on .dot { background: var(--accent); }
+    .agent.work .dot { background: var(--warn); }
+    .n { font-size: 13px; font-weight: 600; }
+    .r {
+      font-size: 12px; color: var(--mute); margin-top: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .bubble {
+      border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 10px;
+      background: var(--panel); border: 1px solid var(--line); max-width: 92%;
+    }
+    .bubble.me {
+      margin-left: auto;
+      background: var(--paper);
+      border-color: var(--paper-line);
+      color: var(--paper-text);
+    }
+    .bubble.ai {
+      border-left: 2px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      background: #161A1E;
+    }
+    .meta {
+      font-size: 11px; color: var(--mute); margin-bottom: 6px;
+      font-family: "Noto Sans Mono CJK SC", ui-monospace, monospace;
+      letter-spacing: 0.04em;
+    }
+    .chiprow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+    .chip {
+      font-size: 12px; padding: 5px 10px; border-radius: 999px;
+      border: 1px solid var(--accent); color: var(--accent-ink);
+      background: rgba(61,57,0,0.85);
+    }
+    .chip.sec {
+      border-color: var(--line); color: var(--dim); background: transparent;
+    }
+    .tabs { display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+    .tab { font-size: 12px; padding: 4px 2px; color: var(--mute); }
+    .tab.on { color: var(--accent-ink); box-shadow: inset 0 -2px 0 var(--accent); }
+    .sec-h {
+      font-family: var(--font-serif);
+      font-size: 13px; color: var(--dim); font-weight: 600;
+      padding-bottom: 8px; border-bottom: 1px solid var(--line);
+      margin: 0 0 10px;
+    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .card {
+      border-radius: 8px; border: 1px solid var(--line);
+      background: #0a0b0c center/cover no-repeat;
+      aspect-ratio: 1; position: relative; overflow: hidden;
+    }
+    .card span {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      font-size: 10px; color: var(--dim);
+      background: linear-gradient(transparent, rgba(14,16,18,0.85));
+      padding: 16px 8px 8px;
+    }
+    .empty {
+      grid-column: 1 / -1;
+      padding: 20px; text-align: center; color: var(--mute);
+      font-size: 13px; border: 1px dashed var(--line); border-radius: 8px;
+    }
+    .scard {
+      border-radius: 12px; border: 1px solid var(--line);
+      background: var(--bg); padding: 12px; margin-top: 12px; font-size: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.28);
+    }
+    .scard b {
+      display: block; margin-bottom: 4px;
+      font-family: var(--font-serif); font-size: 14px; font-weight: 600;
+    }
+    .note {
+      margin-top: 22px; color: var(--mute); font-size: 12px;
+      text-align: center; max-width: 720px;
+    }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <h1>奎燕设计智能体 · 三栏产品壳概念</h1>
+  <p class="sub">静态概念截图 · KEY 视界 · 左能力轨 · 中主对话 · 右市场地图/策略画布<br/>全品类设计参考与方向遴选 · 非一键出完稿</p>
+
+  <div class="shot" aria-label="产品壳概念示意">
+    <div class="tb">
+      <div class="tb-title">KEY 视界</div>
+      <div class="phases">
+        <span>Brief</span> → <span class="on">地图</span> → <span>策略</span> → <span>短名单</span>
+      </div>
+      <div class="pill">青绿茶礼盒</div>
+    </div>
+    <div class="cols">
+      <div class="col">
+        <div class="label">LEFT · Agent 能力轨</div>
+        <div class="col-body">
+          <div class="agent on">
+            <div class="dot"></div>
+            <div>
+              <div class="n">KEY 视界</div>
+              <div class="r">已理解青绿茶礼盒 Brief（L1）</div>
+            </div>
+          </div>
+          <div class="agent work">
+            <div class="dot"></div>
+            <div>
+              <div class="n">Data Crawler</div>
+              <div class="r">上次同步 23 条样本</div>
+            </div>
+          </div>
+          <div class="agent">
+            <div class="dot"></div>
+            <div>
+              <div class="n">Dot Dot</div>
+              <div class="r">等待策略卡生成指令</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="label">CENTER · 主对话（编排器）</div>
+        <div class="col-body">
+          <div class="bubble me">新品牌青绿茶礼盒…中式现代、不仿古…</div>
+          <div class="bubble ai">
+            <div class="meta">L1 · Brief 理解</div>
+            已理解 Brief。气质中式现代 · 礼赠+电商。下一步可看市场地图，或同步 Data Crawler。
+          </div>
+          <div class="bubble ai">
+            <div class="meta">L3 · 市场地图</div>
+            样本 23 · 优先中式现代 / 礼赠典雅 / 地域文旅。
+          </div>
+          <div class="chiprow">
+            <span class="chip">看市场地图</span>
+            <span class="chip">生成三张策略卡</span>
+            <span class="chip sec">同步 Data Crawler</span>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="label">RIGHT · 结果画布</div>
+        <div class="col-body">
+          <div class="tabs">
+            <span class="tab on">市场地图</span>
+            <span class="tab">策略卡</span>
+            <span class="tab">短名单</span>
+          </div>
+          <h3 class="sec-h">中式现代 · 参考</h3>
+          <div class="grid">
+            <div class="card" style="background-image:url('assets/ref1.png')"><span>assets/ref1 · 来源示意</span></div>
+            <div class="card" style="background-image:url('assets/ref2.jpg')"><span>assets/ref2 · 来源示意</span></div>
+            <div class="card" style="background-image:url('assets/ref3.png')"><span>assets/ref3 · 来源示意</span></div>
+            <div class="empty">更多货架样本会随采集继续挂上</div>
+          </div>
+          <div class="scard">
+            <b>青绿新中轴 · Keep / Kill</b>
+            以青绿做现代色锤，中式结构去仿古。决策同步短名单。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note">可交互原型：<a href="./">index.html</a>（用静态服务打开即可）· 本文仅作愿景示意 · 图为 assets 真样</p>
+</body>
+</html>

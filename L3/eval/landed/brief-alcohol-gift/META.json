@@ -1,0 +1,17 @@
+{
+  "brief_id": "brief-alcohol-gift",
+  "name": "酒类礼盒",
+  "domain": "alcohol",
+  "main_wall": 216,
+  "pending_review": 2738,
+  "buckets": {
+    "soft_pack_only": 1999,
+    "keep_core": 193,
+    "kill_noise": 732,
+    "keep_analogy": 23,
+    "kill_unrelated": 7
+  },
+  "shell_default": false,
+  "updated_at": "2026-08-12T14:17:19Z",
+  "directed_new": 0
+}

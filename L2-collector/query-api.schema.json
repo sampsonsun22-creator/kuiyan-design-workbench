@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kuiyan-design-workbench/L2-collector/query-api",
+  "title": "L2QueryPack",
+  "type": "object",
+  "properties": {
+    "input": {
+      "type": "object",
+      "properties": {
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "free_text_brief": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "language": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "market": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "channel": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "price_band": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cultural_tone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "domain_id": {
+      "type": "string"
+    },
+    "category_label": {
+      "type": "string"
+    },
+    "primary_queries": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "analogy_queries": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "shelf_queries": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source_plan": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "source",
+          "method",
+          "query_group",
+          "priority"
+        ],
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "query_group": {
+            "type": "string",
+            "enum": [
+              "primary",
+              "analogy",
+              "shelf",
+              "portfolio"
+            ]
+          },
+          "priority": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "style_bucket_hints": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "analogy_seeds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "domain_id",
+    "primary_queries",
+    "analogy_queries",
+    "shelf_queries",
+    "source_plan"
+  ]
+}

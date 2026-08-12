@@ -1,0 +1,21 @@
+{
+  "brief_id": "dairy_kids",
+  "name": "儿童乳品",
+  "domain": "dairy",
+  "summary": "儿童奶/酸奶/奶粉等乳品包装",
+  "brief_text": "儿童奶/酸奶/奶粉等乳品包装",
+  "main_wall": 17,
+  "pending_review": 2938,
+  "pool_size": 2955,
+  "buckets": {
+    "soft_pack_only": 2064,
+    "kill_noise": 867,
+    "keep_core": 17,
+    "kill_unrelated": 7
+  },
+  "rule_version": "brief_relevance_v1_strict",
+  "gate": "brief_relevance_v1",
+  "shell_write": false,
+  "generated_at": "2026-08-12T14:16:53Z",
+  "path": "L3/eval/landed/dairy_kids"
+}

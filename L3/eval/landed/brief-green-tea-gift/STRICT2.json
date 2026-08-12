@@ -1,0 +1,24 @@
+{
+  "brief_id": "green_tea_gift",
+  "variant": "strict2",
+  "from_main_n": 184,
+  "strict2_main_n": 172,
+  "dropped_n": 12,
+  "dropped_sample_titles": [
+    "Soda / Beer Packaging Mockup by Renderteam | Creative Market",
+    "Paper Box Mockup Set by Renderteam | Creative Market",
+    "Paper Box Mockup Set by Renderteam | Creative Market",
+    "Soda / Beer Packaging Mockup by Renderteam | Creative Market",
+    "Custom Wine Gift Boxes & Packaging Designs | Custom Boxes  #packaging #design #gift",
+    "Paper Box Mockup Set by Renderteam | Creative Market",
+    "Soda / Beer Packaging Mockup by Renderteam | Creative Market",
+    "Employee Appreciation Day Gift Ideas for Your Team",
+    "Teach you how to wrap beautiful gift boxes",
+    "\"Healing Wellness\" Gift Box: Lavender Eye Pillow, 2 Peaceful Teas, Honey, Scented Candle & Greeting ",
+    "Paper Box Mockup Set by Renderteam | Creative Market",
+    "Tealight Candle Package Design"
+  ],
+  "rule": "demote Paper Box Mockup / Soda Beer / non-tea gift tutorials unless tea|allowed analogy",
+  "shell_write": false,
+  "note": "Proposal only — ui-shell locks untouched; shell may keep 184 until unlock"
+}

@@ -1,0 +1,44 @@
+{
+  "version": "1.0",
+  "purpose": "CN shelf smoke ≤3 each; wait for 奎燕 order before running",
+  "max_items_per_platform": 3,
+  "query": "绿茶礼盒",
+  "actors": {
+    "jd": {
+      "primary": "zen-studio/jd-com-search-scraper",
+      "fallback": "sian.agency/jd-com-product-scraper",
+      "input": {
+        "keyword": "绿茶礼盒",
+        "maxItems": 3,
+        "enrichWithDetails": false,
+        "fetchReviews": false
+      }
+    },
+    "taobao": {
+      "primary": "zen-studio/taobao-search-scraper",
+      "fallback": "sian.agency/taobao-tmall-product-scraper",
+      "input": {
+        "keyword": "绿茶礼盒",
+        "maxItems": 3,
+        "enrichWithDetails": false,
+        "fetchReviews": false
+      }
+    }
+  },
+  "mcp_runbook": [
+    "CallMcpTool user-Apify call-actor with actor+input (waitSecs=45)",
+    "If not terminal: get-actor-run then get-dataset-items",
+    "Save raw dataset JSON to smoke/out/apify-{platform}-raw.json",
+    "python map_apify_shelf.py --platform {platform} --query 绿茶礼盒 --in raw.json --out samples/shelf-smoke-{platform}.jsonl --limit 3"
+  ],
+  "success_criteria": {
+    "count": "1-3 per platform",
+    "required_fields": ["id", "image_url", "page_url", "title", "source", "source_type"],
+    "source_type": "shelf",
+    "is_on_market": true
+  },
+  "outputs": {
+    "jd": "/workspace/kuiyan-design-workbench/L2-collector/samples/shelf-smoke-jd.jsonl",
+    "taobao": "/workspace/kuiyan-design-workbench/L2-collector/samples/shelf-smoke-taobao.jsonl"
+  }
+}

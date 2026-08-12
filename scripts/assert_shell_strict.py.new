@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+"""Refuse if KEY 视界 shell main-wall is not image_gate strict (~1820/~1127)."""
+from __future__ import annotations
+import json, sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+LOCK = ROOT / "ui-shell" / "data" / "SHELL-DEFAULT.lock.md"
+MAIN = ROOT / "ui-shell" / "data" / "l2_main_wall.jsonl"
+PEND = ROOT / "ui-shell" / "data" / "l2_pending_review.jsonl"
+STATUS = ROOT / "ui-shell" / "data" / "FEED-STATUS.json"
+WIDE = ROOT / "L3" / "feeds" / "l2_main_wall_platform_2864.jsonl"
+EXPECTED_MAIN, EXPECTED_PEND, TOL = 1820, 1127, 5
+
+
+def nlines(p: Path) -> int:
+    if not p.exists():
+        return -1
+    return sum(1 for line in p.open() if line.strip())
+
+
+def main() -> int:
+    n, p = nlines(MAIN), nlines(PEND)
+    wide_n = nlines(WIDE)
+    errors = []
+    if n < 0:
+        errors.append(f"missing {MAIN}")
+    if p < 0:
+        errors.append(f"missing {PEND}")
+    if n in (2864, 2935) or (wide_n > 0 and n == wide_n and n > 2000):
+        errors.append(f"shell main_wall={n} looks like wide/structural overwrite")
+    if abs(n - EXPECTED_MAIN) > TOL:
+        errors.append(f"shell main_wall={n}, expected ~{EXPECTED_MAIN}")
+    if abs(p - EXPECTED_PEND) > TOL:
+        errors.append(f"shell pending={p}, expected ~{EXPECTED_PEND}")
+    if list((ROOT / "ui-shell" / "data").glob("*wide*")):
+        errors.append("ui-shell/data still has *wide* files")
+    if STATUS.exists():
+        st = json.loads(STATUS.read_text())
+        if st.get("shell_default") != "strict":
+            errors.append(f"FEED-STATUS shell_default={st.get('shell_default')!r}")
+        if st.get("main_wall") in (2864, 2935) or st.get("pass_main") in (2864, 2935):
+            errors.append("FEED-STATUS main count claims wide/structural")
+        if "prefer wide" in (st.get("note") or "").lower():
+            errors.append("FEED-STATUS note prefers wide")
+    else:
+        errors.append(f"missing {STATUS}")
+    if not LOCK.exists():
+        errors.append(f"missing {LOCK}")
+    elif "1820" not in LOCK.read_text() and "strict" not in LOCK.read_text().lower():
+        errors.append("SHELL-DEFAULT.lock missing strict/1820")
+    if errors:
+        print("ASSERT_SHELL_STRICT FAIL:")
+        for e in errors:
+            print(" -", e)
+        return 1
+    print(json.dumps({"ok": True, "shell_main_wall": n, "pending": p, "shell_default": "strict", "qc_mode": "image_gate"}, ensure_ascii=False))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

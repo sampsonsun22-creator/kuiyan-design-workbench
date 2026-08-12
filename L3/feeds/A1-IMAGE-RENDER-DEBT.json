@@ -1,0 +1,8 @@
+{
+  "caliber": "1820/1127",
+  "a1_image_render_debt_hosts": {
+    "i.pinimg.com": 508,
+    "sns-webpic-qc.xhscdn.com": 603
+  },
+  "note": "UI cleared; do not rewrite shell locks; track CDN hotlink/export for A1 render rate"
+}

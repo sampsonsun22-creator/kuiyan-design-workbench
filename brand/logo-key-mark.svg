@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 28" role="img" aria-label="{KEY}">
+  <text x="4" y="21" font-family="Didot, 'Playfair Display', 'Noto Serif SC', 'Times New Roman', serif" font-size="20" font-weight="600" fill="#FFE900">{</text>
+  <text x="16" y="21" font-family="Didot, 'Playfair Display', 'Noto Serif SC', 'Times New Roman', serif" font-size="18" font-weight="600" letter-spacing="1.2" fill="#F4F1EA">KEY</text>
+  <text x="58" y="21" font-family="Didot, 'Playfair Display', 'Noto Serif SC', 'Times New Roman', serif" font-size="20" font-weight="600" fill="#FFE900">}</text>
+</svg>
