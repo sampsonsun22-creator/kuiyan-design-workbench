@@ -12,3 +12,6 @@ tmp/
 .firecrawl/
 **/secrets/
 **/*credentials*
+# Cloud Agent env: repo is checked out at /workspace while code hardcodes
+# /workspace/kuiyan-design-workbench. environment.json creates this compat symlink.
+/kuiyan-design-workbench

@@ -1,0 +1,20 @@
+{
+  "name": "KEY 视界 · 奎燕设计工作台",
+  "install": "ln -sfn /workspace /workspace/kuiyan-design-workbench && python3 --version",
+  "start": "ln -sfn /workspace /workspace/kuiyan-design-workbench",
+  "terminals": [
+    {
+      "name": "ui-shell :8766",
+      "command": "cd /workspace/ui-shell && python3 -m http.server 8766"
+    },
+    {
+      "name": "ui-workbench :8765",
+      "command": "cd /workspace/ui && python3 -m http.server 8765"
+    },
+    {
+      "name": "ship key-vision :8767",
+      "command": "cd /workspace/ship/key-vision && python3 -m http.server 8767"
+    }
+  ],
+  "ports": [8765, 8766, 8767]
+}
