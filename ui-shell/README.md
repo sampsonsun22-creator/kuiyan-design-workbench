@@ -20,8 +20,10 @@ ACTIVE = 黄底黑字（`--stage-active-bg: #FFE900`）。
 
 ## 文件
 
-- `index.html` / `styles.css` / `app.js` — 可点原型（静态，无构建）
-- `data/demo-bundle.json` — 青绿茶 e2e 真样
+- `index.html` / `styles.css` / `app.js` / `runtime.js` — 可点原型（静态，无构建）
+- `data/product-runtime.json` — L1 意图 + L4 策略卡 + 研究目录
+- `data/l2_main_wall.jsonl` / `l2_pending_review.jsonl` — 交付主墙 452 / 待复核 2680
+- `data/briefs/` — 黄酒/滋补等已落地研究墙
 - `assets/ref*.png|jpg` — 策略卡本地参考图
 - `RESTYLE-LAB.md` — 本次浅色实验室重做说明
 - `concept.html` — 旧概念页（非主路径）

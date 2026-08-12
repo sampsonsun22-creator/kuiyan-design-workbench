@@ -2,7 +2,7 @@
 
 产品：{KEY} · KEY 视界 · 奎燕 AI 研究室
 
-数据：主墙 / 待复核为 live feed；策略卡与 Brief 来自 `data/product-pack.json`。
+数据：主墙 / 待复核为 live jsonl（452/2680）；Brief 与策略卡来自 `data/product-runtime.json`（不再被空壳 `product-bundle` 挡住）。已保存研究可切换黄酒/滋补落地墙。
 
 本地预览：
 

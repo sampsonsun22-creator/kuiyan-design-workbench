@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KEY 视界 · 设计竞品调研</title>
-  <link rel="stylesheet" href="styles.css?v=452p1ship" />
+  <link rel="stylesheet" href="styles.css?v=452ui1" />
 </head>
 <body>
   <div class="app" id="app">
@@ -88,6 +88,12 @@
 
         <div class="source-cards" id="sourceChips" aria-label="数据源状态"></div>
 
+        <div class="wall-mode" id="wallMode" aria-label="市场地图四墙">
+          <button type="button" class="wall-mode-btn active" data-wall="primary">主品类墙</button>
+          <button type="button" class="wall-mode-btn" data-wall="analogy">类比墙</button>
+          <button type="button" class="wall-mode-btn" data-wall="shelf">货架墙</button>
+        </div>
+        <div class="rec-buckets" id="recBuckets" aria-label="AI 推荐桶"></div>
         <div class="category-chips" id="categoryChips" aria-label="素材类别">
           <button type="button" class="cat-chip active" data-cat="all">全部</button>
           <button type="button" class="cat-chip" data-cat="pack">包装实物</button>
@@ -134,6 +140,10 @@
   </div>
 
   <div class="toast" id="toast"></div>
-  <script src="app.js?v=452p1ship"></script>
+  <div class="modal-backdrop" id="compareBackdrop" hidden>
+    <div class="compare-modal" id="compareModal" role="dialog" aria-label="对比参考"></div>
+  </div>
+  <script src="runtime.js?v=452ui1"></script>
+  <script src="app.js?v=452ui1"></script>
 </body>
 </html>
