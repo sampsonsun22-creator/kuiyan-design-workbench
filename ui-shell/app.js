@@ -21,13 +21,15 @@
     taobao: { label: "淘宝" },
   };
 
-  // Live channel chips (reality, not aspirational)
-  const SOURCES = [
-    { id: "behance", label: "Behance", status: "ok", statusText: "已采集" },
-    { id: "packagingoftheworld", label: "Packaging of the World", status: "ok", statusText: "已采集" },
-    { id: "zcool", label: "站酷", status: "thin", statusText: "薄页/待深采" },
-    { id: "taobao", label: "淘宝", status: "pending", statusText: "货架通道待开通" },
-    { id: "jd", label: "京东", status: "pending", statusText: "货架通道待开通" },
+  const PINNED_SOURCES = [
+    "behance",
+    "packagingoftheworld",
+    "pinterest",
+    "huaban",
+    "xiaohongshu",
+    "zcool",
+    "taobao",
+    "jd",
   ];
 
   const WALL_BATCH_INITIAL = 60;
@@ -54,25 +56,40 @@
     },
   ];
 
-  const SAVED = [
+  // 青绿茶必须走壳权威 452/2680，禁止回落到 184 口径的过时绿茶 brief 文件
+  const RESEARCHES = [
     {
       id: "r-green",
       title: "青绿茶礼盒竞品调研",
       date: "2026-08-12",
       status: "running",
       active: true,
+      question:
+        "新品牌青绿茶礼盒：中式现代气质下，礼赠+电商渠道如何做出开箱记忆点与差异化？",
+      feeds: {
+        main: ["data/l2_main_wall.jsonl", "data/l2-main-wall.jsonl"],
+        pending: ["data/l2_pending_review.jsonl", "data/l2-pending-review.jsonl"],
+      },
+      bundle: "data/product-bundle.json",
+      onlyBriefDefault: true,
     },
     {
-      id: "r-huangjiu",
-      title: "黄酒礼盒气质对标",
-      date: "2026-08-05",
+      id: "r-baijiu",
+      title: "白酒礼盒竞品调研",
+      date: "2026-08-12",
       status: "done",
+      question: "白酒礼盒：礼赠场如何做出体面开箱与货架识别，又避开金红模板？",
+      feeds: { main: ["data/briefs/baijiu_gift_main_wall.jsonl"] },
+      onlyBriefDefault: false,
     },
     {
       id: "r-tonic",
       title: "滋补礼盒开箱记忆点",
-      date: "2026-07-28",
+      date: "2026-08-12",
       status: "done",
+      question: "滋补礼盒：中式现代气质下，如何做出开箱记忆点与差异化？",
+      feeds: { main: ["data/briefs/tonic_gift_main_wall.jsonl"] },
+      onlyBriefDefault: false,
     },
   ];
 
@@ -98,7 +115,9 @@
     wallVisibleLimit: WALL_BATCH_INITIAL,
     feedCounts: { main: 0, pending: 0 },
     activeStyleFilter: "",
+    activeResearchId: "r-green",
     _wallObserver: null,
+    _greenBundle: null,
   };
 
   const $ = (id) => document.getElementById(id);
@@ -225,7 +244,7 @@
   }
 
   function renderResearch() {
-    el.researchList.innerHTML = SAVED.map(
+    el.researchList.innerHTML = RESEARCHES.map(
       (r) => `
       <li class="research-card ${r.active ? "active" : ""}" data-id="${r.id}">
         <div class="rtitle">${escapeHtml(r.title)}</div>
@@ -264,7 +283,8 @@
   let bootSettled = false;
   function forceProductWallDefaults(reason) {
     state.includePending = false;
-    state.onlyBriefRelevant = true;
+    const r = RESEARCHES.find((x) => x.id === state.activeResearchId) || RESEARCHES[0];
+    state.onlyBriefRelevant = r.onlyBriefDefault !== false;
     const pt = el.pendingToggle || document.getElementById("pendingToggle");
     const bt = el.briefToggle || document.getElementById("briefToggle");
     if (pt) {
@@ -273,9 +293,9 @@
       pt.dataset.pending = "0";
     }
     if (bt) {
-      bt.classList.add("active");
-      bt.setAttribute("aria-pressed", "true");
-      bt.dataset.brief = "1";
+      bt.classList.toggle("active", state.onlyBriefRelevant);
+      bt.setAttribute("aria-pressed", state.onlyBriefRelevant ? "true" : "false");
+      bt.dataset.brief = state.onlyBriefRelevant ? "1" : "0";
     }
     updateWallCountBar();
   }
@@ -347,6 +367,28 @@
     return item;
   }
 
+  function sourceChipStatus(id, n) {
+    const listing = id === "taobao" || id === "jd";
+    if (listing) {
+      return n
+        ? { status: "thin", statusText: `listing 样 · ${n}` }
+        : { status: "pending", statusText: "货架通道待开通" };
+    }
+    if (id === "zcool") {
+      if (!n) return { status: "thin", statusText: "薄页/待深采" };
+      return n < 8
+        ? { status: "thin", statusText: `薄页 · ${n}` }
+        : { status: "ok", statusText: `已采集 · ${n}` };
+    }
+    if (id === "huaban") {
+      return n
+        ? { status: "thin", statusText: `已采集 · ${n}（部分裂图）` }
+        : { status: "pending", statusText: "待采集" };
+    }
+    if (n) return { status: "ok", statusText: `已采集 · ${n}` };
+    return { status: "pending", statusText: "待采集" };
+  }
+
   function rebuildSourcesFromWall() {
     const counts = {};
     for (const it of state.wallItems) {
@@ -354,28 +396,20 @@
       if (!s) continue;
       counts[s] = (counts[s] || 0) + 1;
     }
-    // Always surface P0 channels with truthful status chips
-    const pinned = [
-      {
-        id: "behance",
-        status: counts.behance ? "ok" : "ok",
-        statusText: counts.behance ? `已采集 · ${counts.behance}` : "已采集",
-      },
-      {
-        id: "packagingoftheworld",
-        status: "ok",
-        statusText: counts.packagingoftheworld
-          ? `已采集 · ${counts.packagingoftheworld}`
-          : "已采集",
-      },
-      { id: "zcool", status: "thin", statusText: "薄页/待深采" },
-      { id: "taobao", status: "pending", statusText: "货架通道待开通" },
-      { id: "jd", status: "pending", statusText: "货架通道待开通" },
-    ];
-    const pinnedIds = new Set(pinned.map((p) => p.id));
+    const pinnedIds = new Set(PINNED_SOURCES);
+    const pinned = PINNED_SOURCES.map((id) => {
+      const n = counts[id] || 0;
+      return {
+        id,
+        label: (SOURCE_META[id] && SOURCE_META[id].label) || id,
+        count: n,
+        ...sourceChipStatus(id, n),
+      };
+    });
     const extras = Object.entries(counts)
       .filter(([id]) => !pinnedIds.has(id))
       .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
       .map(([id, count]) => ({
         id,
         label: (SOURCE_META[id] && SOURCE_META[id].label) || id,
@@ -383,14 +417,7 @@
         statusText: `已上墙 ${count}`,
         count,
       }));
-    state.sources = [
-      ...pinned.map((p) => ({
-        ...p,
-        label: (SOURCE_META[p.id] && SOURCE_META[p.id].label) || p.id,
-        count: counts[p.id] || 0,
-      })),
-      ...extras,
-    ];
+    state.sources = [...pinned, ...extras];
     renderSources();
     const styleSel = el.filters && el.filters.querySelector('[data-filter="style"]');
     if (styleSel) {
@@ -543,61 +570,100 @@
     return items.filter((it) => imgFor(it));
   }
 
-  async function loadLiveFeeds() {
-    // Live wall feeds (~452 / ~2680). Prefer underscore names; hyphen aliases ok.
-    async function fetchFeed(paths) {
-      let res = null;
-      for (const p of paths) {
-        res = await fetch(p);
-        if (res.ok) return res;
-      }
-      return res;
+  async function fetchFirstOk(paths) {
+    let res = null;
+    for (const p of paths) {
+      res = await fetch(p);
+      if (res.ok) return res;
     }
-    const [mainPartA, mainPartB, pendingRes, bucketsRes] = await Promise.all([
-      fetch("data/l2_main_wall_a.jsonl"),
-      fetch("data/l2_main_wall_b.jsonl"),
-      fetchFeed([
-        "data/l2_pending_review.jsonl",
-        "data/l2-pending-review.jsonl",
-        "data/l2_pending_review_20260812.jsonl",
-      ]),
+    return res;
+  }
+
+  async function loadMainWallText(paths) {
+    const list = paths && paths.length
+      ? paths
+      : [
+          "data/l2_main_wall.jsonl",
+          "data/l2-main-wall.jsonl",
+          "data/l2_main_wall_20260812.jsonl",
+        ];
+    for (const p of list) {
+      const res = await fetch(p);
+      if (res.ok) {
+        const text = await res.text();
+        if (text && text.trim()) return text;
+      }
+    }
+    const a = await fetch("data/l2_main_wall_a.jsonl");
+    const b = await fetch("data/l2_main_wall_b.jsonl");
+    let text = "";
+    if (a.ok) text += await a.text();
+    if (b.ok) text += (text && !text.endsWith("\n") ? "\n" : "") + (await b.text());
+    if (text.trim()) return text;
+    throw new Error("main wall missing");
+  }
+
+  function normalizeBundle(j) {
+    if (!j || typeof j !== "object") return { l4_cards: [] };
+    if (!Array.isArray(j.l4_cards)) {
+      if (Array.isArray(j.l4)) j.l4_cards = j.l4;
+      else if (j.l4 && Array.isArray(j.l4.cards)) j.l4_cards = j.l4.cards;
+      else j.l4_cards = [];
+    }
+    return j;
+  }
+
+  async function loadProductBundle() {
+    const paths = ["data/product-bundle.json", "data/product-pack.json"];
+    let fallback = null;
+    for (const p of paths) {
+      const res = await fetch(p);
+      if (!res.ok) continue;
+      const j = normalizeBundle(await res.json());
+      if (j.l4_cards && j.l4_cards.length) return j;
+      if (!fallback) fallback = j;
+    }
+    if (fallback) return fallback;
+    throw new Error("product pack missing");
+  }
+
+  async function loadLiveFeeds(research) {
+    const r = research || RESEARCHES.find((x) => x.id === state.activeResearchId) || RESEARCHES[0];
+    const pendingPaths = (r.feeds && r.feeds.pending) || [
+      "data/l2_pending_review.jsonl",
+      "data/l2-pending-review.jsonl",
+      "data/l2_pending_review_20260812.jsonl",
+    ];
+    const [mainText, pendingRes, bucketsRes] = await Promise.all([
+      loadMainWallText(r.feeds && r.feeds.main),
+      r.feeds && r.feeds.pending === undefined && r.id !== "r-green"
+        ? Promise.resolve({ ok: false })
+        : fetchFirstOk(pendingPaths),
       fetch("data/style-buckets-v1.json"),
     ]);
-    let mainRes = null;
-    let mainText = "";
-    if (mainPartA.ok || mainPartB.ok) {
-      if (mainPartA.ok) mainText += await mainPartA.text();
-      if (mainPartB.ok) mainText += (mainText && !mainText.endsWith("\n") ? "\n" : "") + await mainPartB.text();
-      mainRes = { ok: true, status: 200, text: async () => mainText };
-    } else {
-      mainRes = await fetchFeed([
-        "data/l2_main_wall.jsonl",
-        "data/l2-main-wall.jsonl",
-        "data/l2_main_wall_20260812.jsonl",
-      ]);
-    }
-    if (!mainRes.ok) throw new Error("main wall " + mainRes.status);
     if (bucketsRes.ok) {
       const bj = await bucketsRes.json();
       const map = {};
       (bj.buckets || []).forEach((b) => {
         if (b.id) map[b.id] = b.name_zh || b.id;
       });
-      state.bucketIdToZh = map;
+      state.bucketIdToZh = { ...map, ...(state.bundle?.bucket_id_to_zh || {}) };
       if (state.bundle) {
         state.bundle.bucket_id_to_zh = { ...(state.bundle.bucket_id_to_zh || {}), ...map };
       }
     } else if (state.bundle?.bucket_id_to_zh) {
       state.bucketIdToZh = { ...state.bundle.bucket_id_to_zh };
     }
-    const mainRaw = parseJsonl(await mainRes.text());
-    const pendingRaw = pendingRes.ok ? parseJsonl(await pendingRes.text()) : [];
+    const mainRaw = parseJsonl(mainText);
+    const pendingRaw = pendingRes && pendingRes.ok ? parseJsonl(await pendingRes.text()) : [];
     state.wallItems = mainRaw
-      .map((r) => normalizeFeedItem(r, "main_wall"))
-      .filter((it) => imgFor(it) || it.page_url);
+      .map((row) => normalizeFeedItem(row, "main_wall"))
+      .filter((it) => imgFor(it) || it.page_url || it.id);
+    if (!state.wallItems.length && mainRaw.length) {
+      state.wallItems = mainRaw.map((row) => normalizeFeedItem(row, "main_wall"));
+    }
     state.wallItems = demoteFragileWallOrder(state.wallItems);
-    // Keep pending even if image missing (badge still useful); counts = file lines
-    state.pendingItems = pendingRaw.map((r) => normalizeFeedItem(r, "pending_review"));
+    state.pendingItems = pendingRaw.map((row) => normalizeFeedItem(row, "pending_review"));
     state.feedCounts = {
       main: mainRaw.length,
       pending: pendingRaw.length,
@@ -687,6 +753,39 @@
     return 2;
   }
 
+  function isShelfItem(it) {
+    if (!it) return false;
+    const s = String(it.source || "").toLowerCase();
+    const st = String(it.source_type || "").toLowerCase();
+    const m = String(it.is_on_market || "").toLowerCase();
+    return st === "shelf" || m === "true" || /^(jd|taobao|1688|tmall)$/.test(s);
+  }
+
+  function isAnalogyItem(it) {
+    if (!it) return false;
+    if (it.analogy_from) return true;
+    const rel = (it.extra && it.extra.brief_relevance_v1) || "";
+    if (rel === "keep_analogy") return true;
+    const blob = [
+      it.title,
+      it.query_used,
+      it.category_label,
+      Array.isArray(it.raw_tags) ? it.raw_tags.join(" ") : "",
+    ].join(" ");
+    return /黄酒|滋补|阿胶|人参礼|sake\b|huangjiu|tonic\s*gift|herbal\s*gift|wine\s*gift|香氛|高端水|国潮美妆/.test(
+      blob
+    );
+  }
+
+  function briefRelLabel(item) {
+    const pre = item?.extra?.brief_relevance_v1;
+    const s = scoreBriefRelevance(item);
+    if (pre === "keep_analogy" || (s === "match" && pre === "keep_analogy")) return "贴合（类比）";
+    if (s === "match") return "贴合";
+    if (s === "low") return "弱相关";
+    return "跑题/低相关";
+  }
+
   function getFilteredWallItems() {
     let items = state.wallItems.slice();
     if (state.includePending && state.pendingItems.length) {
@@ -709,13 +808,14 @@
       });
       items = pendingFirst.concat(mains);
     }
-    if (state.activeCat === "pack") {
-      items = items.filter(
-        (it) =>
-          /货架|实物|pack|shelf/i.test(it.bucket || "") || it.source_type === "shelf"
-      );
+    if (state.activeCat === "primary") {
+      items = items.filter((it) => !isShelfItem(it));
+    } else if (state.activeCat === "analogy") {
+      items = items.filter(isAnalogyItem);
+    } else if (state.activeCat === "shelf" || state.activeCat === "pack") {
+      items = items.filter(isShelfItem);
     } else if (state.activeCat === "case") {
-      items = items.filter((it) => !/货架|实物|shelf/i.test(it.bucket || ""));
+      items = items.filter((it) => !isShelfItem(it));
     }
     if (state.activeSource) {
       items = items.filter(
@@ -887,6 +987,11 @@
     el.inspector.classList.remove("hidden");
     el.right.classList.add("inspector-open");
     const rel = briefRelation(item);
+    const bucketZh = (item.suggested_style_buckets || [])
+      .map((id) => state.bucketIdToZh?.[id] || state.bundle?.bucket_id_to_zh?.[id] || id)
+      .filter(Boolean);
+    const struct = (item.structure_tags || []).filter(Boolean);
+    const page = item.page_url || "";
     el.inspectorBody.innerHTML = `
       <div class="inspector-preview"><img referrerpolicy="no-referrer" src="${escapeAttr(imgFor(item))}" alt="" /></div>
       <div class="inspector-title">${escapeHtml(humanTitle(item.title || item.id))}</div>
@@ -915,6 +1020,33 @@
       <div class="insp-block risk">
         <h4><span class="ico">!</span>差异化风险</h4>
         <ul>${rel.risk.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>
+      </div>
+      <div class="insp-block collect">
+        <h4><span class="ico">#</span>采集字段</h4>
+        <ul>
+          <li>来源：${escapeHtml(humanSource(item.source))} · ${escapeHtml(item.source_type || "未标类型")}</li>
+          <li>贴 brief：${escapeHtml(briefRelLabel(item))}${
+            item.extra && item.extra.brief_relevance_v1
+              ? `（${escapeHtml(item.extra.brief_relevance_v1)}）`
+              : ""
+          }</li>
+          <li>风格桶：${escapeHtml(bucketZh.join(" / ") || item.bucket || "待标注")}</li>
+          ${
+            struct.length
+              ? `<li>结构：${escapeHtml(struct.slice(0, 4).join(" / "))}</li>`
+              : ""
+          }
+          ${
+            item.query_used
+              ? `<li>检索：${escapeHtml(String(item.query_used).slice(0, 80))}</li>`
+              : ""
+          }
+          ${
+            page
+              ? `<li><a class="insp-link" href="${escapeAttr(page)}" target="_blank" rel="noopener noreferrer">打开原页</a></li>`
+              : "<li>原页链接待补</li>"
+          }
+        </ul>
       </div>
       <div class="insp-block">
         <h4><span class="ico">📎</span>支持证据</h4>
@@ -1044,6 +1176,21 @@
       <span>${escapeHtml(tone)} · ${escapeHtml(channel)}</span>
       <span>${briefSummary}</span>
     </div>`;
+    const rec = state.bundle?.l3?.ai_recommended_buckets || [];
+    if (rec.length) {
+      html += `<div class="rec-bar" aria-label="AI 推荐桶">
+        <span class="rec-label">先盯这几桶</span>
+        ${rec
+          .map((b) => {
+            const name = b.name_zh || b.id;
+            const on = state.activeStyleFilter === name;
+            return `<button type="button" class="rec-chip${on ? " active" : ""}" data-rec-bucket="${escapeAttr(
+              name
+            )}" title="${escapeAttr(b.why || "")}">${escapeHtml(name)}</button>`;
+          })
+          .join("")}
+      </div>`;
+    }
 
     visOrder.forEach((name) => {
       const totalInBucket = (byBucket[name] || []).length;
@@ -1089,16 +1236,28 @@
     }
   }
 
+  function resolveCardImage(c) {
+    for (const m of c.reference_montage || []) {
+      if (m.image_url && /^https?:/i.test(m.image_url)) return m.image_url;
+      const it = findWallItem(m.item_id);
+      const u = it && imgFor(it);
+      if (u && /^https?:/i.test(u)) return u;
+    }
+    return c.cover_image || c.local_ref_image || "";
+  }
+
   function renderStrategy() {
     const cards = state.bundle?.l4_cards || [];
     if (!cards.length) {
-      return `<div class="empty"><div class="slogan">还没有方向卡</div><p class="hint">等视觉墙看顺眼了，再请智能体帮你写三张可批判的方向。</p>
+      return `<div class="empty"><div class="slogan">还没有方向卡</div><p class="hint">这轮研究还没写出可批判的方向。青绿茶礼盒那轮有三张示意卡。</p>
       <button type="button" class="empty-cta" data-empty-action="ask-strategy">去聊聊方向</button></div>`;
     }
     return `<div class="strategy-list">${cards
       .map((c) => {
         const d = state.decisions[c.card_id] || c.hou_decision || "pending";
-        const img = c.local_ref_image || c.reference_montage?.[0]?.image_url || "";
+        const img = resolveCardImage(c);
+        const tags = c.recommended_style_buckets_zh || [];
+        const montage = (c.reference_montage || []).slice(0, 3);
         return `
         <article class="strategy-card ${d === "keep" ? "keep" : d === "kill" ? "kill" : ""}" data-card-id="${c.card_id}">
           <div class="sc-img-big" style="background-image:url('${escapeAttr(img)}')"></div>
@@ -1106,11 +1265,27 @@
             <h4>${escapeHtml(c.title)}</h4>
             <p class="one-liner">${escapeHtml(c.one_liner || "")}</p>
             <p class="adv">${escapeHtml(c.advantage || "")}</p>
+            ${
+              c.differentiation
+                ? `<p class="diff">${escapeHtml(c.differentiation)}</p>`
+                : ""
+            }
             <div class="sc-tags">
-              ${(c.recommended_style_buckets_zh || [])
-                .map((t) => `<span>${escapeHtml(t)}</span>`)
-                .join("")}
+              ${tags.map((t) => `<span>${escapeHtml(t)}</span>`).join("")}
             </div>
+            ${
+              montage.length
+                ? `<ul class="sc-montage">${montage
+                    .map(
+                      (m) =>
+                        `<li>${escapeHtml(m.why || m.title || m.item_id || "参考")}</li>`
+                    )
+                    .join("")}</ul>`
+                : ""
+            }
+            <p class="sc-disclaimer">${escapeHtml(
+              c.demo_disclaimer || "方向示意 · 非完稿"
+            )}</p>
           </div>
           <div class="sc-actions">
             <button type="button" class="keep-btn ${d === "keep" ? "active-keep" : ""}" data-decide="keep" data-card-id="${c.card_id}">留下</button>
@@ -1123,7 +1298,7 @@
 
   function keptCards() {
     if (!state.bundle) return [];
-    return state.bundle.l4_cards.filter((c) => state.decisions[c.card_id] === "keep");
+    return (state.bundle.l4_cards || []).filter((c) => state.decisions[c.card_id] === "keep");
   }
 
   function renderShortlist() {
@@ -1202,13 +1377,20 @@
     const counts = state.bundle?.l3?.counts || {};
     const cards = state.bundle?.l4_cards || [];
 
+    const mainN = state.feedCounts.main || counts.main_wall || 0;
+    const pendN = state.feedCounts.pending || counts.pending_review || 0;
+    const shelfN = counts.shelf || 0;
+    const analogyN = counts.analogy || 0;
+    const product = input.product || "青绿茶礼盒";
+    const tone = input.culture_tone || "中式现代";
+
     appendEvent({
       agent: "奎燕设计智能体",
       time: "11:58",
       tag: "读 Brief",
       tagClass: "stage",
       dot: "ok",
-      html: `<p>先帮你把 Brief 读明白了——青绿茶礼盒，走中式现代，礼赠+电商都要站得住。</p>
+      html: `<p>先帮你把 Brief 读明白了——${escapeHtml(product)}，走${escapeHtml(tone)}，礼赠+电商都要站得住。</p>
         <div class="event-note">必须有：${escapeHtml((input.must_have || []).slice(0, 3).join("、") || "开箱记忆点")}
         <br>必须避开：${escapeHtml((input.must_avoid || []).slice(0, 2).join("、") || "金红喜庆堆砌")}</div>
         <div class="chips-row">
@@ -1223,7 +1405,7 @@
       tag: "摸样本",
       tagClass: "",
       dot: "yellow",
-      html: `<p>摸了一轮包装参考：主品类 + 类比 + 货架大概 ${counts.total || 0} 条，有图 ${counts.with_image || 0} 张。</p>
+      html: `<p>主墙已挂上 <strong>${mainN}</strong> 张可用参考 · 待复核 <strong>${pendN}</strong> · 货架 listing ${shelfN} · 类比 ${analogyN}。</p>
         <div class="chips-row">
           <button type="button" class="artifact-link" data-artifact="map">采集清单</button>
           <button type="button" class="artifact-link" data-artifact="map">市场地图草稿</button>
@@ -1236,7 +1418,7 @@
       tag: "补证据",
       tagClass: "consensus",
       dot: "ok",
-      html: `<p>花瓣和小红书还差登录深采——先用 Behance / 站酷把墙铺起来，不耽误讨论。</p>
+      html: `<p>花瓣有图但 CDN 容易裂，已往后排；小红书/Pinterest 已在主墙。淘宝/京东仍是 listing 样，货架深采还没开通。</p>
         <div class="chips-row">
           <button type="button" class="artifact-link" data-artifact="map">待补源备注</button>
         </div>`,
@@ -1428,6 +1610,16 @@
     });
 
     const lower = t.toLowerCase();
+    const mainN = state.feedCounts.main || 0;
+    const pendN = state.feedCounts.pending || 0;
+    const cards = state.bundle?.l4_cards || [];
+    const rec = (state.bundle?.l3?.ai_recommended_buckets || [])
+      .map((b) => b.name_zh || b.id)
+      .filter(Boolean)
+      .slice(0, 5)
+      .join(" / ");
+    const cardNames = cards.map((c) => c.title).filter(Boolean).join(" / ");
+
     if (/市场地图|视觉|探索|看墙|地图/.test(t)) {
       setCap("orchestrator", "working", "正在帮你汇总视觉墙");
       setCap("dotdot", "working", "按风格桶重新摆墙");
@@ -1435,27 +1627,56 @@
         setCap("orchestrator", "online", "视觉墙刷新好了，等你点选");
         setCap("dotdot", "idle", "桶标签已就绪");
         setStage(3);
+        appendEvent({
+          agent: "奎燕设计智能体",
+          time: "现在",
+          tag: "市场地图",
+          tagClass: "consensus",
+          dot: "ok",
+          html: `<p>主墙 <strong>${mainN}</strong> · 待复核 ${pendN}。右侧可切「主品类 / 类比 / 货架」。${
+            rec ? `先盯：${escapeHtml(rec)}。` : ""
+          }</p>
+          <div class="chips-row"><button type="button" class="artifact-link" data-artifact="map">打开视觉墙</button></div>`,
+        });
       }, 400);
       return;
     }
     if (/策略|三张|生成.*卡|批判/.test(t)) {
       setCap("dotdot", "working", "正在帮你写 / 刷新策略卡");
       setTimeout(() => {
-        setCap("dotdot", "idle", "等你留下 / 先放下");
+        setCap("dotdot", "idle", cards.length ? "等你留下 / 先放下" : "这轮还没有方向卡");
         setStage(4);
+        appendEvent({
+          agent: "奎燕设计智能体",
+          time: "现在",
+          tag: "策略卡",
+          tagClass: cards.length ? "challenge" : "",
+          dot: cards.length ? "warn" : "ok",
+          html: cards.length
+            ? `<p>三张方向卡（示意·非完稿）：<strong>${escapeHtml(cardNames)}</strong>。留下或先放下即可进短名单。</p>`
+            : `<p>这轮研究还没写出方向卡。切回青绿茶礼盒可以看到三张示意卡。</p>`,
+        });
       }, 450);
       return;
     }
     if (/crawler|采集|同步/.test(lower) || /同步|采集/.test(t)) {
-      setCap("crawler", "working", "正在帮你拉取包装参考…");
+      setCap("crawler", "working", "正在帮你核对包装参考…");
       setTimeout(() => {
         setCap(
           "crawler",
           "idle",
-          `同步好了 ${state.bundle?.l3?.counts?.total || 23} 条 · 货架 ${state.bundle?.l3?.counts?.shelf || 6}`
+          `主墙 ${mainN} · 待复核 ${pendN}`
         );
         setStage(2);
         switchTab("visual", { fromStage: true });
+        appendEvent({
+          agent: "采集",
+          time: "现在",
+          tag: "同步",
+          tagClass: "consensus",
+          dot: "ok",
+          html: `<p>已核对本地真数据：主墙 ${mainN} · 待复核 ${pendN}。货架深采仍待开通，不假装连上了。</p>`,
+        });
       }, 600);
       return;
     }
@@ -1469,8 +1690,92 @@
       tag: "回复",
       tagClass: "consensus",
       dot: "ok",
-      html: `<p>收到。可以说「看视觉墙」「生成三张策略卡」「同步采集」或「输出短名单」——我跟着你走。</p>`,
+      html: `<p>收到。可以说「看市场地图」「生成三张策略卡」「同步采集」或「输出短名单」——我按墙上的 ${mainN} 张参考跟你走。</p>`,
     });
+  }
+
+  async function applyResearch(id) {
+    const r = RESEARCHES.find((x) => x.id === id);
+    if (!r) return;
+    RESEARCHES.forEach((x) => (x.active = x.id === id));
+    state.activeResearchId = id;
+    state.selectedIds.clear();
+    state.shortlistVisual = [];
+    state.decisions = {};
+    state.activeCat = "all";
+    state.activeSource = null;
+    state.activeStyleFilter = "";
+    closeInspector();
+    renderResearch();
+    if (el.researchTitle) el.researchTitle.textContent = r.title;
+    if (el.researchQuestion) {
+      el.researchQuestion.value = r.question.slice(0, 200);
+      updateQCount();
+    }
+    if (el.categoryChips) {
+      el.categoryChips.querySelectorAll(".cat-chip:not(.pending-toggle):not(.brief-toggle)").forEach((c) => {
+        c.classList.toggle("active", c.dataset.cat === "all");
+      });
+    }
+    userArmedPending = false;
+    if (r.onlyBriefDefault) {
+      state.onlyBriefRelevant = true;
+      if (el.briefToggle) {
+        el.briefToggle.classList.add("active");
+        el.briefToggle.setAttribute("aria-pressed", "true");
+        el.briefToggle.dataset.brief = "1";
+      }
+    } else {
+      state.onlyBriefRelevant = false;
+      if (el.briefToggle) {
+        el.briefToggle.classList.remove("active");
+        el.briefToggle.setAttribute("aria-pressed", "false");
+        el.briefToggle.dataset.brief = "0";
+      }
+    }
+    toast(`正在打开「${r.title}」…`);
+    try {
+      if (r.id === "r-green") {
+        if (state._greenBundle) state.bundle = state._greenBundle;
+        else state.bundle = await loadProductBundle();
+        (state.bundle.l4_cards || []).forEach((c) => {
+          state.decisions[c.card_id] = c.hou_decision || "pending";
+        });
+      } else {
+        if (!state._greenBundle && state.bundle?.l4_cards?.length) {
+          state._greenBundle = state.bundle;
+        }
+        state.bundle = {
+          bucket_id_to_zh: (state.bundle && state.bundle.bucket_id_to_zh) || {},
+          l1: {
+            brief_id: r.id,
+            raw_brief: r.question,
+            input: { product: r.title, culture_tone: "中式现代", channel: "礼赠 + 电商" },
+          },
+          l3: { counts: {}, ai_recommended_buckets: [], l1_summary: { tone: "中式现代", channel: "礼赠+电商" } },
+          l4_cards: [],
+        };
+      }
+      await loadLiveFeeds(r);
+      setCap("orchestrator", "online", `正在看「${r.title}」`);
+      seedStream();
+      state.stage = 3;
+      syncStageButtons(3);
+      switchTab("visual", { fromStage: true });
+      appendEvent({
+        agent: "奎燕设计智能体",
+        time: "现在",
+        tag: "切换研究",
+        tagClass: "stage",
+        dot: "ok",
+        html: r.onlyBriefDefault
+          ? `<p>已切回青绿茶礼盒。主墙 <strong>${state.feedCounts.main}</strong> · 待复核 <strong>${state.feedCounts.pending}</strong>。</p>`
+          : `<p>已打开「${escapeHtml(r.title)}」落地主墙 <strong>${state.feedCounts.main}</strong> 张。这轮还没有策略卡；贴 brief 筛选已关掉，避免用茶礼规则误杀。</p>`,
+      });
+    } catch (err) {
+      console.warn(err);
+      toast("这轮研究的墙还没挂上");
+    }
   }
 
   function updateQCount() {
@@ -1569,6 +1874,16 @@
     }
 
     el.canvasBody.addEventListener("click", (e) => {
+      const rec = e.target.closest("[data-rec-bucket]");
+      if (rec) {
+        const name = rec.dataset.recBucket;
+        state.activeStyleFilter = state.activeStyleFilter === name ? "" : name;
+        const styleSel = el.filters && el.filters.querySelector('[data-filter="style"]');
+        if (styleSel) styleSel.value = state.activeStyleFilter;
+        state.wallVisibleLimit = WALL_BATCH_INITIAL;
+        renderCanvas();
+        return;
+      }
       const decide = e.target.closest("[data-decide]");
       if (decide) {
         setDecision(decide.dataset.cardId, decide.dataset.decide);
@@ -1698,13 +2013,9 @@
     el.researchList.addEventListener("click", (e) => {
       const card = e.target.closest(".research-card");
       if (!card) return;
-      SAVED.forEach((r) => (r.active = r.id === card.dataset.id));
-      renderResearch();
-      const r = SAVED.find((x) => x.id === card.dataset.id);
-      if (r) {
-        el.researchTitle.textContent = r.title;
-        toast(`已切换到「${r.title}」`);
-      }
+      const id = card.dataset.id;
+      if (!id || id === state.activeResearchId) return;
+      applyResearch(id);
     });
 
     el.btnNew.addEventListener("click", () => {
@@ -1772,23 +2083,22 @@
       // 1) Live feeds first for the visual wall
       let feedsOk = false;
       try {
-        await loadLiveFeeds();
+        await loadLiveFeeds(RESEARCHES[0]);
         feedsOk = true;
       } catch (feedErr) {
         console.warn("live feeds", feedErr);
       }
 
-      // 2) Product pack for L1 brief + L4 strategy cards (no demo fallback)
-      let res = await fetch("data/product-bundle.json");
-      if (!res.ok) res = await fetch("data/product-pack.json");
-      if (!res.ok) throw new Error("product pack " + res.status);
-      state.bundle = await res.json();
+      // 2) Product pack for L1 brief + L4 strategy cards.
+      // Skip empty-l4 stubs and fall through to product-pack.
+      state.bundle = await loadProductBundle();
+      state._greenBundle = state.bundle;
       (state.bundle.l4_cards || []).forEach((c) => {
         state.decisions[c.card_id] = c.hou_decision || "pending";
       });
+      const q0 = RESEARCHES[0].question;
       if (el.researchQuestion) {
-        el.researchQuestion.value =
-          "新品牌青绿茶礼盒：中式现代气质下，礼赠+电商渠道如何做出开箱记忆点与差异化？";
+        el.researchQuestion.value = q0.slice(0, 200);
         updateQCount();
       }
 
@@ -1798,6 +2108,8 @@
         rebuildSourcesFromWall();
         updateWallCountBar();
         toast("主墙暂时读不到，先用本地缓存顶上");
+      } else {
+        rebuildSourcesFromWall();
       }
       if (state.bundle?.l3 && state.feedCounts.main) {
         state.bundle.l3.counts = {

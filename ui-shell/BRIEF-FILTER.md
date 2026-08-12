@@ -11,6 +11,6 @@
 - **含待复核**：待复核仍置顶；组内同样套 brief 筛选/排序。
 
 ## 与锁定 feed 的关系
-- **不**改写 `ui-shell/data/l2_main_wall.jsonl` / `l2_pending_review.jsonl`（保持 image_gate 1820/1127）。
-- 结构性提案见 `L3/feeds/l2_*_proposed_brief_v1.jsonl` 与 `BRIEF-RELEVANCE-PROPOSAL.json`；解锁后才可替换壳内 feed。
-- 壳可选在解锁后改为默认读 brief-pass 排序的 feed；在此之前靠本客户端筛选即可用。
+- **不**改写 `ui-shell/data/l2_main_wall.jsonl` / `l2_pending_review.jsonl`（交付基线 **452 / 2680**，brief_relevance_v1）。
+- 客户端「只看贴 brief」是壳内筛选，不改 jsonl。
+- 禁止把 `data/briefs/green_tea_gift_main_wall.jsonl`（184，过时口径）当作默认主墙。

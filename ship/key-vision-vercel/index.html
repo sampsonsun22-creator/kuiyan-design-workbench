@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KEY 视界 · 设计竞品调研</title>
-  <link rel="stylesheet" href="styles.css?v=452wall1" />
+  <link rel="stylesheet" href="styles.css?v=452land1" />
 </head>
 <body>
   <div class="app" id="app">
@@ -90,20 +90,21 @@
 
         <div class="category-chips" id="categoryChips" aria-label="素材类别">
           <button type="button" class="cat-chip active" data-cat="all">全部</button>
-          <button type="button" class="cat-chip" data-cat="pack">包装实物</button>
-          <button type="button" class="cat-chip" data-cat="case">设计案例</button>
+          <button type="button" class="cat-chip" data-cat="primary">主品类</button>
+          <button type="button" class="cat-chip" data-cat="analogy">类比</button>
+          <button type="button" class="cat-chip" data-cat="shelf">货架</button>
           <button type="button" class="cat-chip pending-toggle" id="pendingToggle" data-pending="0" aria-pressed="false">含待复核</button>
           <button type="button" class="cat-chip brief-toggle active" id="briefToggle" data-brief="1" aria-pressed="true">只看贴 brief</button>
         </div>
         <div class="wall-count-bar" id="wallCountBar" aria-live="polite">主墙 — · 待复核 —</div>
 
         <div class="filters" id="filters">
-          <select aria-label="风格" data-filter="style"><option value="">风格 · 全部</option><option>中式现代</option><option>国际简约</option><option>工艺材质感</option></select>
-          <select aria-label="来源" data-filter="source" class="filter-source"><option value="">来源 · 全部</option><option>Behance</option><option>站酷</option><option>Packaging of the World</option></select>
+          <select aria-label="风格" data-filter="style"><option>风格 · 全部</option><option>中式现代</option><option>国际简约</option><option>工艺材质感</option></select>
+          <select aria-label="来源" data-filter="source" class="filter-source"><option>来源 · 全部</option><option>Behance</option><option>站酷</option><option>Packaging of the World</option></select>
           <select aria-label="方向" data-filter="direction" class="filter-direction" hidden><option>方向 · 全部</option><option>开箱记忆</option><option>货架识别</option><option>礼赠仪式</option></select>
           <select aria-label="气质" data-filter="tone" class="filter-tone" hidden><option>气质 · 全部</option><option>中式现代</option><option>国际简约</option><option>地域文旅</option></select>
-          <select aria-label="市场" data-filter="market"><option value="">市场 · 礼赠+电商</option><option>礼赠</option><option>电商</option></select>
-          <select aria-label="年份" data-filter="year"><option value="">年份 · 近 3 年</option><option>2024–2026</option><option>全部</option></select>
+          <select aria-label="市场" data-filter="market"><option>市场 · 礼赠+电商</option><option>礼赠</option><option>电商</option></select>
+          <select aria-label="年份" data-filter="year"><option>年份 · 近 3 年</option><option>2024–2026</option><option>全部</option></select>
         </div>
 
         <div class="canvas-wrap">
@@ -134,6 +135,6 @@
   </div>
 
   <div class="toast" id="toast"></div>
-  <script src="app.js?v=452wall1"></script>
+  <script src="app.js?v=452land1"></script>
 </body>
 </html>

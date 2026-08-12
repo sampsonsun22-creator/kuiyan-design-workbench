@@ -1,1 +1,502 @@
-{"meta":{"product":"KEY 视界","qc_mode":"brief_relevance_v1","main_wall":452,"pending_review":2680,"brief":"青绿茶礼盒包装","":false},"l1":{"brief_id":"brief-green-tea-gift-20260812","raw_brief":"新品牌青绿茶礼盒包装设计。渠道：一二线城市礼赠 + 电商礼盒；客群 28–45 新中产与商务馈赠；气质要求中式现代、不仿古堆砌；价格带中高端；需在详情页/礼盒开箱有清晰记忆点与差异化；工艺可接受材质升级或适度异形；类比可参考茶礼、黄酒礼盒、滋补礼盒与国际简约茶包装。","created_at":"2026-08-12T11:58:34Z","input":{"brand":"新品牌·青绿茶","product":"青绿茶礼盒","category_text":"绿茶 / 礼盒茶","channel":"礼赠 + 电商礼盒","audience":"28–45 新中产、商务馈赠","price_band":"中高端","culture_tone":"中式现代","competitors":["小罐茶礼盒（气质参照）","国际精品茶礼（简约参照）"],"must_have":["开箱仪式感","中式现代不仿古","电商主图信息清晰","礼赠体面"],"must_avoid":["寺庙仿古堆砌","廉价金红喜庆模板","信息过载看不清品类"],"occasion":"节日/商务馈赠","constraints":["可材质升级","可适度异形"],"kuiyan_case_refs":["中宝琯柚茶","吾茶白","石库门上海么糖（礼赠/海派现代可类比）"]},"intent":{"domain_id":"tea_beverage","domain_label_zh":"茶与即饮/新茶饮相关包装","confidence":0.92,"analogy_plan":[{"rule_id":"gift_occasion","label_zh":"礼赠场","targets":["酒礼盒","滋补礼盒","糕点礼盒","文创礼盒"]},{"rule_id":"chinese_modern","label_zh":"中式现代叙事","targets":["黄酒","国潮美妆","地方特产礼盒"]},{"rule_id":"global_minimal","label_zh":"国际简约","targets":["精品咖啡","高端水","香氛"]}],"query_plan":{"inspiration":["green tea packaging design gift box","青绿茶 礼盒 包装设计","Chinese modern tea gift packaging"],"shelf":["天猫 绿茶礼盒 包装","京东 高端茶礼盒"],"analogy":["huangjiu gift box packaging","tcm tonic gift packaging modern","minimal coffee gift box packaging"]},"style_prior":["chinese_modern","chinese_ceremonial","global_minimal","regional_culture","craft_material","minimal_white"],"risk_notes":["礼赠茶货架易陷入金红仿古；需主动拉开","样本阶段货架墙偏弱，需后续接电商深采"]}},"l3":{"counts":{"main_wall":452,"pending_review":2680,"primary":452,"qc_mode":"brief_relevance_v1"}},"l4":{},"style_buckets_ref":"style-buckets-v1.json"}
+{
+  "meta": {
+    "product": "KEY 视界",
+    "brief_id": "brief-green-tea-gift-20260812",
+    "main_wall": 452,
+    "pending_review": 2680,
+    "qc_mode": "brief_relevance_v1",
+    "shell_floor": 452,
+    "updated_at": "2026-08-12T16:30:09Z",
+    "footer": "KEY 视界 · 主墙 452 · 待复核 2680 · 策略卡为方向示意非完稿",
+    "generated_from": [
+      "ui-shell/data/l2_main_wall.jsonl",
+      "ui-shell/data/l2_pending_review.jsonl",
+      "demo/e2e-green-tea-gift/L4-card-*-v2.json",
+      "L3/style-buckets-v1.json"
+    ],
+    "note": "slim pack: L1+L3 summary+L4 cards; visual wall reads live jsonl"
+  },
+  "l1": {
+    "brief_id": "brief-green-tea-gift-20260812",
+    "raw_brief": "新品牌青绿茶礼盒包装设计。渠道：一二线城市礼赠 + 电商礼盒；客群 28–45 新中产与商务馈赠；气质要求中式现代、不仿古堆砌；价格带中高端；需在详情页/礼盒开箱有清晰记忆点与差异化；工艺可接受材质升级或适度异形；类比可参考茶礼、黄酒礼盒、滋补礼盒与国际简约茶包装。",
+    "created_at": "2026-08-12T11:58:34Z",
+    "input": {
+      "brand": "（演示）新品牌·青绿茶",
+      "product": "青绿茶礼盒",
+      "category_text": "绿茶 / 礼盒茶",
+      "channel": "礼赠 + 电商礼盒",
+      "audience": "28–45 新中产、商务馈赠",
+      "price_band": "中高端",
+      "culture_tone": "中式现代",
+      "competitors": [
+        "小罐茶礼盒（气质参照）",
+        "国际精品茶礼（简约参照）"
+      ],
+      "must_have": [
+        "开箱仪式感",
+        "中式现代不仿古",
+        "电商主图信息清晰",
+        "礼赠体面"
+      ],
+      "must_avoid": [
+        "寺庙仿古堆砌",
+        "廉价金红喜庆模板",
+        "信息过载看不清品类"
+      ],
+      "occasion": "节日/商务馈赠",
+      "constraints": [
+        "可材质升级",
+        "可适度异形"
+      ],
+      "kuiyan_case_refs": [
+        "中宝琯柚茶",
+        "吾茶白",
+        "石库门上海么糖（礼赠/海派现代可类比）"
+      ]
+    },
+    "intent": {
+      "domain_id": "tea_beverage",
+      "domain_label_zh": "茶与即饮/新茶饮相关包装",
+      "confidence": 0.92,
+      "analogy_plan": [
+        {
+          "rule_id": "gift_occasion",
+          "label_zh": "礼赠场",
+          "targets": [
+            "酒礼盒",
+            "滋补礼盒",
+            "糕点礼盒",
+            "文创礼盒"
+          ]
+        },
+        {
+          "rule_id": "chinese_modern",
+          "label_zh": "中式现代叙事",
+          "targets": [
+            "黄酒",
+            "国潮美妆",
+            "地方特产礼盒"
+          ]
+        },
+        {
+          "rule_id": "global_minimal",
+          "label_zh": "国际简约",
+          "targets": [
+            "精品咖啡",
+            "高端水",
+            "香氛"
+          ]
+        }
+      ],
+      "query_plan": {
+        "inspiration": [
+          "green tea packaging design gift box",
+          "青绿茶 礼盒 包装设计",
+          "Chinese modern tea gift packaging"
+        ],
+        "shelf": [
+          "天猫 绿茶礼盒 包装",
+          "京东 高端茶礼盒"
+        ],
+        "analogy": [
+          "huangjiu gift box packaging",
+          "tcm tonic gift packaging modern",
+          "minimal coffee gift box packaging"
+        ]
+      },
+      "style_prior": [
+        "chinese_modern",
+        "chinese_ceremonial",
+        "global_minimal",
+        "regional_culture",
+        "craft_material",
+        "minimal_white"
+      ],
+      "risk_notes": [
+        "礼赠茶货架易陷入金红仿古；需主动拉开",
+        "样本阶段货架墙偏弱，需后续接电商深采"
+      ]
+    }
+  },
+  "l3": {
+    "brief_id": "brief-green-tea-gift-20260812",
+    "generated_at": "2026-08-12T16:30:09Z",
+    "counts": {
+      "main_wall": 452,
+      "pending_review": 2680,
+      "primary": 452,
+      "shelf": 9,
+      "analogy": 2,
+      "qc_mode": "brief_relevance_v1"
+    },
+    "source_distribution": {
+      "main": {
+        "behance": 191,
+        "huaban": 79,
+        "pinterest": 68,
+        "xiaohongshu": 21,
+        "packagingoftheworld": 21,
+        "jd": 5,
+        "zcool": 4,
+        "99designs": 4,
+        "foodtalks": 4,
+        "packdesigner": 4,
+        "soso": 3,
+        "dribbble": 3,
+        "rigidboxsivakasi": 3,
+        "web": 3,
+        "stock": 2,
+        "canva": 2,
+        "pakfactory": 2,
+        "so": 2,
+        "mtpak": 2,
+        "shinerayad": 2,
+        "img": 2,
+        "goobai": 2,
+        "taobao": 1,
+        "arka": 1,
+        "magnific": 1,
+        "sucai": 1,
+        "gaoding": 1,
+        "meihua": 1,
+        "forestpackage": 1,
+        "wecustomboxes": 1,
+        "oxopackaging": 1,
+        "1688": 1,
+        "sohu": 1,
+        "m": 1,
+        "16pic": 1,
+        "etsy": 1,
+        "wix": 1,
+        "saratogateaandhoney": 1,
+        "made-in-china": 1,
+        "smartbuy": 1,
+        "yingmei158": 1,
+        "vipyidian": 1,
+        "brillpack": 1,
+        "szbxlpackaging": 1,
+        "baoxiaohe": 1
+      },
+      "pending": {
+        "xiaohongshu": 806,
+        "behance": 684,
+        "pinterest": 597,
+        "huaban": 590,
+        "zcool": 3
+      }
+    },
+    "l1_summary": {
+      "domain": "茶与即饮/新茶饮相关包装",
+      "channel": "礼赠 + 电商礼盒",
+      "tone": "中式现代",
+      "price_band": "中高端"
+    },
+    "ai_recommended_buckets": [
+      {
+        "id": "chinese_ceremonial",
+        "name_zh": "中式典雅/礼赠",
+        "why": "礼赠仪式感"
+      },
+      {
+        "id": "chinese_modern",
+        "name_zh": "中式现代",
+        "why": "Brief 中式现代"
+      },
+      {
+        "id": "regional_culture",
+        "name_zh": "地域文旅",
+        "why": "茶产地叙事"
+      },
+      {
+        "id": "global_minimal",
+        "name_zh": "国际简约",
+        "why": "拉开喜庆货架"
+      },
+      {
+        "id": "natural_organic",
+        "name_zh": "自然有机",
+        "why": "综合 prior"
+      }
+    ],
+    "channel_status": [
+      {
+        "id": "behance",
+        "label": "Behance",
+        "status": "ok",
+        "statusText": "已采集 · 191",
+        "count": 191
+      },
+      {
+        "id": "packagingoftheworld",
+        "label": "Packaging of the World",
+        "status": "ok",
+        "statusText": "已采集 · 21",
+        "count": 21
+      },
+      {
+        "id": "pinterest",
+        "label": "Pinterest",
+        "status": "ok",
+        "statusText": "已采集 · 68",
+        "count": 68
+      },
+      {
+        "id": "huaban",
+        "label": "花瓣",
+        "status": "ok",
+        "statusText": "已采集 · 79",
+        "count": 79
+      },
+      {
+        "id": "xiaohongshu",
+        "label": "小红书",
+        "status": "ok",
+        "statusText": "已采集 · 21",
+        "count": 21
+      },
+      {
+        "id": "zcool",
+        "label": "站酷",
+        "status": "thin",
+        "statusText": "薄页 · 4",
+        "count": 4
+      },
+      {
+        "id": "taobao",
+        "label": "淘宝",
+        "status": "thin",
+        "statusText": "listing 样 · 1",
+        "count": 1,
+        "note": "货架深采通道待开通；主墙仅有 listing 级样本"
+      },
+      {
+        "id": "jd",
+        "label": "京东",
+        "status": "thin",
+        "statusText": "listing 样 · 5",
+        "count": 5,
+        "note": "货架深采通道待开通；主墙仅有 listing 级样本"
+      }
+    ],
+    "walls": {
+      "primary": {
+        "count": 452,
+        "note": "主墙读 l2_main_wall.jsonl"
+      },
+      "analogy": {
+        "count": 2,
+        "note": "类比样本偏薄；keep_analogy + 礼赠/滋补/黄酒线索"
+      },
+      "shelf": {
+        "count": 9,
+        "note": "listing 级货架样，深采待开通"
+      },
+      "pending_review": {
+        "count": 2680,
+        "note": "默认不进首页主路径"
+      }
+    },
+    "feed_source": "ui-shell/data/l2_main_wall.jsonl",
+    "truth_source": "brief_relevance_v1"
+  },
+  "l4_cards": [
+    {
+      "card_id": "card-cm-01-v2",
+      "brief_id": "brief-green-tea-gift-20260812",
+      "title": "青绿新中轴",
+      "one_liner": "以「青绿」做现代色锤，中式结构去仿古，一眼茶、二眼礼。",
+      "advantage": "礼赠体面但不土；电商主图有色识别。",
+      "differentiation": "相对京东/淘宝常见绿茶礼盒的金红喜庆与特产堆砌主图，用青绿现代色锤+克制中式结构做详情页第一眼差异；不走仿古龙凤。",
+      "recommended_style_buckets": [
+        "chinese_modern",
+        "craft_material"
+      ],
+      "reference_montage": [
+        {
+          "item_id": "packagingoftheworld:you-ming-tang-tea-gift-box",
+          "why": "对称中式礼盒但去繁——可借「现代中轴」结构，慎学金红",
+          "wall": "primary",
+          "image_url": "https://packagingoftheworld.com/wp-content/uploads/2023/12/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20231229095315.png",
+          "title": "You Ming Tang Tea Gift Box",
+          "page_url": "https://packagingoftheworld.com/2023/12/you-ming-tang-tea-gift-box-packaging.html"
+        },
+        {
+          "item_id": "packagingoftheworld:genmai-soup-gift-box",
+          "why": "仪式感来自层次与材质，不是纹样堆砌；对齐「不仿古」",
+          "wall": "primary",
+          "image_url": "http://packagingoftheworld.com/wp-content/uploads/2023/07/2-27-1365x2048.jpg",
+          "title": "Genmai soup gift box",
+          "page_url": "https://packagingoftheworld.com/2020/10/genmai-soup-gift-box.html"
+        }
+      ],
+      "verbal_directions": [
+        "主视觉围绕「青绿新中轴」展开",
+        "品名层级大于品牌纹样",
+        "礼盒外侧克制，内侧给开箱惊喜"
+      ],
+      "sketch_directions": [
+        "外盒色块构成草图",
+        "开箱分层结构示意"
+      ],
+      "demo_prompt": "Premium Chinese green tea gift box packaging, direction \"青绿新中轴\", style 中式现代, 工艺材质感, modern not antique, elegant unboxing, studio product photography, high-end FMCG packaging mockup, not a final artwork",
+      "demo_disclaimer": "Demo only — 非完稿，供侯总遴选方向",
+      "hou_decision": "pending",
+      "merge_into": null,
+      "created_at": "2026-08-12T12:00:08Z",
+      "extra_note": "v2：补强参考 why，原 card-cm-01.json 保留",
+      "updated_at": "2026-08-12T12:03:09Z",
+      "local_ref_image": "assets/ref1.png",
+      "recommended_style_buckets_zh": [
+        "中式现代",
+        "工艺材质感"
+      ],
+      "cover_image": "assets/ref1.png"
+    },
+    {
+      "card_id": "card-gm-02-v2",
+      "brief_id": "brief-green-tea-gift-20260812",
+      "title": "静奢留白",
+      "one_liner": "国际简约骨架 + 一点点东方材质，把礼盒做成「安静的贵」。",
+      "advantage": "新中产审美友好，跨礼赠/自用。",
+      "differentiation": "货架 listing 多为热闹满版；本方向用国际简约留白与材质感拉开，适合怕「土」、要体面但不喧闹的新中产礼赠。",
+      "recommended_style_buckets": [
+        "global_minimal",
+        "minimal_white"
+      ],
+      "reference_montage": [
+        {
+          "item_id": "packagingoftheworld:genmai-soup-gift-box",
+          "why": "留白+材质即可传达礼赠，验证「安静的贵」",
+          "wall": "primary",
+          "image_url": "http://packagingoftheworld.com/wp-content/uploads/2023/07/2-27-1365x2048.jpg",
+          "title": "Genmai soup gift box",
+          "page_url": "https://packagingoftheworld.com/2020/10/genmai-soup-gift-box.html"
+        },
+        {
+          "item_id": "behance:search-tea-ology",
+          "why": "国际简约茶包装气质参照（listing 级，Phase B 需深链）",
+          "wall": "primary"
+        }
+      ],
+      "verbal_directions": [
+        "主视觉围绕「静奢留白」展开",
+        "品名层级大于品牌纹样",
+        "礼盒外侧克制，内侧给开箱惊喜"
+      ],
+      "sketch_directions": [
+        "外盒色块构成草图",
+        "开箱分层结构示意"
+      ],
+      "demo_prompt": "Premium Chinese green tea gift box packaging, direction \"静奢留白\", style 国际简约, 极简白盒, modern not antique, elegant unboxing, studio product photography, high-end FMCG packaging mockup, not a final artwork",
+      "demo_disclaimer": "Demo only — 非完稿，供侯总遴选方向",
+      "hou_decision": "pending",
+      "merge_into": null,
+      "created_at": "2026-08-12T12:00:08Z",
+      "extra_note": "v2：补强参考 why，原 card-gm-02.json 保留",
+      "updated_at": "2026-08-12T12:03:09Z",
+      "local_ref_image": "assets/ref2.jpg",
+      "recommended_style_buckets_zh": [
+        "国际简约",
+        "极简白盒"
+      ],
+      "cover_image": "assets/ref2.jpg"
+    },
+    {
+      "card_id": "card-cc-03-v2",
+      "brief_id": "brief-green-tea-gift-20260812",
+      "title": "开箱仪式",
+      "one_liner": "礼赠仪式感做在结构开箱，而不是贴金箔龙凤。",
+      "advantage": "开箱视频/详情页天然内容点。",
+      "differentiation": "电商页常靠图案喊「礼」；本方向把仪式感做进开箱结构与层次（可拍短视频），区隔平面贴金的货架套路。",
+      "recommended_style_buckets": [
+        "chinese_ceremonial",
+        "regional_culture"
+      ],
+      "reference_montage": [
+        {
+          "item_id": "packagingoftheworld:you-ming-tang-tea-gift-box",
+          "why": "开箱/层次可读，礼赠仪式感样本",
+          "wall": "primary",
+          "image_url": "https://packagingoftheworld.com/wp-content/uploads/2023/12/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20231229095315.png",
+          "title": "You Ming Tang Tea Gift Box",
+          "page_url": "https://packagingoftheworld.com/2023/12/you-ming-tang-tea-gift-box-packaging.html"
+        },
+        {
+          "item_id": "packagingoftheworld:barg-tea-uzbekistan",
+          "why": "产地/节庆叙事可借，但要翻译成中国礼赠语境、避免异域符号照搬",
+          "wall": "primary",
+          "image_url": "http://packagingoftheworld.com/wp-content/uploads/2024/10/6-20-1024x709.jpg",
+          "title": "Barg – Tea Packaging Design for a Brand in Uzbekistan",
+          "page_url": "https://packagingoftheworld.com/2026/07/barg-tea-packaging-design-for-a-brand-in-uzbekistan.html"
+        }
+      ],
+      "verbal_directions": [
+        "主视觉围绕「开箱仪式」展开",
+        "品名层级大于品牌纹样",
+        "礼盒外侧克制，内侧给开箱惊喜"
+      ],
+      "sketch_directions": [
+        "外盒色块构成草图",
+        "开箱分层结构示意"
+      ],
+      "demo_prompt": "Premium Chinese green tea gift box packaging, direction \"开箱仪式\", style 中式典雅/礼赠, 地域文旅, modern not antique, elegant unboxing, studio product photography, high-end FMCG packaging mockup, not a final artwork",
+      "demo_disclaimer": "Demo only — 非完稿，供侯总遴选方向",
+      "hou_decision": "pending",
+      "merge_into": null,
+      "created_at": "2026-08-12T12:00:08Z",
+      "extra_note": "v2：补强参考 why，原 card-cc-03.json 保留",
+      "updated_at": "2026-08-12T12:03:09Z",
+      "local_ref_image": "assets/ref3.png",
+      "recommended_style_buckets_zh": [
+        "中式典雅/礼赠",
+        "地域文旅"
+      ],
+      "cover_image": "assets/ref3.png"
+    }
+  ],
+  "bucket_id_to_zh": {
+    "chinese_modern": "中式现代",
+    "chinese_ceremonial": "中式典雅/礼赠",
+    "global_minimal": "国际简约",
+    "swiss_international": "瑞士国际主义",
+    "natural_organic": "自然有机",
+    "luxury_gilt": "奢华金饰",
+    "minimal_white": "极简白盒",
+    "color_youth": "色彩冲击/年轻潮",
+    "cartoon_ip": "卡通IP趣味",
+    "retro_nostalgia": "复古怀旧",
+    "craft_material": "工艺材质感",
+    "appetite_photo": "摄影食欲风",
+    "illustration_story": "插画叙事",
+    "efficacy_hammer": "成分科学/功效锤",
+    "regional_culture": "地域文旅",
+    "pet_cute": "宠物萌感",
+    "maternal_safe": "母婴安全感",
+    "nightlife_trend": "夜场潮流",
+    "sustainable_plain": "可持续质朴",
+    "art_collab": "跨界艺术限量"
+  },
+  "bucket_zh_to_id": {
+    "中式现代": "chinese_modern",
+    "中式典雅/礼赠": "chinese_ceremonial",
+    "国际简约": "global_minimal",
+    "瑞士国际主义": "swiss_international",
+    "自然有机": "natural_organic",
+    "奢华金饰": "luxury_gilt",
+    "极简白盒": "minimal_white",
+    "色彩冲击/年轻潮": "color_youth",
+    "卡通IP趣味": "cartoon_ip",
+    "复古怀旧": "retro_nostalgia",
+    "工艺材质感": "craft_material",
+    "摄影食欲风": "appetite_photo",
+    "插画叙事": "illustration_story",
+    "成分科学/功效锤": "efficacy_hammer",
+    "地域文旅": "regional_culture",
+    "宠物萌感": "pet_cute",
+    "母婴安全感": "maternal_safe",
+    "夜场潮流": "nightlife_trend",
+    "可持续质朴": "sustainable_plain",
+    "跨界艺术限量": "art_collab"
+  },
+  "style_buckets_ref": "style-buckets-v1.json"
+}

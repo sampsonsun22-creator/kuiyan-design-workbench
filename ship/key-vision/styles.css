@@ -1305,3 +1305,64 @@ button, input, textarea, select {
 .wall-card.img-broken-card {
   display: none !important;
 }
+
+.rec-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+.rec-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.rec-chip {
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+.rec-chip.active {
+  background: var(--key-yellow, #f5d76e);
+  border-color: var(--ink);
+}
+.insp-block.collect h4 .ico { background: #F3F0E7; }
+.insp-link {
+  color: var(--ink);
+  font-weight: 600;
+}
+.sc-body .diff {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.sc-montage {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.sc-montage li {
+  position: relative;
+  padding-left: 12px;
+  margin-top: 4px;
+}
+.sc-montage li::before {
+  content: "·";
+  position: absolute;
+  left: 2px;
+}
+.sc-disclaimer {
+  margin: 10px 0 0;
+  font-size: 10.5px;
+  color: #8a867c;
+}

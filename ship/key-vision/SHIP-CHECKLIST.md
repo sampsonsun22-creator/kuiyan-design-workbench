@@ -28,19 +28,19 @@ FEED-STATUS: main_wall=452 · pending_review=2680 · feed=brief_relevance · she
 
 ## Ship pack contents
 
-- [x] index.html / app.js / styles.css / assets/
-- [x] data/product-pack.json
+- [x] index.html / app.js / styles.css / assets/（含 brand + ref1/2/3）
+- [x] data/product-bundle.json（精简：L1 + L3 摘要 + 3× l4_cards）
 - [x] data/l2_main_wall.jsonl (452) + hyphen alias
 - [x] data/l2_pending_review.jsonl (2680) + hyphen alias
-- [x] data/FEED-STATUS.json + style-buckets-v1.json
+- [x] data/briefs/baijiu_gift_main_wall.jsonl + tonic_gift_main_wall.jsonl
+- [x] data/FEED-STATUS.json + style-buckets-v1.json + researches.json
 - [x] vercel.json
 - [x] CHANNEL-DEBT.md
 - [x] SHIP-CHECKLIST.md
 
 ## Gaps / notes
 
-- Platform live lock is **452 / 2680**（this task did not rewrite L3 clean feeds）.
-- ui-shell may keep a legacy pack filename for builders；ship does not reference it.
-- concept.html cleaned in ui-shell but not shipped.
-- Pack JSON may still carry internal fields；UI does not render them.
-- Boot load: `product-bundle.json` → `product-pack.json`（已去掉 `demo-bundle` 回落）。
+- Platform live lock is **452 / 2680**（this task did not rewrite L3 jsonl）.
+- 公网 `key-vision` 必须同步本目录：缺 `assets/` 或空 `l4` 的 stub bundle 会导致策略卡空白、品牌 404。
+- Boot：jsonl 主墙 → `product-bundle.json`（有 l4_cards 即停）→ 否则 `product-pack.json`。
+- 白酒/滋补切换只换主墙，不套茶礼 brief 筛选，也没有策略卡。

@@ -1,8 +1,27 @@
 {
+  "updated_at": "2026-08-12T15:02:51Z",
+  "shell_default": "strict",
+  "qc_mode": "brief_relevance_v1",
   "main_wall": 452,
   "pending_review": 2680,
+  "pass_main": 452,
   "shell_floor": 452,
+  "stability": "LOCKED_brief_relevance_v1_unlock452",
+  "source": "unlock452 ship package",
   "feed": "brief_relevance",
-  "updated_at": "2026-08-12T15:04:42Z",
-  "note": "authoritative shell 452 / pending 2680"
+  "next_unlock_gate": "main_wall > 452 with valid pending",
+  "forbid": [
+    "image_gate",
+    "<=410",
+    "<=401",
+    "<=304",
+    "274",
+    "1820",
+    "wide",
+    "structural",
+    "rollback_410"
+  ],
+  "note": "authoritative shell 452 / pending 2680; do not write back to 410",
+  "restore_source": "L3/feeds/l2_*_brief_relevance_expanded_unlock.jsonl",
+  "backup_unlock": "L3/feeds/l2_*_brief_relevance_expanded_unlock.jsonl"
 }
