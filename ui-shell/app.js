@@ -1169,7 +1169,10 @@
     return `<div class="strategy-list">${cards
       .map((c) => {
         const d = state.decisions[c.card_id] || c.hou_decision || "pending";
-        const img = c.local_ref_image || c.reference_montage?.[0]?.image_url || "";
+        const img =
+          c.reference_montage?.find((reference) => reference?.image_url)?.image_url ||
+          c.local_ref_image ||
+          "";
         return `
         <article class="strategy-card ${d === "keep" ? "keep" : d === "kill" ? "kill" : ""}" data-card-id="${c.card_id}">
           <div class="sc-img-big" style="background-image:url('${escapeAttr(img)}')"></div>
@@ -1951,6 +1954,21 @@
       if (!res.ok) res = await fetch("data/product-pack.json");
       if (!res.ok) throw new Error("product pack " + res.status);
       state.bundle = await res.json();
+      if (!Array.isArray(state.bundle.l4_cards) || !state.bundle.l4_cards.length) {
+        const packRes = await fetch("data/product-pack.json");
+        if (packRes.ok) {
+          const pack = await packRes.json();
+          state.bundle = {
+            ...pack,
+            ...state.bundle,
+            l1: state.bundle.l1 || pack.l1,
+            l3: { ...(pack.l3 || {}), ...(state.bundle.l3 || {}) },
+            l4_cards: pack.l4_cards || [],
+            bucket_id_to_zh: state.bundle.bucket_id_to_zh || pack.bucket_id_to_zh || {},
+            item_catalog: state.bundle.item_catalog || pack.item_catalog || {},
+          };
+        }
+      }
 
       if (!feedsOk) {
         state.wallItems = collectWallItemsFromBundleFallback();
