@@ -265,6 +265,28 @@ button, input, textarea, select {
   color: var(--text-muted);
 }
 
+.save-status {
+  margin-left: auto;
+  color: var(--ok);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.save-status.saving { color: var(--working); }
+
+.export-btn {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  padding: 5px 10px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.export-btn:hover { border-color: var(--ink); color: var(--ink); }
+
 /* Research question — tall white card */
 .question-card {
   background: #FFFBF3;
@@ -1216,6 +1238,103 @@ button, input, textarea, select {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+
+.new-research-dialog {
+  width: min(520px, calc(100vw - 32px));
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 0;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 24px 80px rgb(26 26 26 / 0.24);
+}
+
+.new-research-dialog::backdrop {
+  background: rgb(26 26 26 / 0.38);
+  backdrop-filter: blur(3px);
+}
+
+.new-research-dialog form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+}
+
+.dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dialog-kicker {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.dialog-head h2 {
+  margin: 3px 0 0;
+  font-size: 19px;
+  line-height: 1.35;
+}
+
+.dialog-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.new-research-dialog label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.new-research-dialog input,
+.new-research-dialog textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  outline: none;
+  resize: vertical;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.new-research-dialog input:focus,
+.new-research-dialog textarea:focus {
+  border-color: var(--ink);
+  background: var(--surface);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.dialog-actions button {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dialog-secondary { border: 1px solid var(--line); background: var(--surface); }
+.dialog-primary { border: 1px solid var(--key-yellow); background: var(--key-yellow); }
 
 @media (max-width: 1100px) {
   .app { grid-template-columns: 220px minmax(300px, 1fr) minmax(340px, 1.1fr); }

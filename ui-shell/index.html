@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KEY 视界 · 设计竞品调研</title>
-  <link rel="stylesheet" href="styles.css?v=452p1ship" />
+  <link rel="stylesheet" href="styles.css?v=453workspace" />
 </head>
 <body>
   <div class="app" id="app">
@@ -38,6 +38,8 @@
         <div class="center-title-row">
           <h1>协作室</h1>
           <span class="center-sub" id="researchTitle">青绿茶礼盒 · 竞品调研</span>
+          <span class="save-status" id="saveStatus" role="status">已保存到本机</span>
+          <button type="button" class="export-btn" id="btnExportResearch">导出数据</button>
         </div>
         <div class="question-card">
           <div class="question-card-head">
@@ -134,6 +136,30 @@
   </div>
 
   <div class="toast" id="toast"></div>
-  <script src="app.js?v=452p1ship"></script>
+  <dialog class="new-research-dialog" id="newResearchDialog" aria-labelledby="newResearchTitle">
+    <form method="dialog" id="newResearchForm">
+      <div class="dialog-head">
+        <div>
+          <span class="dialog-kicker">新研究</span>
+          <h2 id="newResearchTitle">先把要解决的问题说清楚</h2>
+        </div>
+        <button type="button" class="dialog-close" id="btnCloseNewResearch" aria-label="关闭">×</button>
+      </div>
+      <label>
+        研究名称
+        <input id="newResearchName" name="title" maxlength="60" required placeholder="例如：高端即饮咖啡货架研究" />
+      </label>
+      <label>
+        这次要搞清的事
+        <textarea id="newResearchQuestion" name="question" rows="4" maxlength="200" required placeholder="品类、渠道、人群、气质和希望解决的差异化问题"></textarea>
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="dialog-secondary" id="btnCancelNewResearch">取消</button>
+        <button type="submit" class="dialog-primary">创建并开始</button>
+      </div>
+    </form>
+  </dialog>
+  <script src="research-store.js?v=453workspace"></script>
+  <script src="app.js?v=453workspace"></script>
 </body>
 </html>

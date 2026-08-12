@@ -2,6 +2,8 @@
  * P0: Inspector 320 / 选中底栏 / 黄 pill / 品牌三行 / 人情味文案
  */
 (() => {
+  const DEFAULT_QUESTION =
+    "新品牌青绿茶礼盒：中式现代气质下，礼赠+电商渠道如何做出开箱记忆点与差异化？";
   const STAGES = [
     { id: 1, key: "brief", label: "先听清你要什么", tab: "visual" },
     { id: 2, key: "crawl", label: "去市场上找参考", tab: "visual" },
@@ -54,27 +56,41 @@
     },
   ];
 
-  const SAVED = [
+  const DEFAULT_RESEARCHES = [
     {
       id: "r-green",
       title: "青绿茶礼盒竞品调研",
+      question: DEFAULT_QUESTION,
       date: "2026-08-12",
       status: "running",
       active: true,
+      stage: 3,
+      tab: "visual",
     },
     {
       id: "r-huangjiu",
       title: "黄酒礼盒气质对标",
+      question: "黄酒礼盒如何建立中式现代气质，同时避开同质化的传统符号？",
       date: "2026-08-05",
       status: "done",
+      stage: 5,
+      tab: "shortlist",
     },
     {
       id: "r-tonic",
       title: "滋补礼盒开箱记忆点",
+      question: "滋补礼盒如何兼顾专业信任感、礼赠仪式与年轻化开箱体验？",
       date: "2026-07-28",
       status: "done",
+      stage: 5,
+      tab: "shortlist",
     },
   ];
+
+  const researchStore = window.KeyVisionResearchStore.createResearchStore(window.localStorage, {
+    seeds: DEFAULT_RESEARCHES,
+  });
+  let SAVED = [];
 
   const state = {
     bundle: null,
@@ -99,6 +115,7 @@
     feedCounts: { main: 0, pending: 0 },
     activeStyleFilter: "",
     _wallObserver: null,
+    restoringWorkspace: false,
   };
 
   const $ = (id) => document.getElementById(id);
@@ -127,7 +144,59 @@
     wallCountBar: $("wallCountBar"),
     pendingToggle: $("pendingToggle"),
     briefToggle: $("briefToggle"),
+    saveStatus: $("saveStatus"),
+    btnExport: $("btnExportResearch"),
+    newResearchDialog: $("newResearchDialog"),
+    newResearchForm: $("newResearchForm"),
+    newResearchName: $("newResearchName"),
+    newResearchQuestion: $("newResearchQuestion"),
+    btnCloseNewResearch: $("btnCloseNewResearch"),
+    btnCancelNewResearch: $("btnCancelNewResearch"),
   };
+
+  function activeResearch() {
+    return researchStore.getActive();
+  }
+
+  function refreshSaved() {
+    const snapshot = researchStore.getSnapshot();
+    SAVED = snapshot.researches.map((research) => ({
+      ...research,
+      date: String(research.updatedAt || research.createdAt || "").slice(0, 10),
+      active: research.id === snapshot.activeResearchId,
+    }));
+  }
+
+  function markSaved() {
+    if (!el.saveStatus) return;
+    el.saveStatus.textContent = "已保存到本机";
+    el.saveStatus.classList.remove("saving");
+  }
+
+  function persistActive(patch = {}) {
+    if (state.restoringWorkspace) return;
+    const current = activeResearch();
+    if (!current) return;
+    if (el.saveStatus) {
+      el.saveStatus.textContent = "保存中…";
+      el.saveStatus.classList.add("saving");
+    }
+    researchStore.update(current.id, patch);
+    refreshSaved();
+    renderResearch();
+    markSaved();
+  }
+
+  function persistWorkspace(patch = {}) {
+    persistActive({
+      question: el.researchQuestion?.value || "",
+      stage: state.stage,
+      tab: state.tab,
+      decisions: state.decisions,
+      shortlistVisualIds: state.shortlistVisual.map((item) => item.id),
+      ...patch,
+    });
+  }
 
   function toast(msg) {
     el.toast.textContent = msg;
@@ -478,6 +547,7 @@
     const meta = STAGES.find((s) => s.id === n);
     if (syncTab && meta) switchTab(meta.tab, { fromStage: true });
     if (appendEvent) pushStageEvent(n);
+    persistWorkspace();
   }
 
   function switchTab(tab, { fromStage = false } = {}) {
@@ -496,6 +566,7 @@
         syncStageButtons(state.stage);
       }
     }
+    persistWorkspace();
   }
 
   function collectWallItems() {
@@ -1371,6 +1442,7 @@
 
   function setDecision(cardId, decision) {
     state.decisions[cardId] = decision;
+    persistWorkspace();
     renderCanvas();
     document.querySelectorAll(`[data-card-action][data-card-id="${cardId}"]`).forEach((btn) => {
       const act = btn.dataset.cardAction;
@@ -1418,6 +1490,12 @@
   function handleSend(text) {
     const t = text.trim();
     if (!t) return;
+    const current = activeResearch();
+    const messages = [
+      ...(current?.messages || []),
+      { id: `m-${Date.now()}`, text: t, createdAt: new Date().toISOString() },
+    ];
+    persistWorkspace({ messages });
     appendEvent({
       agent: "你",
       time: "现在",
@@ -1477,6 +1555,71 @@
     if (!el.researchQuestion || !el.qCount) return;
     const n = el.researchQuestion.value.length;
     el.qCount.textContent = `${n}/200`;
+  }
+
+  function defaultDecisions() {
+    const decisions = {};
+    (state.bundle?.l4_cards || []).forEach((card) => {
+      decisions[card.card_id] = card.hou_decision || "pending";
+    });
+    return decisions;
+  }
+
+  function appendStoredMessages(messages) {
+    (messages || []).forEach((message) => {
+      appendEvent({
+        agent: "你",
+        time: String(message.createdAt || "").slice(11, 16) || "之前",
+        tag: "已保存留言",
+        tagClass: "",
+        dot: "yellow",
+        html: `<div class="event-note">${escapeHtml(message.text)}</div>`,
+      });
+    });
+  }
+
+  function applyResearchWorkspace(research, { announce = false } = {}) {
+    if (!research) return;
+    state.restoringWorkspace = true;
+    el.researchTitle.textContent = research.title;
+    el.researchQuestion.value = research.question || "";
+    state.stage = research.stage || 1;
+    state.tab = research.tab || "visual";
+    state.decisions = { ...defaultDecisions(), ...(research.decisions || {}) };
+    state.shortlistVisual = (research.shortlistVisualIds || [])
+      .map((id) => findWallItem(id))
+      .filter(Boolean);
+    state.selectedIds.clear();
+    closeInspector();
+    syncStageButtons(state.stage);
+    switchTab(state.tab, { fromStage: true });
+    updateQCount();
+    renderResearch();
+    if (state.bundle) {
+      seedStream();
+      appendStoredMessages(research.messages);
+    }
+    state.restoringWorkspace = false;
+    markSaved();
+    if (announce) toast(`已切换到「${research.title}」`);
+  }
+
+  function exportResearchData() {
+    const blob = new Blob([researchStore.exportJson()], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const date = new Date().toISOString().slice(0, 10);
+    link.href = url;
+    link.download = `key-vision-research-${date}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast("研究数据已导出");
+  }
+
+  function openNewResearchDialog() {
+    el.newResearchForm.reset();
+    el.newResearchDialog.showModal();
+    requestAnimationFrame(() => el.newResearchName.focus());
   }
 
   function bindEvents() {
@@ -1630,6 +1773,7 @@
           seen.add(it.id);
           added += 1;
         });
+        if (added) persistWorkspace();
         if (!added) toast(n ? "这些已在短名单里了（或还不能收）" : "先勾几张再收");
         else {
           toast(`已收进短名单 ${added} 张 · 共 ${state.shortlistVisual.length}`);
@@ -1698,20 +1842,34 @@
     el.researchList.addEventListener("click", (e) => {
       const card = e.target.closest(".research-card");
       if (!card) return;
-      SAVED.forEach((r) => (r.active = r.id === card.dataset.id));
-      renderResearch();
-      const r = SAVED.find((x) => x.id === card.dataset.id);
-      if (r) {
-        el.researchTitle.textContent = r.title;
-        toast(`已切换到「${r.title}」`);
-      }
+      const research = researchStore.setActive(card.dataset.id);
+      refreshSaved();
+      applyResearchWorkspace(research, { announce: true });
     });
 
-    el.btnNew.addEventListener("click", () => {
-      toast("新建研究 — 把 Brief 贴进研究问题就行");
-      el.researchQuestion.focus();
-      el.researchQuestion.select();
+    el.btnNew.addEventListener("click", openNewResearchDialog);
+    el.btnCloseNewResearch.addEventListener("click", () => el.newResearchDialog.close());
+    el.btnCancelNewResearch.addEventListener("click", () => el.newResearchDialog.close());
+    el.newResearchForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const title = el.newResearchName.value.trim();
+      const question = el.newResearchQuestion.value.trim();
+      if (!title || !question) return;
+      const research = researchStore.create({ title, question });
+      refreshSaved();
+      el.newResearchDialog.close();
+      applyResearchWorkspace(research);
+      appendEvent({
+        agent: "奎燕设计智能体",
+        time: "现在",
+        tag: "Brief 已落地",
+        tagClass: "consensus",
+        dot: "ok",
+        html: `<p>「${escapeHtml(title)}」已经建好并自动保存。我们先从 Brief 开始对齐。</p>`,
+      });
+      toast("新研究已创建并保存");
     });
+    el.btnExport.addEventListener("click", exportResearchData);
 
     document.querySelector(".attach-row").addEventListener("click", (e) => {
       const b = e.target.closest("[data-attach]");
@@ -1719,7 +1877,16 @@
       toast(`附件「${b.dataset.attach}」先占个位，正式版再接上传`);
     });
 
-    el.researchQuestion.addEventListener("input", updateQCount);
+    let questionSaveTimer;
+    el.researchQuestion.addEventListener("input", () => {
+      updateQCount();
+      if (el.saveStatus) {
+        el.saveStatus.textContent = "保存中…";
+        el.saveStatus.classList.add("saving");
+      }
+      clearTimeout(questionSaveTimer);
+      questionSaveTimer = setTimeout(() => persistWorkspace(), 250);
+    });
 
     document.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-empty-action]");
@@ -1757,6 +1924,7 @@
     }, 200);
     setTimeout(() => { bootSettled = true; clearInterval(guard); if (!userArmedPending) forceProductWallDefaults("boot-settle"); }, 4000);
 
+    refreshSaved();
     renderCaps();
     renderResearch();
     renderSources();
@@ -1783,14 +1951,6 @@
       if (!res.ok) res = await fetch("data/product-pack.json");
       if (!res.ok) throw new Error("product pack " + res.status);
       state.bundle = await res.json();
-      (state.bundle.l4_cards || []).forEach((c) => {
-        state.decisions[c.card_id] = c.hou_decision || "pending";
-      });
-      if (el.researchQuestion) {
-        el.researchQuestion.value =
-          "新品牌青绿茶礼盒：中式现代气质下，礼赠+电商渠道如何做出开箱记忆点与差异化？";
-        updateQCount();
-      }
 
       if (!feedsOk) {
         state.wallItems = collectWallItemsFromBundleFallback();
@@ -1808,11 +1968,8 @@
           pending_review: state.feedCounts.pending,
         };
       }
-      state.stage = 3;
-      syncStageButtons(3);
-      switchTab("visual", { fromStage: true });
+      applyResearchWorkspace(activeResearch());
       if (!userArmedPending) forceProductWallDefaults("after-visual");
-      seedStream();
       appendEvent({
         agent: "采集",
         time: "现在",

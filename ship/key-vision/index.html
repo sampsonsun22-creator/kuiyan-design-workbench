@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KEY 视界 · 设计竞品调研</title>
-  <link rel="stylesheet" href="styles.css?v=452wall1" />
+  <link rel="stylesheet" href="styles.css?v=453workspace" />
 </head>
 <body>
   <div class="app" id="app">
@@ -38,6 +38,8 @@
         <div class="center-title-row">
           <h1>协作室</h1>
           <span class="center-sub" id="researchTitle">青绿茶礼盒 · 竞品调研</span>
+          <span class="save-status" id="saveStatus" role="status">已保存到本机</span>
+          <button type="button" class="export-btn" id="btnExportResearch">导出数据</button>
         </div>
         <div class="question-card">
           <div class="question-card-head">
@@ -98,12 +100,12 @@
         <div class="wall-count-bar" id="wallCountBar" aria-live="polite">主墙 — · 待复核 —</div>
 
         <div class="filters" id="filters">
-          <select aria-label="风格" data-filter="style"><option value="">风格 · 全部</option><option>中式现代</option><option>国际简约</option><option>工艺材质感</option></select>
-          <select aria-label="来源" data-filter="source" class="filter-source"><option value="">来源 · 全部</option><option>Behance</option><option>站酷</option><option>Packaging of the World</option></select>
+          <select aria-label="风格" data-filter="style"><option>风格 · 全部</option><option>中式现代</option><option>国际简约</option><option>工艺材质感</option></select>
+          <select aria-label="来源" data-filter="source" class="filter-source"><option>来源 · 全部</option><option>Behance</option><option>站酷</option><option>Packaging of the World</option></select>
           <select aria-label="方向" data-filter="direction" class="filter-direction" hidden><option>方向 · 全部</option><option>开箱记忆</option><option>货架识别</option><option>礼赠仪式</option></select>
           <select aria-label="气质" data-filter="tone" class="filter-tone" hidden><option>气质 · 全部</option><option>中式现代</option><option>国际简约</option><option>地域文旅</option></select>
-          <select aria-label="市场" data-filter="market"><option value="">市场 · 礼赠+电商</option><option>礼赠</option><option>电商</option></select>
-          <select aria-label="年份" data-filter="year"><option value="">年份 · 近 3 年</option><option>2024–2026</option><option>全部</option></select>
+          <select aria-label="市场" data-filter="market"><option>市场 · 礼赠+电商</option><option>礼赠</option><option>电商</option></select>
+          <select aria-label="年份" data-filter="year"><option>年份 · 近 3 年</option><option>2024–2026</option><option>全部</option></select>
         </div>
 
         <div class="canvas-wrap">
@@ -134,6 +136,30 @@
   </div>
 
   <div class="toast" id="toast"></div>
-  <script src="app.js?v=452wall1"></script>
+  <dialog class="new-research-dialog" id="newResearchDialog" aria-labelledby="newResearchTitle">
+    <form method="dialog" id="newResearchForm">
+      <div class="dialog-head">
+        <div>
+          <span class="dialog-kicker">新研究</span>
+          <h2 id="newResearchTitle">先把要解决的问题说清楚</h2>
+        </div>
+        <button type="button" class="dialog-close" id="btnCloseNewResearch" aria-label="关闭">×</button>
+      </div>
+      <label>
+        研究名称
+        <input id="newResearchName" name="title" maxlength="60" required placeholder="例如：高端即饮咖啡货架研究" />
+      </label>
+      <label>
+        这次要搞清的事
+        <textarea id="newResearchQuestion" name="question" rows="4" maxlength="200" required placeholder="品类、渠道、人群、气质和希望解决的差异化问题"></textarea>
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="dialog-secondary" id="btnCancelNewResearch">取消</button>
+        <button type="submit" class="dialog-primary">创建并开始</button>
+      </div>
+    </form>
+  </dialog>
+  <script src="research-store.js?v=453workspace"></script>
+  <script src="app.js?v=453workspace"></script>
 </body>
 </html>

@@ -4,6 +4,8 @@
 
 数据：主墙 / 待复核为 live feed；策略卡与 Brief 来自 `data/product-pack.json`。
 
+研究工作区：新建研究、Brief、阶段、留言、Keep/Kill 和短名单保存在浏览器本机；可导出 `key-vision/research-workspace@1` JSON。当前不包含账号级云同步。
+
 本地预览：
 
 ```bash
