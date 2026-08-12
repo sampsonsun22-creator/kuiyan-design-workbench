@@ -68,6 +68,62 @@ def main() -> int:
         err.append("app.js missing loadProductBundle")
     if "采集字段" not in app:
         err.append("inspector missing 采集字段")
+    if "未标注" not in app:
+        err.append("inspector missing 未标注 fallback")
+    if "function wallRole" not in app:
+        err.append("app.js missing wallRole")
+    if "isUnsafePack" not in app:
+        err.append("app.js missing isUnsafePack")
+    if "loadPendingFeed" not in app:
+        err.append("app.js missing lazy pending loader")
+    if 'wallRole(it) === "primary"' not in app:
+        err.append("primary chip must filter wallRole===primary")
+    if "data/l2_main_wall_a.jsonl" in app:
+        full = app.find("data/l2_main_wall.jsonl")
+        split = app.find("data/l2_main_wall_a.jsonl")
+        if full < 0 or split < full:
+            err.append("app.js must prefer full wall before split files")
+    if 'data-filter="market" hidden' not in html:
+        err.append("market filter must stay hidden")
+    if 'data-filter="year" hidden' not in html:
+        err.append("year filter must stay hidden")
+    if "btnNewResearch" in html and "disabled" not in html.split("btnNewResearch", 1)[1][:120]:
+        err.append("新建研究 must be disabled")
+
+    pack = ROOT / "ui-shell" / "data" / "product-pack.json"
+    if pack.exists():
+        pack_doc = json.loads(pack.read_text(encoding="utf-8"))
+        if "item_catalog" in pack_doc:
+            err.append("product-pack.json must be slim (no item_catalog)")
+        if pack.stat().st_size > 200_000:
+            err.append(f"product-pack.json too large ({pack.stat().st_size})")
+        if len(pack_doc.get("l4_cards") or []) != 3:
+            err.append("product-pack.json missing l4_cards")
+        counts = ((pack_doc.get("l3") or {}).get("counts") or {})
+        if counts.get("image_gate"):
+            err.append("product-pack.json still has image_gate")
+    else:
+        err.append("missing product-pack.json slim alias")
+
+    if BUNDLE.stat().st_size > 200_000:
+        err.append(f"product-bundle.json too large ({BUNDLE.stat().st_size})")
+    counts = ((bundle.get("l3") or {}).get("counts") or {})
+    if counts.get("primary") != 446 or counts.get("analogy") != 2 or counts.get("shelf") != 4:
+        err.append(f"bundle role counts {counts.get('primary')}/{counts.get('analogy')}/{counts.get('shelf')} expected 446/2/4")
+    wall_ids = {json.loads(line)["id"] for line in MAIN.open(encoding="utf-8") if line.strip()}
+    for card in cards:
+        cover = card.get("cover_image") or card.get("local_ref_image") or ""
+        if cover.startswith("http://"):
+            err.append(f"card {card.get('card_id')} http cover")
+        for m in card.get("reference_montage") or []:
+            iid = m.get("item_id") or ""
+            if iid and iid not in wall_ids:
+                err.append(f"montage {iid} not on 452 wall")
+            if str(m.get("image_url") or "").startswith("http://"):
+                err.append(f"montage {iid} uses http")
+    for rel in ("assets/ref1.png", "assets/ref2.jpg", "assets/ref3.png"):
+        if not (ROOT / "ui-shell" / rel).exists():
+            err.append(f"missing {rel}")
 
     tonic = ROOT / "ui-shell" / "data" / "briefs" / "tonic_gift_main_wall.jsonl"
     baijiu = ROOT / "ui-shell" / "data" / "briefs" / "baijiu_gift_main_wall.jsonl"

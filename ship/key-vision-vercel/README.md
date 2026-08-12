@@ -17,4 +17,4 @@ python3 -m http.server 8767
 
 1. `app.js` 先读 `data/l2_main_wall.jsonl` 铺视觉墙  
 2. 再读 `data/product-bundle.json` 拿 L1 Brief 与 `l4_cards`  
-3. 若 bundle 没有策略卡，才会回落到 `data/product-pack.json`
+3. 若 bundle 没有策略卡，才会回落到同内容的 `data/product-pack.json`（slim，无 item_catalog）

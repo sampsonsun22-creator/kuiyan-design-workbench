@@ -131,6 +131,13 @@ button, input, textarea, select {
 
 .btn-new:hover { background: #000; }
 .btn-new:active { transform: translateY(1px); }
+.btn-new:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: var(--ink);
+}
+.btn-new:disabled:hover { background: var(--ink); }
+.btn-new:disabled:active { transform: none; }
 
 .left-section { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
 .left-section.saved { flex: 1; overflow: hidden; }
@@ -306,6 +313,9 @@ button, input, textarea, select {
   color: var(--ink);
   min-height: 52px;
   padding: 0;
+}
+.question-card textarea[readonly] {
+  cursor: default;
 }
 
 .question-card-foot {

@@ -4,9 +4,11 @@
 Does NOT rewrite ui-shell/data/l2_*.jsonl (452/2680 lock).
 Strips item_catalog and pending wall item dumps so the public client
 can load L4 strategy cards without a 5MB JSON.
+product-pack.json is a safe alias of the same slim artifact.
 """
 from __future__ import annotations
 
+import copy
 import json
 from collections import Counter
 from datetime import datetime, timezone
@@ -17,7 +19,6 @@ DATA = ROOT / "ui-shell" / "data"
 MAIN = DATA / "l2_main_wall.jsonl"
 PEND = DATA / "l2_pending_review.jsonl"
 BUCKETS = ROOT / "L3" / "style-buckets-v1.json"
-PACK = DATA / "product-pack.json"
 L1 = ROOT / "demo" / "e2e-green-tea-gift" / "L1-brief-intent.json"
 L4_CARDS = [
     ROOT / "demo" / "e2e-green-tea-gift" / "L4-card-cm-01-v2.json",
@@ -29,10 +30,15 @@ LOCAL_REF = {
     "card-gm-02-v2": "assets/ref2.jpg",
     "card-cc-03-v2": "assets/ref3.png",
 }
-OUTS = [
-    DATA / "product-bundle.json",
-    ROOT / "ship" / "key-vision" / "data" / "product-bundle.json",
-    ROOT / "ship" / "key-vision-vercel" / "data" / "product-bundle.json",
+MONTAGE_ALIASES = {
+    # listing-level id is not on the 452 wall
+    "behance:search-tea-ology": "behance:216540701-theory-of-tea",
+}
+OUT_NAMES = ("product-bundle.json", "product-pack.json")
+OUT_DIRS = [
+    DATA,
+    ROOT / "ship" / "key-vision" / "data",
+    ROOT / "ship" / "key-vision-vercel" / "data",
 ]
 
 
@@ -52,6 +58,31 @@ def load_jsonl(path: Path) -> list[dict]:
                 continue
             rows.append(json.loads(line))
     return rows
+
+
+def https_url(url: str) -> str:
+    u = str(url or "").strip()
+    if u.startswith("http://"):
+        return "https://" + u[len("http://") :]
+    return u
+
+
+def wall_role(row: dict) -> str:
+    if str(row.get("source_type") or "").lower() == "shelf":
+        return "shelf"
+    rel = (row.get("extra") or {}).get("brief_relevance_v1") or ""
+    if row.get("analogy_from") or rel == "keep_analogy":
+        return "analogy"
+    return "primary"
+
+
+def sanitize_l1(raw: dict) -> dict:
+    l1 = copy.deepcopy(raw)
+    inp = l1.setdefault("input", {})
+    brand = str(inp.get("brand") or "")
+    if "演示" in brand or "demo" in brand.lower():
+        inp["brand"] = "新品牌·青绿茶"
+    return l1
 
 
 def channel_status(counts: Counter) -> list[dict]:
@@ -123,18 +154,27 @@ def enrich_cards(cards: list[dict], catalog: dict[str, dict], id_to_zh: dict[str
         montage = []
         for m in card.get("reference_montage") or []:
             mm = dict(m)
-            hit = catalog.get(mm.get("item_id") or "")
+            iid = mm.get("item_id") or ""
+            if iid in MONTAGE_ALIASES:
+                mm["item_id"] = MONTAGE_ALIASES[iid]
+                iid = mm["item_id"]
+            hit = catalog.get(iid)
             if hit:
-                mm["image_url"] = mm.get("image_url") or hit.get("image_url") or hit.get("thumbnail_url") or ""
+                mm["image_url"] = https_url(
+                    mm.get("image_url") or hit.get("image_url") or hit.get("thumbnail_url") or ""
+                )
                 mm["title"] = mm.get("title") or hit.get("title") or ""
-                mm["page_url"] = mm.get("page_url") or hit.get("page_url") or ""
+                mm["page_url"] = https_url(mm.get("page_url") or hit.get("page_url") or "")
+            else:
+                mm["image_url"] = https_url(mm.get("image_url") or "")
+                mm["page_url"] = https_url(mm.get("page_url") or "")
             montage.append(mm)
         card["reference_montage"] = montage
         cover = card.get("local_ref_image") or ""
         if not cover:
             cover = next((m.get("image_url") for m in montage if m.get("image_url")), "")
         card["cover_image"] = cover
-        card["demo_disclaimer"] = card.get("demo_disclaimer") or "Demo only — 非完稿，供方向遴选"
+        card["demo_disclaimer"] = "方向示意 · 非完稿"
         out.append(card)
     return out
 
@@ -151,30 +191,17 @@ def main() -> int:
     id_to_zh = {b["id"]: b.get("name_zh") or b["id"] for b in buckets_doc.get("buckets") or [] if b.get("id")}
     zh_to_id = {v: k for k, v in id_to_zh.items()}
 
-    pack = load_json(PACK) if PACK.exists() else {}
-    l1 = pack.get("l1") or load_json(L1)
-    # Prefer canonical v2 card files over pack copies
-    cards = [load_json(p) for p in L4_CARDS]
+    l1 = sanitize_l1(load_json(L1))
     catalog = {r["id"]: r for r in main_rows if r.get("id")}
-    cards = enrich_cards(cards, catalog, id_to_zh)
+    cards = enrich_cards([load_json(p) for p in L4_CARDS], catalog, id_to_zh)
 
     src_main = Counter(str(r.get("source") or "") for r in main_rows)
     src_pend = Counter(str(r.get("source") or "") for r in pend_rows)
-    shelf_n = sum(
-        1
-        for r in main_rows
-        if str(r.get("source_type") or "").lower() == "shelf"
-        or str(r.get("source") or "").lower() in {"jd", "taobao", "1688", "tmall"}
-        or str(r.get("is_on_market") or "").lower() == "true"
-    )
-    analogy_n = sum(
-        1
-        for r in main_rows
-        if r.get("analogy_from")
-        or (r.get("extra") or {}).get("brief_relevance_v1") == "keep_analogy"
-    )
+    roles = Counter(wall_role(r) for r in main_rows)
+    primary_n = int(roles.get("primary", 0))
+    shelf_n = int(roles.get("shelf", 0))
+    analogy_n = int(roles.get("analogy", 0))
 
-    l3_pack = pack.get("l3") or {}
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     bundle = {
         "meta": {
@@ -189,7 +216,9 @@ def main() -> int:
             "generated_from": [
                 "ui-shell/data/l2_main_wall.jsonl",
                 "ui-shell/data/l2_pending_review.jsonl",
-                "demo/e2e-green-tea-gift/L4-card-*-v2.json",
+                "L4-card-cm-01-v2.json",
+                "L4-card-gm-02-v2.json",
+                "L4-card-cc-03-v2.json",
                 "L3/style-buckets-v1.json",
             ],
             "note": "slim pack: L1+L3 summary+L4 cards; visual wall reads live jsonl",
@@ -201,7 +230,7 @@ def main() -> int:
             "counts": {
                 "main_wall": 452,
                 "pending_review": 2680,
-                "primary": 452,
+                "primary": primary_n,
                 "shelf": shelf_n,
                 "analogy": analogy_n,
                 "qc_mode": "brief_relevance_v1",
@@ -210,14 +239,13 @@ def main() -> int:
                 "main": {k: v for k, v in src_main.most_common() if k},
                 "pending": {k: v for k, v in src_pend.most_common(12) if k},
             },
-            "l1_summary": (l3_pack.get("l1_summary") or {
+            "l1_summary": {
                 "domain": (l1.get("intent") or {}).get("domain_label_zh") or "茶礼",
                 "channel": (l1.get("input") or {}).get("channel") or "礼赠+电商",
                 "tone": (l1.get("input") or {}).get("culture_tone") or "中式现代",
                 "price_band": (l1.get("input") or {}).get("price_band") or "中高端",
-            }),
-            "ai_recommended_buckets": l3_pack.get("ai_recommended_buckets")
-            or [
+            },
+            "ai_recommended_buckets": [
                 {"id": "chinese_modern", "name_zh": "中式现代", "why": "Brief 主气质"},
                 {"id": "chinese_ceremonial", "name_zh": "中式典雅/礼赠", "why": "礼赠仪式感"},
                 {"id": "global_minimal", "name_zh": "国际简约", "why": "拉开喜庆货架"},
@@ -226,10 +254,10 @@ def main() -> int:
             ],
             "channel_status": channel_status(src_main),
             "walls": {
-                "primary": {"count": 452, "note": "主墙读 l2_main_wall.jsonl"},
-                "analogy": {"count": analogy_n, "note": "类比样本偏薄；keep_analogy + 礼赠/滋补/黄酒线索"},
-                "shelf": {"count": shelf_n, "note": "listing 级货架样，深采待开通"},
-                "pending_review": {"count": 2680, "note": "默认不进首页主路径"},
+                "primary": {"count": primary_n, "note": "主品类角色；主墙仍读 l2_main_wall.jsonl 452"},
+                "analogy": {"count": analogy_n, "note": "类比样本偏薄；keep_analogy 仅 2"},
+                "shelf": {"count": shelf_n, "note": "source_type=shelf listing 样，深采待开通"},
+                "pending_review": {"count": 2680, "note": "默认不进首页主路径；点「含待复核」再加载"},
             },
             "feed_source": "ui-shell/data/l2_main_wall.jsonl",
             "truth_source": "brief_relevance_v1",
@@ -240,11 +268,13 @@ def main() -> int:
         "style_buckets_ref": "style-buckets-v1.json",
     }
 
-    text = json.dumps(bundle, ensure_ascii=False, indent=2)
-    for dest in OUTS:
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(text + "\n", encoding="utf-8")
-        print(f"wrote {dest} bytes={dest.stat().st_size} l4={len(cards)}")
+    text = json.dumps(bundle, ensure_ascii=False, indent=2) + "\n"
+    for dest_dir in OUT_DIRS:
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        for name in OUT_NAMES:
+            dest = dest_dir / name
+            dest.write_text(text, encoding="utf-8")
+            print(f"wrote {dest} bytes={dest.stat().st_size} l4={len(cards)}")
     return 0
 
 

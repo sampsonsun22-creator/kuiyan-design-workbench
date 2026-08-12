@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KEY 视界 · 设计竞品调研</title>
-  <link rel="stylesheet" href="styles.css?v=452land1" />
+  <link rel="stylesheet" href="styles.css?v=452land2" />
 </head>
 <body>
   <div class="app" id="app">
@@ -17,7 +17,7 @@
         <div class="brand-sub">奎燕 AI 研究室</div>
       </div>
 
-      <button type="button" class="btn-new" id="btnNewResearch">
+      <button type="button" class="btn-new" id="btnNewResearch" disabled title="本版不支持新建研究">
         <span class="plus">+</span> 新建研究
       </button>
 
@@ -42,15 +42,16 @@
         <div class="question-card">
           <div class="question-card-head">
             <span class="q-label">这次要搞清的事</span>
-            <span class="q-edit" aria-hidden="true">✎</span>
+            <span class="q-edit" hidden aria-hidden="true">✎</span>
           </div>
           <textarea
             id="researchQuestion"
             rows="3"
             maxlength="200"
+            readonly
           >新品牌青绿茶礼盒：中式现代气质下，礼赠+电商渠道如何做出开箱记忆点与差异化？</textarea>
           <div class="question-card-foot">
-            <span class="q-hint">随便改 · 我们按这个对齐</span>
+            <span class="q-hint">本轮研究问题（只读）</span>
             <span class="q-count" id="qCount">58/200</span>
           </div>
         </div>
@@ -67,12 +68,12 @@
       <div class="stream" id="activityStream" role="log" aria-live="polite"></div>
 
       <form class="composer" id="composer">
-        <div class="attach-row" aria-label="附件">
+        <div class="attach-row" hidden aria-hidden="true" aria-label="附件">
           <button type="button" class="attach" title="图片" data-attach="image">🖼</button>
           <button type="button" class="attach" title="表格" data-attach="table">▦</button>
           <button type="button" class="attach" title="证据" data-attach="evidence">📎</button>
         </div>
-        <textarea id="composerInput" rows="1" placeholder="补充一句你在意的事，或直接拍板…"></textarea>
+        <textarea id="composerInput" rows="1" placeholder="可以说「看市场地图」「看策略卡」或「输出短名单」…"></textarea>
         <button type="submit" class="send-btn" id="sendBtn">发送</button>
       </form>
     </main>
@@ -103,8 +104,8 @@
           <select aria-label="来源" data-filter="source" class="filter-source"><option>来源 · 全部</option><option>Behance</option><option>站酷</option><option>Packaging of the World</option></select>
           <select aria-label="方向" data-filter="direction" class="filter-direction" hidden><option>方向 · 全部</option><option>开箱记忆</option><option>货架识别</option><option>礼赠仪式</option></select>
           <select aria-label="气质" data-filter="tone" class="filter-tone" hidden><option>气质 · 全部</option><option>中式现代</option><option>国际简约</option><option>地域文旅</option></select>
-          <select aria-label="市场" data-filter="market"><option>市场 · 礼赠+电商</option><option>礼赠</option><option>电商</option></select>
-          <select aria-label="年份" data-filter="year"><option>年份 · 近 3 年</option><option>2024–2026</option><option>全部</option></select>
+          <select aria-label="市场" data-filter="market" hidden><option value="">市场 · 礼赠+电商</option><option>礼赠</option><option>电商</option></select>
+          <select aria-label="年份" data-filter="year" hidden><option value="">年份 · 近 3 年</option><option>2024–2026</option><option>全部</option></select>
         </div>
 
         <div class="canvas-wrap">
@@ -112,7 +113,7 @@
           <div class="selection-bar hidden" id="selectionBar" aria-live="polite">
             <span class="sel-count" id="selCount">先看这 0 张</span>
             <div class="sel-actions">
-              <button type="button" data-sel-action="compare">对比一下</button>
+              <button type="button" data-sel-action="compare" hidden>对比一下</button>
               <button type="button" data-sel-action="shortlist">收进短名单</button>
               <button type="button" class="sel-primary" data-sel-action="open">打开原页</button>
             </div>
@@ -135,6 +136,6 @@
   </div>
 
   <div class="toast" id="toast"></div>
-  <script src="app.js?v=452land1"></script>
+  <script src="app.js?v=452land2"></script>
 </body>
 </html>

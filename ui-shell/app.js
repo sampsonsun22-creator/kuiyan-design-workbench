@@ -309,10 +309,18 @@
       return;
     }
     const shown = getFilteredWallItems().length;
+    const filtered =
+      Boolean(state.activeSource) ||
+      (state.activeCat && state.activeCat !== "all") ||
+      Boolean(state.activeStyleFilter);
+    if (filtered) {
+      el.wallCountBar.innerHTML = `这屏 ${shown} · 主墙 ${main}${
+        state.includePending ? ` · 待复核 ${pending}` : ""
+      }`;
+      return;
+    }
     if (state.onlyBriefRelevant && !state.includePending) {
-      // Default product view: N tracks on-brief main wall, never "当前 > 主墙"
-      const n = main || shown;
-      el.wallCountBar.innerHTML = `先看和 brief 更贴的 · 约 ${n} 张`;
+      el.wallCountBar.innerHTML = `先看和 brief 更贴的 · ${shown || main} 张`;
       return;
     }
     if (state.includePending) {
@@ -419,6 +427,7 @@
       }));
     state.sources = [...pinned, ...extras];
     renderSources();
+    renderRoleChips();
     const styleSel = el.filters && el.filters.querySelector('[data-filter="style"]');
     if (styleSel) {
       const names = [...new Set(state.wallItems.map((it) => it.bucket).filter(Boolean))].sort((a, b) =>
@@ -468,14 +477,12 @@
     const yearSel = el.filters && el.filters.querySelector('[data-filter="year"]');
     const styleSel = el.filters && el.filters.querySelector('[data-filter="style"]');
     const isVisual = state.tab === "visual";
-    const isStrategy = state.tab === "strategy";
-    // Visual-only filters must stay hidden on shortlist (strategyMode alone was overwritten before)
     if (sourceSel) sourceSel.hidden = !isVisual;
     if (styleSel) styleSel.hidden = !isVisual;
-    if (yearSel) yearSel.hidden = !isVisual;
-    if (dirSel) dirSel.hidden = !isStrategy;
-    if (toneSel) toneSel.hidden = !isStrategy;
-    if (marketSel) marketSel.hidden = !(isVisual || isStrategy);
+    if (yearSel) yearSel.hidden = true;
+    if (dirSel) dirSel.hidden = true;
+    if (toneSel) toneSel.hidden = true;
+    if (marketSel) marketSel.hidden = true;
     if (el.categoryChips) {
       el.categoryChips.style.display = state.tab === "visual" ? "" : "none";
     }
@@ -613,32 +620,72 @@
     return j;
   }
 
+  function isUnsafePack(j) {
+    if (!j || typeof j !== "object") return true;
+    const counts = (j.l3 && j.l3.counts) || {};
+    if (counts.image_gate) return true;
+    const cat = j.item_catalog;
+    if (cat && typeof cat === "object" && Object.keys(cat).length > 50) return true;
+    if ((j.meta && Number(j.meta.item_catalog_size)) > 50) return true;
+    return false;
+  }
+
+  function sanitizeBundle(j) {
+    const out = normalizeBundle(j);
+    if (out.item_catalog) delete out.item_catalog;
+    if (out.l3 && out.l3.counts && out.l3.counts.image_gate) delete out.l3.counts.image_gate;
+    if (out.l3 && out.l3.walls && out.l3.walls.pending_review && Array.isArray(out.l3.walls.pending_review.items)) {
+      out.l3.walls.pending_review.items = [];
+    }
+    return out;
+  }
+
   async function loadProductBundle() {
     const paths = ["data/product-bundle.json", "data/product-pack.json"];
     let fallback = null;
     for (const p of paths) {
-      const res = await fetch(p);
-      if (!res.ok) continue;
-      const j = normalizeBundle(await res.json());
-      if (j.l4_cards && j.l4_cards.length) return j;
-      if (!fallback) fallback = j;
+      try {
+        const res = await fetch(p);
+        if (!res.ok) continue;
+        const raw = await res.json();
+        if (isUnsafePack(raw)) continue;
+        const j = sanitizeBundle(raw);
+        if (j.l4_cards && j.l4_cards.length) return j;
+        if (!fallback) fallback = j;
+      } catch (err) {
+        console.warn("bundle", p, err);
+      }
     }
     if (fallback) return fallback;
     throw new Error("product pack missing");
   }
 
-  async function loadLiveFeeds(research) {
+  async function loadPendingFeed(research) {
     const r = research || RESEARCHES.find((x) => x.id === state.activeResearchId) || RESEARCHES[0];
+    if (!r || r.id !== "r-green") {
+      state.pendingItems = [];
+      state.feedCounts.pending = 0;
+      return;
+    }
+    if (state.pendingItems.length) return;
     const pendingPaths = (r.feeds && r.feeds.pending) || [
       "data/l2_pending_review.jsonl",
       "data/l2-pending-review.jsonl",
       "data/l2_pending_review_20260812.jsonl",
     ];
-    const [mainText, pendingRes, bucketsRes] = await Promise.all([
+    const pendingRes = await fetchFirstOk(pendingPaths);
+    const pendingRaw = pendingRes && pendingRes.ok ? parseJsonl(await pendingRes.text()) : [];
+    state.pendingItems = pendingRaw.map((row) => normalizeFeedItem(row, "pending_review"));
+    state.feedCounts.pending = pendingRaw.length;
+    if (state.bundle?.l3?.counts) {
+      state.bundle.l3.counts.pending_review = pendingRaw.length;
+    }
+  }
+
+  async function loadLiveFeeds(research) {
+    const r = research || RESEARCHES.find((x) => x.id === state.activeResearchId) || RESEARCHES[0];
+    const [mainText, bucketsRes] = await Promise.all([
       loadMainWallText(r.feeds && r.feeds.main),
-      r.feeds && r.feeds.pending === undefined && r.id !== "r-green"
-        ? Promise.resolve({ ok: false })
-        : fetchFirstOk(pendingPaths),
       fetch("data/style-buckets-v1.json"),
     ]);
     if (bucketsRes.ok) {
@@ -655,7 +702,6 @@
       state.bucketIdToZh = { ...state.bundle.bucket_id_to_zh };
     }
     const mainRaw = parseJsonl(mainText);
-    const pendingRaw = pendingRes && pendingRes.ok ? parseJsonl(await pendingRes.text()) : [];
     state.wallItems = mainRaw
       .map((row) => normalizeFeedItem(row, "main_wall"))
       .filter((it) => imgFor(it) || it.page_url || it.id);
@@ -663,11 +709,18 @@
       state.wallItems = mainRaw.map((row) => normalizeFeedItem(row, "main_wall"));
     }
     state.wallItems = demoteFragileWallOrder(state.wallItems);
-    state.pendingItems = pendingRaw.map((row) => normalizeFeedItem(row, "pending_review"));
+    state.pendingItems = [];
+    const knownPend =
+      r.id === "r-green"
+        ? Number((state.bundle && state.bundle.l3 && state.bundle.l3.counts && state.bundle.l3.counts.pending_review) || 2680)
+        : 0;
     state.feedCounts = {
       main: mainRaw.length,
-      pending: pendingRaw.length,
+      pending: knownPend,
     };
+    if (state.includePending && r.id === "r-green") {
+      await loadPendingFeed(r);
+    }
     state.wallVisibleLimit = WALL_BATCH_INITIAL;
     const freq = {};
     state.wallItems.forEach((it) => {
@@ -753,28 +806,37 @@
     return 2;
   }
 
+  function wallRole(it) {
+    if (!it) return "primary";
+    if (String(it.source_type || "").toLowerCase() === "shelf") return "shelf";
+    const rel = (it.extra && it.extra.brief_relevance_v1) || "";
+    if (it.analogy_from || rel === "keep_analogy") return "analogy";
+    return "primary";
+  }
+
+  function renderRoleChips() {
+    if (!el.categoryChips) return;
+    const n = { primary: 0, analogy: 0, shelf: 0 };
+    state.wallItems.forEach((it) => {
+      n[wallRole(it)] = (n[wallRole(it)] || 0) + 1;
+    });
+    const labels = {
+      primary: `主品类 · ${n.primary}`,
+      analogy: `类比 · ${n.analogy}`,
+      shelf: `货架 · ${n.shelf}`,
+    };
+    el.categoryChips.querySelectorAll(".cat-chip[data-cat]").forEach((chip) => {
+      const cat = chip.dataset.cat;
+      if (labels[cat]) chip.textContent = labels[cat];
+    });
+  }
+
   function isShelfItem(it) {
-    if (!it) return false;
-    const s = String(it.source || "").toLowerCase();
-    const st = String(it.source_type || "").toLowerCase();
-    const m = String(it.is_on_market || "").toLowerCase();
-    return st === "shelf" || m === "true" || /^(jd|taobao|1688|tmall)$/.test(s);
+    return wallRole(it) === "shelf";
   }
 
   function isAnalogyItem(it) {
-    if (!it) return false;
-    if (it.analogy_from) return true;
-    const rel = (it.extra && it.extra.brief_relevance_v1) || "";
-    if (rel === "keep_analogy") return true;
-    const blob = [
-      it.title,
-      it.query_used,
-      it.category_label,
-      Array.isArray(it.raw_tags) ? it.raw_tags.join(" ") : "",
-    ].join(" ");
-    return /黄酒|滋补|阿胶|人参礼|sake\b|huangjiu|tonic\s*gift|herbal\s*gift|wine\s*gift|香氛|高端水|国潮美妆/.test(
-      blob
-    );
+    return wallRole(it) === "analogy";
   }
 
   function briefRelLabel(item) {
@@ -809,13 +871,13 @@
       items = pendingFirst.concat(mains);
     }
     if (state.activeCat === "primary") {
-      items = items.filter((it) => !isShelfItem(it));
+      items = items.filter((it) => wallRole(it) === "primary");
     } else if (state.activeCat === "analogy") {
-      items = items.filter(isAnalogyItem);
+      items = items.filter((it) => wallRole(it) === "analogy");
     } else if (state.activeCat === "shelf" || state.activeCat === "pack") {
-      items = items.filter(isShelfItem);
+      items = items.filter((it) => wallRole(it) === "shelf");
     } else if (state.activeCat === "case") {
-      items = items.filter((it) => !isShelfItem(it));
+      items = items.filter((it) => wallRole(it) === "primary");
     }
     if (state.activeSource) {
       items = items.filter(
@@ -1024,27 +1086,19 @@
       <div class="insp-block collect">
         <h4><span class="ico">#</span>采集字段</h4>
         <ul>
-          <li>来源：${escapeHtml(humanSource(item.source))} · ${escapeHtml(item.source_type || "未标类型")}</li>
+          <li>来源：${escapeHtml(humanSource(item.source) || "未标注")} · ${escapeHtml(item.source_type || "未标注")}</li>
           <li>贴 brief：${escapeHtml(briefRelLabel(item))}${
             item.extra && item.extra.brief_relevance_v1
               ? `（${escapeHtml(item.extra.brief_relevance_v1)}）`
               : ""
           }</li>
-          <li>风格桶：${escapeHtml(bucketZh.join(" / ") || item.bucket || "待标注")}</li>
-          ${
-            struct.length
-              ? `<li>结构：${escapeHtml(struct.slice(0, 4).join(" / "))}</li>`
-              : ""
-          }
-          ${
-            item.query_used
-              ? `<li>检索：${escapeHtml(String(item.query_used).slice(0, 80))}</li>`
-              : ""
-          }
+          <li>风格桶：${escapeHtml(bucketZh.join(" / ") || "未标注")}</li>
+          <li>结构：${escapeHtml(struct.length ? struct.slice(0, 4).join(" / ") : "未标注")}</li>
+          <li>检索：${escapeHtml(item.query_used ? String(item.query_used).slice(0, 80) : "未标注")}</li>
           ${
             page
               ? `<li><a class="insp-link" href="${escapeAttr(page)}" target="_blank" rel="noopener noreferrer">打开原页</a></li>`
-              : "<li>原页链接待补</li>"
+              : "<li>原页：未标注</li>"
           }
         </ul>
       </div>
@@ -1238,12 +1292,12 @@
 
   function resolveCardImage(c) {
     const local = c.cover_image || c.local_ref_image || "";
-    if (local) return local;
+    if (local && !/^http:/i.test(local)) return local;
     for (const m of c.reference_montage || []) {
-      if (m.image_url && /^https?:/i.test(m.image_url)) return m.image_url;
+      if (m.image_url && /^https:/i.test(m.image_url)) return m.image_url;
       const it = findWallItem(m.item_id);
       const u = it && imgFor(it);
-      if (u && /^https?:/i.test(u)) return u;
+      if (u && /^https:/i.test(u)) return u;
     }
     return "";
   }
@@ -1677,7 +1731,7 @@
           tag: "同步",
           tagClass: "consensus",
           dot: "ok",
-          html: `<p>已核对本地真数据：主墙 ${mainN} · 待复核 ${pendN}。货架深采仍待开通，不假装连上了。</p>`,
+          html: `<p>本版不发起新采集。已落地主墙 ${mainN} · 待复核 ${pendN}。货架深采仍待开通，不假装连上了。</p>`,
         });
       }, 600);
       return;
@@ -1692,7 +1746,7 @@
       tag: "回复",
       tagClass: "consensus",
       dot: "ok",
-      html: `<p>收到。可以说「看市场地图」「生成三张策略卡」「同步采集」或「输出短名单」——我按墙上的 ${mainN} 张参考跟你走。</p>`,
+      html: `<p>收到。可以说「看市场地图」「看策略卡」或「输出短名单」——我按墙上的 ${mainN} 张参考跟你走。</p>`,
     });
   }
 
@@ -1707,6 +1761,8 @@
     state.activeCat = "all";
     state.activeSource = null;
     state.activeStyleFilter = "";
+    state.pendingItems = [];
+    state.includePending = false;
     closeInspector();
     renderResearch();
     if (el.researchTitle) el.researchTitle.textContent = r.title;
@@ -1832,7 +1888,15 @@
         chip.dataset.pending = state.includePending ? "1" : "0";
         chip.classList.toggle("active", state.includePending);
         state.wallVisibleLimit = WALL_BATCH_INITIAL;
-        toast(state.includePending ? "已显示待复核（虚线+半透明）" : "已隐藏待复核");
+        if (state.includePending) {
+          toast("正在加载待复核…");
+          loadPendingFeed().then(() => {
+            updateWallCountBar();
+            renderCanvas();
+          });
+        } else {
+          toast("已隐藏待复核");
+        }
         updateWallCountBar();
         renderCanvas();
         return;
@@ -1933,7 +1997,7 @@
       const ids = [...state.selectedIds];
       const n = ids.length;
       if (act === "compare") {
-        toast(n < 2 ? "再勾一张，才能对比一下" : `先并排看这 ${n} 张`);
+        toast("对比还没接上，先在检查器里一张张看");
         return;
       }
       if (act === "shortlist") {
@@ -2020,17 +2084,20 @@
       applyResearch(id);
     });
 
-    el.btnNew.addEventListener("click", () => {
-      toast("新建研究 — 把 Brief 贴进研究问题就行");
-      el.researchQuestion.focus();
-      el.researchQuestion.select();
-    });
+    if (el.btnNew) {
+      el.btnNew.addEventListener("click", () => {
+        toast("本版不能新建研究，请用左侧已保存的三轮");
+      });
+    }
 
-    document.querySelector(".attach-row").addEventListener("click", (e) => {
-      const b = e.target.closest("[data-attach]");
-      if (!b) return;
-      toast(`附件「${b.dataset.attach}」先占个位，正式版再接上传`);
-    });
+    const attachRow = document.querySelector(".attach-row");
+    if (attachRow) {
+      attachRow.addEventListener("click", (e) => {
+        const b = e.target.closest("[data-attach]");
+        if (!b) return;
+        toast("本版不支持上传附件");
+      });
+    }
 
     el.researchQuestion.addEventListener("input", updateQCount);
 
@@ -2092,8 +2159,14 @@
       }
 
       // 2) Product pack for L1 brief + L4 strategy cards.
-      // Skip empty-l4 stubs and fall through to product-pack.
-      state.bundle = await loadProductBundle();
+      // Skip empty-l4 stubs / unsafe image_gate packs and fall through to product-pack.
+      try {
+        state.bundle = await loadProductBundle();
+      } catch (bundleErr) {
+        console.warn("product bundle", bundleErr);
+        state.bundle = { l4_cards: [], l1: {}, l3: { counts: {} } };
+        toast("策略卡暂时读不到，先看主墙");
+      }
       state._greenBundle = state.bundle;
       (state.bundle.l4_cards || []).forEach((c) => {
         state.decisions[c.card_id] = c.hou_decision || "pending";

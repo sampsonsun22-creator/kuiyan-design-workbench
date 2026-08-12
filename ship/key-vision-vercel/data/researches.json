@@ -1,6 +1,6 @@
 {
   "default_id": "r-green",
-  "note": "青绿茶默认读壳权威 452/2680，禁止回落到 briefs/green_tea_gift_main_wall.jsonl（184，过时口径）",
+  "note": "青绿茶默认读壳权威 452/2680，禁止回落到 briefs/green_tea_gift_main_wall.jsonl（184，过时口径）。运行时 RESEARCHES 写在 app.js，须与本文件 items 保持一致。",
   "items": [
     {
       "id": "r-green",
