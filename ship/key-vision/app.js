@@ -1237,13 +1237,15 @@
   }
 
   function resolveCardImage(c) {
+    const local = c.cover_image || c.local_ref_image || "";
+    if (local) return local;
     for (const m of c.reference_montage || []) {
       if (m.image_url && /^https?:/i.test(m.image_url)) return m.image_url;
       const it = findWallItem(m.item_id);
       const u = it && imgFor(it);
       if (u && /^https?:/i.test(u)) return u;
     }
-    return c.cover_image || c.local_ref_image || "";
+    return "";
   }
 
   function renderStrategy() {
