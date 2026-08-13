@@ -92,6 +92,8 @@ def main() -> int:
         err.append("broken thumbs must stay on the wall (do not hide the card)")
     if "图链失效" not in app:
         err.append("broken thumbs need a visible 图链失效 placeholder")
+    if "expiredHuabanCount" not in app or "花瓣" not in app:
+        err.append("count bar must state expired 花瓣 image links")
     if "本轮未采集" not in app:
         err.append("app.js missing 本轮未采集 wording for uncollected dimensions")
     for faked in ("色块与留白节奏可借鉴", "开箱清单"):

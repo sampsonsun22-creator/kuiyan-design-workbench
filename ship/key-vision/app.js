@@ -217,11 +217,27 @@
   }
 
   /** Hosts that currently hotlink-fail from this shell; demote so first paint stays usable. */
+  function isExpiredHuabanUrl(url) {
+    return /gd-hbimg|hbimg\.huaban/i.test(url || "");
+  }
+
   function isFragileImageHost(url) {
     if (!url) return true;
-    return /huaban\.com|gd-hbimg|hbimg\.huaban|xhscdn|xiaohongshu|img\.zcool\.cn|\bzcool\.cn\b/i.test(
-      url
-    );
+    return isExpiredHuabanUrl(url);
+  }
+
+  function expiredHuabanCount(items) {
+    return (items || state.wallItems || []).filter((it) => {
+      if (it.pending || it.qc_status === "pending_review") return false;
+      return isExpiredHuabanUrl(imgFor(it));
+    }).length;
+  }
+
+  function imageGapNoteHtml() {
+    const n = expiredHuabanCount();
+    return n
+      ? ` · <span class="muted">花瓣 ${n} 张图链过期，卡片仍留着</span>`
+      : "";
   }
 
   function demoteFragileWallOrder(items) {
@@ -330,18 +346,18 @@
     if (filtered) {
       el.wallCountBar.innerHTML = `这屏 ${shown} · 主墙 ${main}${
         state.includePending ? ` · 待复核 ${pending}` : ""
-      }`;
+      }${imageGapNoteHtml()}`;
       return;
     }
     if (state.onlyBriefRelevant && !state.includePending) {
-      el.wallCountBar.innerHTML = `先看和 brief 更贴的 · ${shown || main} 张`;
+      el.wallCountBar.innerHTML = `先看和 brief 更贴的 · ${shown || main} 张${imageGapNoteHtml()}`;
       return;
     }
     if (state.includePending) {
-      el.wallCountBar.innerHTML = `主墙 ${main} · 含待复核 · 这屏 ${shown}`;
+      el.wallCountBar.innerHTML = `主墙 ${main} · 含待复核 · 这屏 ${shown} · <span class="muted">角色芯片仍按主墙计</span>${imageGapNoteHtml()}`;
       return;
     }
-    el.wallCountBar.innerHTML = `主墙 ${main} · 这屏 ${shown}`;
+    el.wallCountBar.innerHTML = `主墙 ${main} · 这屏 ${shown}${imageGapNoteHtml()}`;
   }
 
   function parseJsonl(textIn) {
@@ -1164,7 +1180,7 @@
       })
       .join("");
     el.inspectorBody.innerHTML = `
-      <div class="inspector-preview"><img referrerpolicy="no-referrer" src="${escapeAttr(imgFor(item))}" alt="" /></div>
+      <div class="inspector-preview"><img referrerpolicy="no-referrer" src="${escapeAttr(imgFor(item))}" alt="" onerror="this.onerror=null;this.classList.add('img-broken');const f=this.nextElementSibling;if(f)f.hidden=false;" /><div class="thumb-fallback inspector-fallback" hidden>图链失效</div></div>
       <div class="inspector-title">${escapeHtml(humanTitle(item.title || item.id))}</div>
       <div class="inspector-src">${escapeHtml(humanSource(item.source) || "来源待核实")}${
         item.author_or_brand ? " · " + escapeHtml(item.author_or_brand) : ""
@@ -1348,7 +1364,7 @@
     let html = `<div class="wall-summary">
       <span>${escapeHtml(tone)} · ${escapeHtml(channel)}</span>
       <span>${briefSummary}</span>
-      <span class="wall-summary-gap">花瓣 / 小红书 / 站酷图链常失效，卡片仍留着，可点开看字段</span>
+      <span class="wall-summary-gap">花瓣 ${expiredHuabanCount()} 张图链已过期，卡片仍留着可点开看字段；其它源按加载结果，打不开的标「图链失效」</span>
     </div>`;
     const rec = state.bundle?.l3?.ai_recommended_buckets || [];
     if (rec.length) {
@@ -1938,7 +1954,7 @@
           <div class="sl-idx">${i + 1}</div>
           <div class="sl-thumb"><img loading="lazy" referrerpolicy="no-referrer" src="${escapeAttr(
             imgFor(it)
-          )}" alt="" onerror="this.style.visibility='hidden'" /></div>
+          )}" alt="" onerror="this.onerror=null;this.classList.add('img-broken');const f=this.nextElementSibling;if(f)f.hidden=false;" /><div class="thumb-fallback" hidden>图链失效</div></div>
           <div class="sl-body">
             <div class="sl-title">${escapeHtml(humanTitle(it.title || it.id))}</div>
             <div class="sl-scope"><span class="scope-pill scope-${escapeAttr(
@@ -2029,7 +2045,7 @@
           <div class="lane-row${counts.cross ? "" : " lane-zero"}"><span class="lane-zh">跨界</span><span class="lane-n">${counts.cross}</span><span class="lane-note">本轮未单列采集与打标</span></div>
           <div class="lane-row${counts.shelf ? "" : " lane-zero"}"><span class="lane-zh">货架</span><span class="lane-n">${counts.shelf}</span><span class="lane-note">在售 listing 样，深采未开通</span></div>
         </div>
-        <p class="rp-note">主墙 ${mainN} 张已上墙，待复核 ${pendN} 张没算进结论。三路里只有同类算铺开了，不同类和跨界都不够，别把这份报告当「全市场扫描」。</p>
+        <p class="rp-note">主墙 ${mainN} 张已上墙，其中花瓣 ${expiredHuabanCount()} 张图链已过期（点不开图，字段还在）。待复核 ${pendN} 张没算进结论。三路里只有同类算铺开了，不同类和跨界都不够，别把这份报告当「全市场扫描」。</p>
       </section>`;
 
     const covRows = cov

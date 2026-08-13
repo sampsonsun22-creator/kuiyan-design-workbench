@@ -127,6 +127,8 @@ def main() -> int:
         err.append("ship app.js still hides broken wall cards")
     if "图链失效" not in app:
         err.append("ship app.js missing 图链失效 placeholder")
+    if "expiredHuabanCount" not in app:
+        err.append("ship app.js missing expiredHuabanCount")
 
     strict = subprocess.run(
         [sys.executable, str(ROOT / "scripts" / "assert_shell_strict.py")],

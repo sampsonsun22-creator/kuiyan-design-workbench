@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452live`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p1`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -68,6 +68,7 @@ async function main() {
 
     const bar = (await page.locator("#wallCountBar").innerText()).trim();
     note(/452/.test(bar) || /张/.test(bar), `count bar: ${bar}`);
+    note(/花瓣/.test(bar) && /过期/.test(bar), `count bar states expired 花瓣 links: ${bar}`);
 
     const chips = {};
     for (const cat of ["primary", "analogy", "cross", "shelf"]) {
