@@ -13,7 +13,7 @@
 ```bash
 cd ship/key-vision
 python3 -m http.server 8767 --bind 127.0.0.1
-# http://127.0.0.1:8767/?v=452p2
+# http://127.0.0.1:8767/?v=452p3
 ```
 
 ## 数据怎么读

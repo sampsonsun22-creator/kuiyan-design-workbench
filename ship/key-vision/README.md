@@ -6,7 +6,7 @@
 - 方向假设（非完稿）：青绿新中轴 / 静奢留白 / 开箱仪式
 - **现在就能打开（点一次 Open the page）：** https://raw.githack.com/sampsonsun22-creator/kuiyan-design-workbench/cursor/kuiyan-ui-data-landing-65bd/ship/key-vision/index.html
 - `http://127.0.0.1:8767` 只存在于云端虚拟机内部。网页版 Cloud Agent 的浏览器连的是你自己的电脑，所以会 `refused to connect`。
-- Cursor 桌面版：先点编辑器右上角插头图标，把 8767 转到本机，再开 `http://127.0.0.1:8767/?v=452p2`
+- Cursor 桌面版：先点编辑器右上角插头图标，把 8767 转到本机，再开 `http://127.0.0.1:8767/?v=452p3`
 - 旧站 https://key-vision.vercel.app 仍是三页签旧壳，尚未同步本分支
 
 ## 在自己电脑上预览
@@ -14,7 +14,7 @@
 ```bash
 cd ship/key-vision
 python3 -m http.server 8767 --bind 127.0.0.1
-# http://127.0.0.1:8767/?v=452p2
+# http://127.0.0.1:8767/?v=452p3
 ```
 
 ## 数据怎么读

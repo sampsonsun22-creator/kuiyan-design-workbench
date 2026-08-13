@@ -40,7 +40,7 @@
       id: "orchestrator",
       name: "奎燕设计智能体",
       status: "online",
-      lastAction: "五层跑完：意图 → 穷尽 → 拆解 → 筛选 → 结论",
+      lastAction: "五层：Brief → 版图 → 拆解 → 筛选 → 结论",
     },
     {
       id: "crawler",
@@ -1159,7 +1159,10 @@
     const groupIco = { visual_style: "◎", experience: "◇", commerce: "¥" };
     const dimBlocks = groups
       .map((g) => {
+        const pin = { color: 0, graphic_type: 1 };
         const rows = (g.dimensions || [])
+          .slice()
+          .sort((a, b) => (pin[a.id] ?? 10) - (pin[b.id] ?? 10))
           .map((d) => {
             const v = dimValueZh(item, d);
             if (v) {
@@ -1188,7 +1191,7 @@
       <p class="insp-summary">${escapeHtml(
         `口径：${scopeLabel(item)} · ${briefRelLabel(item)}${
           bucketZh.length ? ` · 风格桶 ${bucketZh[0]}` : " · 风格桶未标注"
-        }。下面只写已经采到的字段，没采到的一律「未标注」。`
+        }。色彩和排版有值才写；没标就「未标注」，不替你判字体或色板。`
       )}</p>
       <div class="insp-block match">
         <h4><span class="ico">✓</span>对 Brief 这条</h4>
@@ -1541,7 +1544,33 @@
     const pre = it.extra && it.extra.brief_relevance_v1;
     if (pre === "keep_core" || pre === "pass_brief") s += 2;
     if (searchScope(it) === "shelf" || searchScope(it) === "adjacent") s += 1;
+    if (kuiyanOccasionAligned(it)) s += 1;
     return s;
+  }
+
+  function kuiyanCaseNames() {
+    return (state.bundle?.l1?.input?.kuiyan_case_refs || []).map((s) => String(s).trim()).filter(Boolean);
+  }
+
+  /** 场合/气质对齐，不是视觉对图。没有案例名单就不加分。 */
+  function kuiyanOccasionAligned(it) {
+    if (!kuiyanCaseNames().length) return false;
+    const blob = itemBlob(it);
+    const occasion = String(state.bundle?.l1?.input?.occasion || "");
+    const tone = String(state.bundle?.l1?.input?.culture_tone || "");
+    const gift = /礼赠|礼盒|馈赠|仪式/.test(blob) || /礼赠|礼盒|馈赠/.test(occasion);
+    const modern = /中式|现代|海派|简约/.test(blob) || /中式|现代/.test(tone);
+    return gift || modern;
+  }
+
+  function kuiyanReasonLine(it) {
+    const cases = kuiyanCaseNames();
+    if (!cases.length) return "奎燕先验：本轮没有案例图可对，只按 Brief 收";
+    if (kuiyanOccasionAligned(it)) {
+      const shown = cases.slice(0, 2).join(" / ");
+      return `奎燕先验：和「${shown}」同一类礼赠/中式现代场合，不是视觉对图`;
+    }
+    return "奎燕先验：本轮没有案例图可对，只按 Brief 收";
   }
 
   function pickDiverse(cands, limit, scoreFn) {
@@ -1593,6 +1622,8 @@
 
   function reasonFor(it, hits) {
     const bucketZh = dimValueZh(it, { id: "style_bucket", fields: ["suggested_style_buckets"] });
+    const color = dimValueZh(it, { id: "color", fields: ["color_roles", "color_palette"] });
+    const type = dimValueZh(it, { id: "graphic_type", fields: ["info_hierarchy_tags", "info_hierarchy"] });
     const query = it.query_used ? String(it.query_used).slice(0, 40) : "";
     const lines = [
       `路线：${scopeLabel(it)}${searchScope(it) === "shelf" ? "（在售 listing 样）" : ""}`,
@@ -1604,6 +1635,9 @@
       `检索词：${query || "未标注"}`,
     ];
     if (it.author_or_brand) lines.push(`品牌/作者：${String(it.author_or_brand).slice(0, 40)}`);
+    if (color) lines.push(`色彩：${color}`);
+    if (type) lines.push(`排版：${type}`);
+    lines.push(kuiyanReasonLine(it));
     if (hits && hits.length) lines.push(`命中你的批注：${hits.join(" / ")}`);
     return lines;
   }
@@ -1830,16 +1864,26 @@
     return `
     <section class="panel intent-panel">
       <div class="panel-head">
-        <h3>L1 意图识别 · 先钉死分析对象</h3>
-        <p class="panel-sub">没把这页说清之前，别急着说「已经搜穷尽了」。</p>
+        <h3>L1 意图识别 · 先钉死卖给谁</h3>
+        <p class="panel-sub">客群、渠道、场合没钉住，后面的墙只是一堆图，不能当已经问清。</p>
       </div>
       ${
         briefLoaded
           ? ""
-          : `<p class="rp-warn">这轮只有落地的墙：Brief 还没录进来，下面除了品名基本都是未标注。别把它当已经问清的分析对象。</p>`
+          : `<p class="rp-warn">这轮只有落地的墙，Brief 还没录入。下面除了品名基本都是未标注，不能当已经问清的分析对象。</p>`
       }
 
-      <div class="panel-block">
+      <div class="panel-block" data-sop="audience">
+        <h4>卖给谁 · 在哪卖 · 什么价</h4>
+        <div class="kv">
+          ${kvRow("客群", input.audience)}
+          ${kvRow("渠道", input.channel)}
+          ${kvRow("价格带", input.price_band)}
+          ${kvRow("场合", input.occasion)}
+        </div>
+      </div>
+
+      <div class="panel-block" data-sop="object">
         <h4>分析对象</h4>
         <div class="kv">
           ${kvRow("产品", input.product)}
@@ -1848,16 +1892,6 @@
             intent.confidence ? `（置信 ${intent.confidence}）` : ""
           }` : null)}
           ${kvRow("品牌", input.brand)}
-        </div>
-      </div>
-
-      <div class="panel-block">
-        <h4>卖给谁 · 在哪卖 · 什么价</h4>
-        <div class="kv">
-          ${kvRow("客群", input.audience)}
-          ${kvRow("渠道", input.channel)}
-          ${kvRow("价格带", input.price_band)}
-          ${kvRow("场合", input.occasion)}
         </div>
       </div>
 
@@ -1872,6 +1906,7 @@
       <div class="panel-block">
         <h4>奎燕会什么（先验）</h4>
         <div class="tag-line"><span class="tag-label">过往案例</span>${tagList(input.kuiyan_case_refs)}</div>
+        <div class="kv">${kvRow("品类 fit", input.kuiyan_fit)}</div>
         <div class="tag-line"><span class="tag-label">气质参照</span>${tagList(input.competitors)}</div>
       </div>
 
@@ -1911,7 +1946,7 @@
     const comment = state.houComment || "";
     const commentBox = `
       <div class="l4-comment">
-        <label class="l4-comment-label" for="houCommentBox">你的批注（我按这句重排）</label>
+        <label class="l4-comment-label" for="houCommentBox">你的批注（按这句在已落地墙上重排）</label>
         <textarea id="houCommentBox" rows="2" placeholder="例：不要金红，多留白，只要能拍开箱视频的">${escapeHtml(
           comment
         )}</textarea>
@@ -2003,7 +2038,7 @@
     }（本轮无跨界样本，不编造）</div>
       ${commentBox}
       <div class="sl-list">${cards}</div>
-      <p class="honest-note">推荐理由只引用已采到的字段：贴 brief 判定、路线、风格桶、来源、检索词。色彩、开箱、用户反馈没采到就写「未标注」，不替你编工艺分析。</p>
+      <p class="honest-note">推荐理由只引用已采到的字段。奎燕案例只对齐场合/气质，没有案例图可对视觉。色彩、排版没标就写未标注；开箱、用户反馈没采到不编。</p>
     </section>`;
   }
 
@@ -2028,10 +2063,11 @@
       <section class="rp-sec">
         <h4><span class="rp-n">1</span>分析对象</h4>
         <div class="kv">
-          ${kvRow("产品 / 品类", [input.product, input.category_text].filter(Boolean).join(" · ") || null)}
-          ${kvRow("渠道", input.channel)}
           ${kvRow("客群", input.audience)}
+          ${kvRow("渠道", input.channel)}
           ${kvRow("价格带", input.price_band)}
+          ${kvRow("场合", input.occasion)}
+          ${kvRow("产品 / 品类", [input.product, input.category_text].filter(Boolean).join(" · ") || null)}
           ${kvRow("气质", input.culture_tone)}
         </div>
         <div class="tag-line"><span class="tag-label">必须有</span>${tagList(input.must_have, "tag-keep")}</div>
@@ -2075,7 +2111,7 @@
       <section class="rp-sec">
         <h4><span class="rp-n">3</span>分类覆盖</h4>
         ${covRows || '<p class="muted">维度合同还没读到（data/classify-dimensions-v1.json）。</p>'}
-        <p class="rp-note">分母是主墙 ${mainN} 张。多数条目的色彩、造型材质、图形排版仍是空的，检查器里一律写「未标注」；开箱、功能、用户反馈、成本这四项本轮压根没采。</p>
+        <p class="rp-note">分母是主墙 ${mainN} 张。色彩、排版多数还空着，检查器里写「未标注」。开箱、功能、用户反馈、成本这四项本轮没采。奎燕稿件字体密度高，本轮排版覆盖不够，这里不判字体、也不生图。</p>
       </section>`;
 
     const sec4 = list.length
@@ -2111,7 +2147,7 @@
     const sec5 = `
       <section class="rp-sec">
         <h4><span class="rp-n">5</span>差异化机会</h4>
-        <p class="rp-note">这一段只写能从样本结构数出来的空白，不写没采到的开箱、评论、成本判断。本轮：跨界 ${counts.cross}、不同类 ${counts.adjacent}、货架 ${counts.shelf}（listing 样）。同类铺开了，另外两路不够谈趋势。</p>
+        <p class="rp-note">这一段只写能从样本结构数出来的空白。本轮：跨界 ${counts.cross}、不同类 ${counts.adjacent}、货架 ${counts.shelf}（listing 样）。货架色彩校准需要 listing 主色，本轮货架只有 ${counts.shelf} 条、色彩多数未标注，所以没有淘宝色板。</p>
         ${
           cards.length
             ? `<p class="rp-note">下面三张是<strong>方向假设</strong>，挂在结论层，不是 L4 短名单，也不是完稿。</p><div class="rp-cards">${renderStrategy()}</div>`
@@ -2125,6 +2161,8 @@
     const colorN = covBy.color || 0;
     const structN = covBy.form_material || 0;
 
+    const typeN = covBy.graphic_type || 0;
+
     const sec6 = `
       <section class="rp-sec">
         <h4><span class="rp-n">6</span>风险与下一步</h4>
@@ -2132,18 +2170,23 @@
           <li><b>跨界 0</b>：三路里最缺这一路，本轮没有单列采集与打标，所以造型语言只能从同类里借。</li>
           <li><b>不同类 ${counts.adjacent}</b>：薄到不足以谈行业趋势，酒礼 / 滋补礼 / 精品咖啡都得补。</li>
           <li><b>货架 ${counts.shelf}</b>：只有 listing 样，电商深采没开通，「货架表现力」这一维基本是空的。</li>
+          <li><b>色彩校准做不了</b>：色彩 ${colorN}/${mainN}，货架 ${counts.shelf} 条 listing，没有淘宝竞品色板可对照。</li>
+          <li><b>字体判不了</b>：排版 ${typeN}/${mainN}。奎燕稿件字体密度高，生图过不了这一关，本产品到报告为止，不生包装完稿。</li>
           <li><b>用户反馈未采</b>：电商评价与社交槽点一条没抓，「好看但容易漏」这类判断现在给不出。</li>
           <li><b>成本与定位未采</b>：质感是否配得上中高端价格带，本轮无数据，只能靠人看。</li>
-          <li><b>打标覆盖低</b>：风格桶 ${sbN}/${mainN}、造型 ${structN}/${mainN}、色彩 ${colorN}/${mainN}，其余全是未标注，需要补打标或人工过图。</li>
+          <li><b>打标覆盖低</b>：风格桶 ${sbN}/${mainN}、造型 ${structN}/${mainN}、色彩 ${colorN}/${mainN}，其余全是未标注。</li>
           <li><b>待复核 ${pendN}</b>：没进主墙，也没进这份结论。</li>
         </ul>
-        <p class="rp-note">下一步建议按缺口排序：先补货架深采与用户反馈（直接影响能不能谈体验），再开跨界一路（影响造型语言），最后补成本。</p>
+        <p class="rp-note">下一步按缺口排：先补货架 listing 主色与用户反馈，再开跨界，最后补成本。字体要等排版标注上来，不能靠生图凑。</p>
       </section>`;
 
     return `<section class="panel report-panel">
-      <div class="panel-head">
-        <h3>L5 结论报告 · 差异化机会</h3>
-        <p class="panel-sub">可复核的决策备忘：只用已落地的主墙 ${mainN} 张和你定的短名单，没有新采集，也没有补数。</p>
+      <div class="panel-head rp-head-row">
+        <div>
+          <h3>L5 结论报告 · 差异化机会</h3>
+          <p class="panel-sub">可复核的决策备忘：只用已落地的主墙 ${mainN} 张和你定的短名单，没有新采集，也没有补数。</p>
+        </div>
+        <button type="button" class="rp-copy" data-report-action="copy">复制本页要点</button>
       </div>
       ${emptyBanner}${sec1}${sec2}${sec3}${sec4}${sec5}${sec6}
     </section>`;
@@ -2204,9 +2247,9 @@
       tag: "L1 意图识别",
       tagClass: "stage",
       dot: "ok",
-      html: `<p>先把分析对象钉死：<strong>${escapeHtml(product)}</strong>，${escapeHtml(tone)}，${escapeHtml(
+      html: `<p>先钉客群和渠道：<strong>${escapeHtml(input.audience || "客群未标注")}</strong> · ${escapeHtml(
         input.channel || "渠道未标注"
-      )}，客群${escapeHtml(input.audience || "未标注")}。对象没钉住，我不敢说搜穷尽了。</p>
+      )}。产品是 <strong>${escapeHtml(product)}</strong>，${escapeHtml(tone)}。客群没钉住，这面墙不能当已经问清。</p>
         <div class="event-note">必须有：${escapeHtml((input.must_have || []).slice(0, 3).join("、") || "未标注")}
         <br>必须避开：${escapeHtml((input.must_avoid || []).slice(0, 2).join("、") || "未标注")}</div>
         <div class="chips-row">
@@ -2282,8 +2325,8 @@
           tag: "L1 意图识别",
           tagClass: "stage",
           dot: "yellow",
-          html: `<p>回到分析对象这页。品类、渠道、客群、价格带、红线——哪条不对你直接说，我按新的对象再往下走。</p>
-            <div class="chips-row"><button type="button" class="artifact-link" data-artifact="brief">看分析对象</button></div>`,
+          html: `<p>回到 Brief。先看客群、渠道、场合对不对，再看产品与红线。</p>
+            <div class="chips-row"><button type="button" class="artifact-link" data-artifact="brief">看 Brief</button></div>`,
         }),
       2: () => {
         setCap("crawler", "idle", `同类 ${lanes.same} · 不同类 ${lanes.adjacent} · 跨界 ${lanes.cross} · 货架 ${lanes.shelf}`);
@@ -2578,7 +2621,7 @@
         dot: "ok",
         html: r.onlyBriefDefault
           ? `<p>已切回青绿茶礼盒。主墙 <strong>${state.feedCounts.main}</strong> · 待复核 <strong>${state.feedCounts.pending}</strong>，短名单和批注都已清空重来。</p>`
-          : `<p>已打开「${escapeHtml(r.title)}」落地主墙 <strong>${state.feedCounts.main}</strong> 张。这轮只有墙：L1 除品名外未填，也没有方向假设卡——茶礼那轮的三张卡不会跟过来。贴 brief 筛选已关掉，避免用茶礼规则误杀。</p>`,
+          : `<p>已打开「${escapeHtml(r.title)}」落地主墙 <strong>${state.feedCounts.main}</strong> 张。这轮 Brief 还没录入，只有墙：客群、红线、奎燕案例都是未标注，茶礼那轮的三张方向卡不会跟过来。贴 brief 筛选已关掉，避免用茶礼规则误杀。</p>`,
       });
     } catch (err) {
       console.warn(err);
@@ -2590,6 +2633,38 @@
     if (!el.researchQuestion || !el.qCount) return;
     const n = el.researchQuestion.value.length;
     el.qCount.textContent = `${n}/200`;
+  }
+
+  function copyReportNotes() {
+    const panel = el.canvasBody.querySelector(".report-panel");
+    const text = panel ? String(panel.innerText || "").replace(/\n{3,}/g, "\n\n").trim() : "";
+    if (!text) {
+      toast("报告还没出来");
+      return;
+    }
+    const done = () => toast("要点已复制，可贴进纪要或群");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+    } else {
+      fallbackCopy(text, done);
+    }
+  }
+
+  function fallbackCopy(text, done) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+      done();
+    } catch (err) {
+      toast("复制失败，请手动划选");
+    }
+    ta.remove();
   }
 
   function bindEvents() {
@@ -2695,6 +2770,11 @@
     });
 
     el.canvasBody.addEventListener("click", (e) => {
+      const copyBtn = e.target.closest("[data-report-action='copy']");
+      if (copyBtn) {
+        copyReportNotes();
+        return;
+      }
       const slAction = e.target.closest("[data-shortlist-action]");
       if (slAction) {
         const act = slAction.dataset.shortlistAction;

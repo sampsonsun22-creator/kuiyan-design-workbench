@@ -1440,6 +1440,25 @@ button, input, textarea, select {
   line-height: 1.55;
   color: var(--text-muted);
 }
+.rp-head-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.rp-copy {
+  flex: none;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--ink);
+  background: var(--key-yellow);
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.rp-copy:hover { background: var(--key-yellow-press, #e6c84f); }
 
 .panel-block {
   border: 1px solid var(--line);

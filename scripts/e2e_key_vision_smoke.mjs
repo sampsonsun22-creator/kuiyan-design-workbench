@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p2`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p3`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -87,6 +87,9 @@ async function main() {
     const brief = await page.locator(".intent-panel").innerText();
     note(/青绿茶礼盒/.test(brief), "L1 shows 青绿茶礼盒");
     note(/跨界 0/.test(brief) || /本轮跨界 0/.test(brief), "L1 states 跨界 0");
+    const audienceAt = brief.indexOf("卖给谁");
+    const objectAt = brief.indexOf("分析对象");
+    note(audienceAt >= 0 && objectAt > audienceAt, "L1 lists 卖给谁 before 分析对象");
 
     // Category chips are only visible on the visual tab.
     await page.locator('.tab[data-tab="visual"]').click();
@@ -104,6 +107,7 @@ async function main() {
     note(slCount >= 8 && slCount <= 12, `L4 shortlist cards ${slCount}`);
     note(/路线：/.test(sl) && /贴 brief：/.test(sl), "L4 reasons include 路线/贴 brief");
     note(/检索词：/.test(sl), "L4 reasons include 检索词");
+    note(/奎燕先验/.test(sl), "L4 reasons include 奎燕先验");
     note(!/色块与留白节奏可借鉴/.test(sl), "L4 has no invented craft prose");
 
     await page.locator('.tab[data-tab="report"]').click();
@@ -119,6 +123,8 @@ async function main() {
     );
     note(!/满版热闹/.test(report), "L5 has no invented differentiation prose");
     note(/方向假设/.test(report) || /青绿新中轴/.test(report), "L5 hangs direction cards as 假设");
+    note(/淘宝色板/.test(report) && /字体/.test(report), "L5 states color-board and type coverage gaps");
+    note(/复制本页要点/.test(report), "L5 has copy-report control");
 
     await browser.close();
   } catch (err) {

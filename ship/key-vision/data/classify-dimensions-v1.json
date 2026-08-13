@@ -13,16 +13,16 @@
           "ask": "主色/辅色是什么？明亮活泼还是沉稳高级？"
         },
         {
-          "id": "form_material",
-          "name_zh": "造型与材质",
-          "fields": ["structure_tags", "structure_notes"],
-          "ask": "瓶型/盒型/袋型有何特点？烫金、覆膜、异形等工艺？"
-        },
-        {
           "id": "graphic_type",
           "name_zh": "图形与排版",
           "fields": ["info_hierarchy_tags", "info_hierarchy"],
           "ask": "图案抽象还是具象？字体和信息层级是否清晰？"
+        },
+        {
+          "id": "form_material",
+          "name_zh": "造型与材质",
+          "fields": ["structure_tags", "structure_notes"],
+          "ask": "瓶型/盒型/袋型有何特点？烫金、覆膜、异形等工艺？"
         },
         {
           "id": "style_bucket",
