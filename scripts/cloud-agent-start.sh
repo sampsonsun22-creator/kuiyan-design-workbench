@@ -12,6 +12,13 @@ if [[ ! -d "$DIR" ]]; then
   exit 1
 fi
 
+# TigerVNC sometimes reports RandR brightness 0; that washes the remote desktop.
+# Computer-use chat screenshots are still greyscale (Cursor capture), but the
+# 24-bit VNC framebuffer and "take control" desktop stay in color.
+if [[ -n "${DISPLAY:-}" ]] && command -v xrandr >/dev/null 2>&1; then
+  xrandr --output VNC-0 --brightness 1 >/dev/null 2>&1 || true
+fi
+
 if curl -sf -o /dev/null "http://127.0.0.1:${PORT}/index.html"; then
   echo "KEY 视界 already on :${PORT}"
   exit 0
