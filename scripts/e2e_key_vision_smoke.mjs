@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p4`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p5`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -88,6 +88,47 @@ async function main() {
     const visibleCards = await page.locator(".wall-card").count();
     note(visibleCards >= 8, `visible wall cards ${visibleCards}`);
 
+    const srcPills = await page.locator("#sourceChips .source-card").count();
+    note(srcPills >= 6 && srcPills <= 20, `source pills ${srcPills}`);
+    note(
+      (await page.locator("#sourceChips .source-kicker").innerText()) === "出处",
+      "source bar labeled 出处"
+    );
+    note(await page.locator('#sourceChips [data-source="all"]').count().then((n) => n === 1), "source bar has 全部");
+    const pillH = await page.locator("#sourceChips .source-card").first().evaluate((el) =>
+      el.getBoundingClientRect().height
+    );
+    note(pillH <= 36, `source pill height ${pillH}`);
+
+    const originLinks = page.locator(".wall-card a.src-link");
+    const originN = await originLinks.count();
+    note(originN >= 8, `wall origin links ${originN}`);
+    const hrefs = await originLinks.evaluateAll((as) => as.map((a) => a.getAttribute("href") || ""));
+    note(
+      hrefs.length > 0 && hrefs.every((h) => /^https?:\/\//.test(h)),
+      "wall origin hrefs are collected http(s) page_url"
+    );
+    note(
+      hrefs.some((h) => /behance\.net|packagingoftheworld|xiaohongshu|zcool|pinterest/.test(h)),
+      "wall origin links hit known source hosts"
+    );
+
+    await page.locator('#sourceChips [data-source="behance"]').click();
+    await page.waitForFunction(() => /这屏/.test(document.getElementById("wallCountBar")?.textContent || ""));
+    const filteredBar = (await page.locator("#wallCountBar").innerText()).trim();
+    note(/这屏/.test(filteredBar), `source filter count bar: ${filteredBar}`);
+    await page.locator('#sourceChips [data-source="behance"]').click();
+    await page.waitForFunction(() => /452/.test(document.getElementById("wallCountBar")?.textContent || ""));
+
+    await page.locator(".wall-card .thumb").first().click();
+    await page.waitForSelector("#inspectorBody a.insp-link");
+    const inspHref = await page.locator("#inspectorBody a.insp-url").getAttribute("href");
+    note(/^https?:\/\//.test(inspHref || ""), `inspector origin ${inspHref}`);
+    note(await page.locator("#inspectorBody [data-copy-url]").count().then((n) => n === 1), "inspector has 复制链接");
+    const inspTxt = await page.locator("#inspectorBody .inspector-origin").innerText();
+    note(/behance|packaging|小红书|花瓣|pinterest|站酷|京东|淘宝/i.test(inspTxt), `inspector provenance ${inspTxt.slice(0, 80)}`);
+    await page.locator("#inspectorToggle").click();
+
     await page.locator('.tab[data-tab="intent"]').click();
     await page.waitForSelector(".intent-panel");
     const brief = await page.locator(".intent-panel").innerText();
@@ -111,6 +152,8 @@ async function main() {
     const sl = await page.locator(".l4-panel").innerText();
     const slCount = await page.locator(".l4-panel .sl-item").count();
     note(slCount >= 8 && slCount <= 12, `L4 shortlist cards ${slCount}`);
+    const l4Links = await page.locator(".l4-panel a.sl-open").count();
+    note(l4Links >= 8, `L4 origin links ${l4Links}`);
     note(/路线：/.test(sl) && /贴 brief：/.test(sl), "L4 reasons include 路线/贴 brief");
     note(/检索词：/.test(sl), "L4 reasons include 检索词");
     note(/奎燕先验/.test(sl), "L4 reasons include 奎燕先验");
@@ -157,6 +200,10 @@ async function main() {
     note(/方向假设/.test(report) || /青绿新中轴/.test(report), "L5 hangs direction cards as 假设");
     note(/淘宝色板/.test(report) && /字体/.test(report), "L5 states color-board and type coverage gaps");
     note(/复制本页要点/.test(report), "L5 has copy-report control");
+    const l5Links = await page.locator(".rp-shortlist a.rp-link").count();
+    note(l5Links >= 8, `L5 origin links ${l5Links}`);
+    const l5Href = await page.locator(".rp-shortlist a.rp-link").first().getAttribute("href");
+    note(/^https?:\/\//.test(l5Href || ""), `L5 first origin ${l5Href}`);
 
     await browser.close();
   } catch (err) {

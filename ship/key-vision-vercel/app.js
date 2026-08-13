@@ -11,14 +11,14 @@
   ];
 
   const SOURCE_META = {
-    behance: { label: "Behance" },
-    pinterest: { label: "Pinterest" },
-    huaban: { label: "花瓣" },
-    xiaohongshu: { label: "小红书" },
-    zcool: { label: "站酷" },
-    packagingoftheworld: { label: "Packaging of the World" },
-    jd: { label: "京东" },
-    taobao: { label: "淘宝" },
+    behance: { label: "Behance", short: "Behance" },
+    pinterest: { label: "Pinterest", short: "Pinterest" },
+    huaban: { label: "花瓣", short: "花瓣" },
+    xiaohongshu: { label: "小红书", short: "小红书" },
+    zcool: { label: "站酷", short: "站酷" },
+    packagingoftheworld: { label: "Packaging of the World", short: "POTW" },
+    jd: { label: "京东", short: "京东" },
+    taobao: { label: "淘宝", short: "淘宝" },
   };
 
   const PINNED_SOURCES = [
@@ -373,6 +373,37 @@
     }
     return raw.length > 24 ? raw.slice(0, 24) + "…" : raw;
   }
+
+  /** Only the collected page_url. Never invent a gallery URL. */
+  function pageUrlOf(it) {
+    const u = String(it && it.page_url ? it.page_url : "").trim();
+    return /^https?:\/\//i.test(u) ? u : "";
+  }
+
+  function pageHost(url) {
+    try {
+      return new URL(url).hostname.replace(/^www\./, "");
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function originAnchorHtml(it, opts) {
+    const page = pageUrlOf(it);
+    const o = opts || {};
+    const cls = o.className || "src-link";
+    const label = o.label || "原页";
+    if (!page) return `<span class="src-missing">原页未标注</span>`;
+    const host = pageHost(page);
+    let text = label;
+    if (o.showUrl) text = page;
+    else if (o.showHost && host) text = `${label} · ${host}`;
+    return `<a class="${escapeAttr(cls)}" data-wall-link href="${escapeAttr(
+      page
+    )}" target="_blank" rel="noopener noreferrer" title="${escapeAttr(page)}">${escapeHtml(
+      text
+    )}</a>`;
+  }
   function escapeHtml(s) {
     return String(s ?? "")
       .replace(/&/g, "&amp;")
@@ -463,7 +494,7 @@
   }
 
   function renderSources() {
-    const list = state.sources.length
+    const list = (state.sources.length
       ? state.sources
       : Object.entries(SOURCE_META).map(([id, m]) => ({
           id,
@@ -471,16 +502,32 @@
           status: "pending",
           statusText: "待加载",
           count: 0,
-        }));
-    el.sourceChips.innerHTML = list
-      .map(
-        (s) => `
-      <button type="button" class="source-card ${state.activeSource === s.id ? "active" : ""}" data-source="${s.id}">
-        <span class="sc-name">${escapeHtml(s.label)}${s.count != null ? ` · ${s.count}` : ""}</span>
-        <span class="sc-status"><span class="sdot ${s.status}"></span>${escapeHtml(s.statusText)}</span>
-      </button>`
-      )
-      .join("");
+        }))
+    ).filter((s) => (s.count || 0) > 0);
+    if (!list.length) {
+      el.sourceChips.innerHTML =
+        `<span class="source-kicker">出处</span><span class="source-empty">墙还没有带来源的卡片</span>`;
+      return;
+    }
+    const allBtn = `<button type="button" class="source-card ${
+      state.activeSource ? "" : "active"
+    }" data-source="all" title="看全部来源">全部</button>`;
+    el.sourceChips.innerHTML =
+      `<span class="source-kicker">出处</span>` +
+      allBtn +
+      list
+        .map((s) => {
+          const short = (SOURCE_META[s.id] && SOURCE_META[s.id].short) || s.label;
+          const tip = `${s.label} · ${s.statusText || s.count}`;
+          return `
+      <button type="button" class="source-card ${
+        state.activeSource === s.id ? "active" : ""
+      }" data-source="${s.id}" title="${escapeAttr(tip)}">
+        <span class="sdot ${escapeAttr(s.status || "ok")}"></span>
+        <span class="sc-name">${escapeHtml(short)} · ${s.count}</span>
+      </button>`;
+        })
+        .join("");
   }
 
 
@@ -626,7 +673,7 @@
       .slice(0, 6)
       .map(([id, count]) => ({
         id,
-        label: (SOURCE_META[id] && SOURCE_META[id].label) || id,
+        label: (SOURCE_META[id] && SOURCE_META[id].label) || humanSource(id),
         status: "ok",
         statusText: `已上墙 ${count}`,
         count,
@@ -1296,6 +1343,8 @@
     const weak = pending || weakBrief;
     const sel = !weak && state.selectedIds.has(it.id);
     const srcLine = humanSource(it.source);
+    const page = pageUrlOf(it);
+    const host = pageHost(page);
     const img = imgFor(it);
     const briefScore = scoreBriefRelevance(it);
     return `
@@ -1305,7 +1354,7 @@
               : "qc-pass"
           }" data-id="${escapeAttr(it.id)}" data-qc="${escapeAttr(
       it.qc_status || "pass_main"
-    )}" data-brief="${escapeAttr(briefScore)}" title="${escapeAttr(it.page_url || "")}">
+    )}" data-brief="${escapeAttr(briefScore)}" title="${escapeAttr(page || "原页未标注")}">
             ${weak ? "" : '<span class="check">✓</span>'}
             ${
               pending
@@ -1319,7 +1368,12 @@
             )}" alt="${escapeAttr(it.title || "")}" onerror="this.onerror=null;this.classList.add('img-broken');const c=this.closest('.wall-card');if(c){c.classList.add('img-broken-card');}" /><div class="thumb-fallback" aria-hidden="true">图链失效</div></div>
             <div class="meta">
               <div class="title">${escapeHtml(humanTitle(it.title || it.id))}</div>
-              <div class="src">${escapeHtml(srcLine)}</div>
+              <div class="src">
+                <span class="src-name">${escapeHtml(srcLine)}${
+                  host ? ` · ${escapeHtml(host)}` : ""
+                }</span>
+                ${originAnchorHtml(it)}
+              </div>
             </div>
           </article>`;
   }
@@ -1401,7 +1455,8 @@
       .map((id) => state.bucketIdToZh?.[id] || state.bundle?.bucket_id_to_zh?.[id] || id)
       .filter(Boolean);
     const struct = (item.structure_tags || []).filter(Boolean);
-    const page = item.page_url || "";
+    const page = pageUrlOf(item);
+    const host = pageHost(page);
     const groups = (state.dims && state.dims.groups) || [];
     const groupIco = { visual_style: "◎", experience: "◇", commerce: "¥" };
     const dimBlocks = groups
@@ -1432,9 +1487,22 @@
     el.inspectorBody.innerHTML = `
       <div class="inspector-preview"><img referrerpolicy="no-referrer" src="${escapeAttr(imgFor(item))}" alt="" onerror="this.onerror=null;this.classList.add('img-broken');const f=this.nextElementSibling;if(f)f.hidden=false;" /><div class="thumb-fallback inspector-fallback" hidden>图链失效</div></div>
       <div class="inspector-title">${escapeHtml(humanTitle(item.title || item.id))}</div>
-      <div class="inspector-src">${escapeHtml(humanSource(item.source) || "来源待核实")}${
-        item.author_or_brand ? " · " + escapeHtml(item.author_or_brand) : ""
-      }</div>
+      <div class="inspector-origin">
+        <div class="inspector-src">${escapeHtml(humanSource(item.source) || "来源待核实")}${
+          item.author_or_brand ? " · " + escapeHtml(item.author_or_brand) : ""
+        }${host ? " · " + escapeHtml(host) : ""}</div>
+        <div class="insp-origin-actions">
+          ${originAnchorHtml(item, { className: "insp-open", label: "打开原页" })}
+          ${
+            page
+              ? `<button type="button" class="insp-copy-url" data-copy-url="${escapeAttr(
+                  page
+                )}">复制链接</button>`
+              : ""
+          }
+        </div>
+        ${page ? originAnchorHtml(item, { className: "insp-link insp-url", showUrl: true }) : ""}
+      </div>
       <p class="insp-summary">${escapeHtml(
         `口径：${scopeLabel(item)} · ${briefRelLabel(item)}${
           bucketZh.length ? ` · 风格桶 ${bucketZh[0]}` : " · 风格桶未标注"
@@ -1467,11 +1535,7 @@
           <li>风格桶：${escapeHtml(bucketZh.join(" / ") || "未标注")}</li>
           <li>结构：${escapeHtml(struct.length ? struct.slice(0, 4).join(" / ") : "未标注")}</li>
           <li>检索：${escapeHtml(item.query_used ? String(item.query_used).slice(0, 80) : "未标注")}</li>
-          ${
-            page
-              ? `<li><a class="insp-link" href="${escapeAttr(page)}" target="_blank" rel="noopener noreferrer">打开原页</a></li>`
-              : "<li>原页：未标注</li>"
-          }
+          <li>原页：${originAnchorHtml(item, { className: "insp-link", showHost: true })}</li>
         </ul>
       </div>
       <div class="insp-block">
@@ -2661,13 +2725,7 @@
             }</div>
           </div>
           <div class="sl-actions">
-            ${
-              it.page_url
-                ? `<a class="sl-open" href="${escapeAttr(
-                    it.page_url
-                  )}" target="_blank" rel="noopener noreferrer">原页</a>`
-                : ""
-            }
+            ${originAnchorHtml(it, { className: "sl-open", showHost: true })}
             <button type="button" class="sl-remove" data-shortlist-remove="${escapeAttr(
               it.id
             )}">拿掉</button>
@@ -2777,6 +2835,8 @@
                   scopeLabel(it)
                 )}</span>
                   <strong>${escapeHtml(humanTitle(it.title || it.id))}</strong>
+                  <span class="rp-src">${escapeHtml(humanSource(it.source))}</span>
+                  ${originAnchorHtml(it, { className: "rp-link", showUrl: true })}
                   <span class="rp-why">${escapeHtml(
                     (state.shortlistReasons[it.id] || reasonFor(it)).slice(0, 3).join(" · ")
                   )}</span>
@@ -3412,7 +3472,8 @@
       const chip = e.target.closest(".source-card");
       if (!chip) return;
       const id = chip.dataset.source;
-      state.activeSource = state.activeSource === id ? null : id;
+      if (!id || id === "all") state.activeSource = null;
+      else state.activeSource = state.activeSource === id ? null : id;
       renderSources();
       const src =
         state.sources.find((s) => s.id === id) ||
@@ -3424,7 +3485,11 @@
         tag: "看源",
         tagClass: "",
         dot: src?.status === "working" ? "warn" : "ok",
-        html: `<p>${escapeHtml(src?.label || id)}：${escapeHtml(src?.statusText || "按来源过滤主墙")}。</p>`,
+        html: `<p>${escapeHtml(
+          !id || id === "all" ? "全部出处" : src?.label || id
+        )}：${escapeHtml(
+          !id || id === "all" ? "取消来源过滤" : src?.statusText || "按来源过滤主墙"
+        )}。</p>`,
       });
       if (state.tab !== "visual") switchTab("visual", { fromStage: true });
       else renderCanvas();
@@ -3505,6 +3570,7 @@
     });
 
     el.canvasBody.addEventListener("click", (e) => {
+      if (e.target.closest("[data-wall-link]")) return;
       const copyBtn = e.target.closest("[data-report-action='copy']");
       if (copyBtn) {
         copyReportNotes();
@@ -3629,7 +3695,8 @@
       }
       if (act === "open") {
         const it = findWallItem(state.focusId || ids[0]);
-        if (it?.page_url) window.open(it.page_url, "_blank", "noopener");
+        const href = pageUrlOf(it);
+        if (href) window.open(href, "_blank", "noopener");
         else toast("这张还没有可打开的原页");
       }
     });
@@ -3658,6 +3725,22 @@
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         el.composer.requestSubmit();
+      }
+    });
+
+    el.inspectorBody.addEventListener("click", (e) => {
+      const copyBtn = e.target.closest("[data-copy-url]");
+      if (!copyBtn) return;
+      const url = copyBtn.getAttribute("data-copy-url") || "";
+      if (!url) {
+        toast("这张还没有可打开的原页");
+        return;
+      }
+      const done = () => toast("原页链接已复制，可贴给客户核对");
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done).catch(() => fallbackCopy(url, done));
+      } else {
+        fallbackCopy(url, done);
       }
     });
 

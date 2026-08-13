@@ -707,25 +707,39 @@ button, input, textarea, select {
   background: var(--key-yellow);
 }
 
-/* Source status mini-cards */
+/* Source status — compact provenance pills, not a dashboard of fat cards */
 .source-cards {
   display: flex;
-  gap: 8px;
-  padding: 10px 14px 8px;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 0;
   overflow-x: auto;
   overflow-y: hidden;
   flex: none;
   overscroll-behavior-x: contain;
   scrollbar-width: thin;
 }
-.source-card { flex: 0 0 138px; }
-
+.source-kicker {
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  margin-right: 2px;
+}
+.source-empty {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
 .source-card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
   border: 1px solid var(--line);
   background: var(--surface-2);
   cursor: pointer;
@@ -739,19 +753,13 @@ button, input, textarea, select {
   box-shadow: var(--shadow);
 }
 .source-card .sc-name {
-  font-size: 12px;
-  font-weight: 700;
-}
-.source-card .sc-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10.5px;
-  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 .source-card .sdot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--ok);
   flex: none;
@@ -956,6 +964,38 @@ button, input, textarea, select {
   margin-top: 2px;
   font-size: 10px;
   color: var(--text-muted);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.wall-card .src-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wall-card .src-link {
+  flex: none;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--key-yellow);
+  border: 1px solid var(--ink);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 10px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+.wall-card .src-link:hover {
+  background: var(--key-yellow-press);
+}
+.src-missing {
+  flex: none;
+  color: #8a867c;
 }
 
 .wall-card .thumb img {
@@ -1261,7 +1301,42 @@ button, input, textarea, select {
   color: var(--ink);
 }
 .inspector-title { font-weight: 700; margin-bottom: 2px; font-size: 13px; }
-.inspector-src { font-size: 11px; color: var(--text-muted); margin-bottom: 14px; }
+.inspector-origin { margin: 0 0 14px; }
+.inspector-src { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+.insp-origin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.insp-open, .insp-copy-url {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--ink);
+  background: var(--key-yellow);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--ink);
+}
+.insp-copy-url {
+  background: var(--surface);
+  border-color: var(--line);
+}
+.insp-copy-url:hover, .insp-open:hover { background: var(--key-yellow-press); }
+.insp-copy-url:hover { background: #ECEAE3; }
+.insp-url {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.45;
+  word-break: break-all;
+  color: var(--ink);
+}
 
 .insp-block { margin-bottom: 14px; }
 .insp-block h4 {
@@ -1801,7 +1876,11 @@ button, input, textarea, select {
 }
 .sl-remove { color: var(--kill); }
 .sl-remove:hover { background: var(--kill-soft); border-color: #f0b4b6; }
-.sl-open:hover { background: #ECEAE3; }
+.sl-open {
+  background: var(--key-yellow);
+  border-color: var(--ink);
+}
+.sl-open:hover { background: var(--key-yellow-press); }
 
 /* L5 结论报告 */
 .rp-sec {
@@ -1856,6 +1935,21 @@ button, input, textarea, select {
 }
 .rp-shortlist li:last-child { border-bottom: none; }
 .rp-shortlist strong { margin: 0 6px; }
+.rp-src {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.rp-link {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink);
+  word-break: break-all;
+  margin-top: 2px;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+.rp-link:hover { border-bottom-color: var(--ink); }
 .rp-why { display: block; font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 .rp-risk { margin: 0; padding: 0; list-style: none; }
 .rp-risk li {

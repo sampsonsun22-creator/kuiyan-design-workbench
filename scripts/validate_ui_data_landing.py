@@ -142,6 +142,12 @@ def main() -> int:
         err.append("app.js missing async 按批注重筛")
     if "briefLaneLex" not in app:
         err.append("app.js missing Brief-aware lane reclassify")
+    if "function pageUrlOf" not in app or "data-wall-link" not in app:
+        err.append("app.js missing per-card origin linkage (pageUrlOf / data-wall-link)")
+    if "原页未标注" not in app:
+        err.append("missing honest 原页未标注 fallback (do not invent URLs)")
+    if "source-kicker" not in app:
+        err.append("source bar must render compact 出处 kicker")
 
     pack = ROOT / "ui-shell" / "data" / "product-pack.json"
     if pack.exists():
