@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p3`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p4`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -74,10 +74,16 @@ async function main() {
     for (const cat of ["primary", "analogy", "cross", "shelf"]) {
       chips[cat] = (await page.locator(`.cat-chip[data-cat="${cat}"]`).innerText()).trim();
     }
-    note(/同类 · 446/.test(chips.primary), `同类 chip ${chips.primary}`);
-    note(/不同类 · 2/.test(chips.analogy), `不同类 chip ${chips.analogy}`);
-    note(/跨界 · 0/.test(chips.cross), `跨界 chip ${chips.cross}`);
-    note(/货架 · 4/.test(chips.shelf), `货架 chip ${chips.shelf}`);
+    const nOf = (t) => Number((String(t).match(/(\d+)\s*$/) || [])[1] || NaN);
+    const nSame = nOf(chips.primary);
+    const nAdj = nOf(chips.analogy);
+    const nCross = nOf(chips.cross);
+    const nShelf = nOf(chips.shelf);
+    note(/同类/.test(chips.primary) && nSame >= 400, `同类 chip ${chips.primary}`);
+    note(/不同类/.test(chips.analogy) && nAdj >= 2, `不同类 chip ${chips.analogy}`);
+    note(/跨界/.test(chips.cross) && nCross === 0, `跨界 chip ${chips.cross}`);
+    note(/货架/.test(chips.shelf) && nShelf === 4, `货架 chip ${chips.shelf}`);
+    note(nSame + nAdj + nCross + nShelf === 452, `lane sum ${nSame}+${nAdj}+${nCross}+${nShelf}`);
 
     const visibleCards = await page.locator(".wall-card").count();
     note(visibleCards >= 8, `visible wall cards ${visibleCards}`);
@@ -109,6 +115,32 @@ async function main() {
     note(/检索词：/.test(sl), "L4 reasons include 检索词");
     note(/奎燕先验/.test(sl), "L4 reasons include 奎燕先验");
     note(!/色块与留白节奏可借鉴/.test(sl), "L4 has no invented craft prose");
+
+    await page.fill("#houCommentBox", "不要金红，多留白");
+    await page.locator('[data-shortlist-action="rescreen"]').click();
+    await page.waitForTimeout(400);
+    const slAfter = await page.locator(".l4-panel").innerText();
+    const toastTxt = await page.locator("#toast").innerText().catch(() => "");
+    note(
+      /重筛|重排|留白|金红/.test(slAfter + toastTxt),
+      `L4 comment rescreen reacts: ${(slAfter + toastTxt).slice(0, 80)}`
+    );
+
+    note(await page.locator("#btnNewResearch").isEnabled(), "新建研究 enabled");
+    note(await page.locator("#btnLlmSettings").count().then((n) => n === 1), "gear settings button present");
+    await page.locator("#btnLlmSettings").click();
+    await page.waitForSelector("#llmOverlay:not([hidden])");
+    const llmTxt = await page.locator("#llmDialog").innerText();
+    note(/奎燕设计智能体/.test(llmTxt) && /采集/.test(llmTxt) && /点点/.test(llmTxt), "settings lists three agents");
+    await page.locator("#llmClose").click();
+
+    await page.locator("#btnNewResearch").click();
+    await page.waitForSelector(".intent-panel");
+    const newBrief = await page.locator(".intent-panel").innerText();
+    note(/这是新建的一轮|墙是空的/.test(newBrief), `new research brief: ${newBrief.slice(0, 60)}`);
+    await page.locator('.research-card[data-id="r-green"]').click();
+    await page.locator('.tab[data-tab="visual"]').click();
+    await page.waitForFunction(() => /452/.test(document.getElementById("wallCountBar")?.textContent || ""));
 
     await page.locator('.tab[data-tab="report"]').click();
     await page.waitForSelector(".rp-sec");

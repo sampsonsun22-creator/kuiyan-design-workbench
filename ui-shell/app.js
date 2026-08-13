@@ -57,7 +57,7 @@
   ];
 
   // 青绿茶必须走壳权威 452/2680，禁止回落到 184 口径的过时绿茶 brief 文件
-  const RESEARCHES = [
+  const LANDING_RESEARCHES = [
     {
       id: "r-green",
       title: "青绿茶礼盒竞品调研",
@@ -92,6 +92,37 @@
       onlyBriefDefault: false,
     },
   ];
+  const CUSTOM_STORE = "key-vision-custom-researches";
+  const LLM_STORE = "key-vision-llm-agents";
+  let RESEARCHES = LANDING_RESEARCHES.map((r) => ({ ...r, feeds: r.feeds ? { ...r.feeds } : undefined }));
+
+  const LLM_PROVIDERS = {
+    openai: { label: "OpenAI", baseUrl: "https://api.openai.com/v1", model: "gpt-4o-mini" },
+    anthropic: { label: "Anthropic", baseUrl: "https://api.anthropic.com", model: "claude-sonnet-4-20250514" },
+    deepseek: { label: "DeepSeek", baseUrl: "https://api.deepseek.com", model: "deepseek-chat" },
+    moonshot: { label: "Moonshot 月之暗面", baseUrl: "https://api.moonshot.cn/v1", model: "moonshot-v1-auto" },
+    qwen: { label: "通义千问", baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-plus" },
+    zhipu: { label: "智谱 GLM", baseUrl: "https://open.bigmodel.cn/api/paas/v4", model: "glm-4-flash" },
+    custom: { label: "自定义 OpenAI 兼容", baseUrl: "", model: "" },
+  };
+
+  const AGENT_LLM_META = [
+    {
+      id: "orchestrator",
+      name: "奎燕设计智能体",
+      job: "听 Brief、和你对话、决策筛选、结论报告，并调度采集 / 点点。",
+    },
+    {
+      id: "crawler",
+      name: "采集",
+      job: "按 Brief 把已落地主墙分成同类 / 不同类 / 跨界。货架是在售切片，不是第四品类。本版不发起新爬取。",
+    },
+    {
+      id: "dotdot",
+      name: "点点",
+      job: "视觉 / 体验 / 商业三组打标；批注按已有字段重筛。缺值写未标注，不编造开箱、评论、成本。",
+    },
+  ];
 
   const state = {
     bundle: null,
@@ -124,6 +155,11 @@
     shortlistAuto: false,
     shortlistTouched: false,
     dims: null,
+    chatTurns: [],
+    llmBusy: false,
+    llmAgents: {},
+    llmFocus: "orchestrator",
+    proxyOk: null,
   };
 
   const SHORTLIST_TARGET = 12;
@@ -154,6 +190,16 @@
     qCount: $("qCount"),
     researchTitle: $("researchTitle"),
     btnNew: $("btnNewResearch"),
+    btnSettings: $("btnLlmSettings"),
+    btnCapConfig: $("btnCapConfig"),
+    llmOverlay: $("llmOverlay"),
+    llmForm: $("llmForm"),
+    llmAgentFields: $("llmAgentFields"),
+    llmProxyHint: $("llmProxyHint"),
+    llmClose: $("llmClose"),
+    llmTest: $("llmTest"),
+    sendBtn: $("sendBtn"),
+    qHint: document.querySelector(".q-hint"),
     right: document.querySelector(".right"),
     wallCountBar: $("wallCountBar"),
     pendingToggle: $("pendingToggle"),
@@ -165,6 +211,133 @@
     el.toast.classList.add("show");
     clearTimeout(toast._t);
     toast._t = setTimeout(() => el.toast.classList.remove("show"), 2200);
+  }
+
+  const GEAR_SVG = `<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="1.8"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M19.4 13.1a1.2 1.2 0 0 0 .24-1.1 7.4 7.4 0 0 0 0-.2 1.2 1.2 0 0 0-.24-1.1l1.6-1.3-1.8-3.1-2 .8a7.2 7.2 0 0 0-1.9-1.1l-.3-2.1h-3.6l-.3 2.1a7.2 7.2 0 0 0-1.9 1.1l-2-.8-1.8 3.1 1.6 1.3a1.2 1.2 0 0 0-.24 1.1 7.4 7.4 0 0 0 0 .2 1.2 1.2 0 0 0 .24 1.1l-1.6 1.3 1.8 3.1 2-.8a7.2 7.2 0 0 0 1.9 1.1l.3 2.1h3.6l.3-2.1a7.2 7.2 0 0 0 1.9-1.1l2 .8 1.8-3.1-1.6-1.3Z"/></svg>`;
+
+  function defaultAgentLlm(id) {
+    return {
+      id,
+      provider: "deepseek",
+      baseUrl: LLM_PROVIDERS.deepseek.baseUrl,
+      model: LLM_PROVIDERS.deepseek.model,
+      apiKey: "",
+      inherit: id !== "orchestrator",
+    };
+  }
+
+  function loadLlmAgents() {
+    let saved = {};
+    try {
+      saved = JSON.parse(localStorage.getItem(LLM_STORE) || "{}") || {};
+    } catch (_) {
+      saved = {};
+    }
+    const out = {};
+    AGENT_LLM_META.forEach((m) => {
+      out[m.id] = { ...defaultAgentLlm(m.id), ...(saved[m.id] || {}) };
+    });
+    state.llmAgents = out;
+    return out;
+  }
+
+  function persistLlmAgents() {
+    try {
+      localStorage.setItem(LLM_STORE, JSON.stringify(state.llmAgents || {}));
+    } catch (_) {}
+    syncLlmUi();
+  }
+
+  function llmReady(id) {
+    const cfg = llmConfigFor(id);
+    return Boolean(cfg && cfg.apiKey && cfg.model && cfg.baseUrl);
+  }
+
+  function llmConfigFor(id) {
+    const all = state.llmAgents || loadLlmAgents();
+    const own = all[id] || defaultAgentLlm(id);
+    if (id !== "orchestrator" && own.inherit) {
+      const parent = all.orchestrator || defaultAgentLlm("orchestrator");
+      return { ...parent, id, inherit: true };
+    }
+    return own;
+  }
+
+  function syncLlmUi() {
+    const any = AGENT_LLM_META.some((m) => llmReady(m.id));
+    if (el.btnSettings) el.btnSettings.classList.toggle("ready", any);
+    document.querySelectorAll(".cap-gear").forEach((btn) => {
+      btn.classList.toggle("ready", llmReady(btn.dataset.llmAgent));
+    });
+    if (el.composerInput) {
+      el.composerInput.placeholder = any
+        ? "问这轮墙和 Brief。看 Brief / 看版图 / 帮我筛选 / 出结论 仍可跳转。"
+        : "先点右上角齿轮，给三个智能体配 API，才能真正对话。";
+    }
+  }
+
+  function todayISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  function hydrateCustomResearches() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(CUSTOM_STORE) || "[]");
+      if (!Array.isArray(raw) || !raw.length) return;
+      const landing = new Set(LANDING_RESEARCHES.map((r) => r.id));
+      const extras = raw.filter((r) => r && r.id && !landing.has(r.id)).slice(0, 20);
+      if (extras.length) RESEARCHES = extras.concat(RESEARCHES);
+    } catch (_) {}
+  }
+
+  function persistCustomResearches() {
+    const extras = RESEARCHES.filter((r) => r.custom).map((r) => ({
+      id: r.id,
+      title: r.title,
+      date: r.date,
+      status: r.status,
+      question: r.question,
+      custom: true,
+      emptyWall: true,
+      onlyBriefDefault: false,
+      feeds: { main: [] },
+      brief: r.brief || {},
+    }));
+    try {
+      localStorage.setItem(CUSTOM_STORE, JSON.stringify(extras));
+    } catch (_) {}
+  }
+
+  function emptyBundleFor(r) {
+    const input = r.brief || {};
+    return {
+      bucket_id_to_zh: (state.bundle && state.bundle.bucket_id_to_zh) || {},
+      l1: {
+        brief_id: r.id,
+        raw_brief: r.question || "",
+        input: {
+          product: input.product || "",
+          audience: input.audience || "",
+          channel: input.channel || "",
+          occasion: input.occasion || "",
+          culture_tone: input.culture_tone || "",
+          price_band: input.price_band || "",
+          must_have: input.must_have || [],
+          must_avoid: input.must_avoid || [],
+        },
+        intent: {},
+      },
+      l3: { counts: {}, ai_recommended_buckets: [], l1_summary: {} },
+      l4_cards: [],
+    };
+  }
+
+  function syncQuestionMode() {
+    const r = currentResearch();
+    const editable = Boolean(r && r.custom);
+    if (el.researchQuestion) el.researchQuestion.readOnly = !editable;
+    if (el.qHint) el.qHint.textContent = editable ? "本轮研究问题（可改）" : "本轮研究问题（只读）";
   }
 
   
@@ -265,7 +438,10 @@
       <li class="cap-card ${c.id === "orchestrator" ? "active" : ""}" data-id="${c.id}">
         <span class="dot ${c.status}"></span>
         <div>
-          <div class="cap-name">${escapeHtml(c.name)}</div>
+          <div class="cap-name-row">
+            <div class="cap-name">${escapeHtml(c.name)}</div>
+            <button type="button" class="cap-gear${llmReady(c.id) ? " ready" : ""}" data-llm-agent="${c.id}" title="配置 ${escapeAttr(c.name)} 的 API" aria-label="配置 ${escapeAttr(c.name)} 的 API">${GEAR_SVG}</button>
+          </div>
           <div class="cap-action">${escapeHtml(c.lastAction)}</div>
         </div>
       </li>`
@@ -335,7 +511,7 @@
     const main = state.feedCounts.main || 0;
     const pending = state.feedCounts.pending || 0;
     if (!main && !pending && !state.wallItems.length) {
-      el.wallCountBar.textContent = "墙还在长";
+      el.wallCountBar.textContent = currentResearch().emptyWall ? "这轮还没有采集 · 墙是空的" : "墙还在长";
       return;
     }
     const shown = getFilteredWallItems().length;
@@ -630,6 +806,7 @@
   }
 
   async function loadMainWallText(paths) {
+    if (Array.isArray(paths) && paths.length === 0) return "";
     const list = paths && paths.length
       ? paths
       : [
@@ -650,7 +827,7 @@
     if (a.ok) text += await a.text();
     if (b.ok) text += (text && !text.endsWith("\n") ? "\n" : "") + (await b.text());
     if (text.trim()) return text;
-    throw new Error("main wall missing");
+    return "";
   }
 
   function normalizeBundle(j) {
@@ -727,6 +904,20 @@
 
   async function loadLiveFeeds(research) {
     const r = research || RESEARCHES.find((x) => x.id === state.activeResearchId) || RESEARCHES[0];
+    const emptyWall = Boolean(r.emptyWall) || (r.feeds && Array.isArray(r.feeds.main) && r.feeds.main.length === 0);
+    if (emptyWall) {
+      state.wallItems = [];
+      state.pendingItems = [];
+      state.feedCounts = { main: 0, pending: 0 };
+      state.preferredBuckets = [];
+      state.wallVisibleLimit = WALL_BATCH_INITIAL;
+      rebuildSourcesFromWall();
+      updateWallCountBar();
+      setCap("crawler", "idle", "这轮还没有采集，墙是空的");
+      setCap("dotdot", "idle", "没有样本可打标");
+      if (!userArmedPending) forceProductWallDefaults("after-empty-feeds");
+      return;
+    }
     const [mainText, bucketsRes] = await Promise.all([
       loadMainWallText(r.feeds && r.feeds.main),
       fetch("data/style-buckets-v1.json"),
@@ -745,6 +936,7 @@
       state.bucketIdToZh = { ...state.bundle.bucket_id_to_zh };
     }
     const mainRaw = parseJsonl(mainText);
+    if (r.id === "r-green" && !mainRaw.length) throw new Error("main wall missing");
     state.wallItems = mainRaw
       .map((row) => normalizeFeedItem(row, "main_wall"))
       .filter((it) => imgFor(it) || it.page_url || it.id);
@@ -781,10 +973,11 @@
     }
     rebuildSourcesFromWall();
     updateWallCountBar();
+    const lanesNow = scopeCounts();
     setCap(
       "crawler",
       "idle",
-      `主墙 ${state.feedCounts.main} · 待复核 ${state.feedCounts.pending}`
+      `同类 ${lanesNow.same} · 不同类 ${lanesNow.adjacent} · 跨界 ${lanesNow.cross} · 货架 ${lanesNow.shelf}`
     );
     setCap("dotdot", "idle", `主墙已经铺好，等你点选`);
     if (!userArmedPending) forceProductWallDefaults("after-feeds");
@@ -849,11 +1042,75 @@
     return 2;
   }
 
-  function wallRole(it) {
-    if (!it) return "primary";
+  const LANE_LEX = {
+    tea: /茶|tea|matcha|绿茶|青茶|红茶|白茶|乌龙|普洱|龙井|茉莉|花茶|茶叶/i,
+    liquor: /白酒|黄酒|酒礼|葡萄酒|wine|sake|baijiu|huangjiu|红酒|洋酒|beer|啤酒|mezcal|威士忌|白酒礼/i,
+    tonic: /滋补|阿胶|人参|膏方|保健礼|tonic|herbal\s*gift|养生/i,
+    pastry: /糕点|月饼|巧克力|chocolate|饼干|bakery|点心礼/i,
+    coffee: /咖啡|coffee|latte|espresso/i,
+    cultural: /文创|博物馆|特产礼/i,
+    cross: /香氛|香水|perfume|fragrance|美妆|护肤|cosmetic|skincare|潮玩|家居|服饰|球鞋|艺术衍生|高端水|mineral\s*water|国潮美妆/i,
+  };
+
+  function itemLaneBlob(it) {
+    return [
+      it.title,
+      it.query_used,
+      it.category_label,
+      Array.isArray(it.raw_tags) ? it.raw_tags.join(" ") : "",
+      it.author_or_brand,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  function briefLaneLex() {
+    const input = state.bundle?.l1?.input || {};
+    const intent = state.bundle?.l1?.intent || {};
+    const blob = [input.product, input.category_text, intent.domain_label_zh, currentResearch().title, currentResearch().question]
+      .filter(Boolean)
+      .join(" ");
+    if (LANE_LEX.liquor.test(blob) && !LANE_LEX.tea.test(blob)) {
+      return {
+        same: LANE_LEX.liquor,
+        adjacent: new RegExp(
+          `${LANE_LEX.tea.source}|${LANE_LEX.tonic.source}|${LANE_LEX.pastry.source}|${LANE_LEX.coffee.source}`,
+          "i"
+        ),
+      };
+    }
+    if (LANE_LEX.tonic.test(blob) && !LANE_LEX.tea.test(blob)) {
+      return {
+        same: LANE_LEX.tonic,
+        adjacent: new RegExp(`${LANE_LEX.tea.source}|${LANE_LEX.liquor.source}|${LANE_LEX.pastry.source}`, "i"),
+      };
+    }
+    return {
+      same: LANE_LEX.tea,
+      adjacent: new RegExp(
+        `${LANE_LEX.liquor.source}|${LANE_LEX.tonic.source}|${LANE_LEX.pastry.source}|${LANE_LEX.coffee.source}|${LANE_LEX.cultural.source}`,
+        "i"
+      ),
+    };
+  }
+
+  function searchScope(it) {
+    if (!it) return "same";
     if (String(it.source_type || "").toLowerCase() === "shelf") return "shelf";
-    const rel = (it.extra && it.extra.brief_relevance_v1) || "";
-    if (it.analogy_from || rel === "keep_analogy") return "analogy";
+    const blob = itemLaneBlob(it);
+    const lex = briefLaneLex();
+    if (LANE_LEX.cross.test(blob) && !lex.same.test(blob)) return "cross";
+    if (lex.adjacent.test(blob) && !lex.same.test(blob)) return "adjacent";
+    const rel = it.extra && it.extra.brief_relevance_v1;
+    if ((it.analogy_from || rel === "keep_analogy") && !lex.same.test(blob)) return "adjacent";
+    return "same";
+  }
+
+  function wallRole(it) {
+    const s = searchScope(it);
+    if (s === "shelf") return "shelf";
+    if (s === "adjacent") return "analogy";
+    if (s === "cross") return "cross";
     return "primary";
   }
 
@@ -875,16 +1132,6 @@
       const cat = chip.dataset.cat;
       if (labels[cat]) chip.textContent = labels[cat];
     });
-  }
-
-  function searchScope(it) {
-    const role = wallRole(it);
-    if (role === "shelf") return "shelf";
-    if (role === "analogy") return "adjacent";
-    if (it && (it.search_scope === "cross" || (it.extra && it.extra.search_scope === "cross"))) {
-      return "cross";
-    }
-    return "same";
   }
 
   function isAnalogyItem(it) {
@@ -1304,6 +1551,11 @@
   }
 
   function renderVisual() {
+    if (currentResearch().emptyWall && !state.wallItems.length) {
+      return `<div class="empty"><div class="slogan">这轮墙是空的</div>
+        <p class="hint">新建研究不会从青绿茶那轮抄 452 张过来。先在 Brief 钉死卖给谁；采集通道开通前，这里就是空的。</p>
+        <button type="button" class="empty-cta" data-empty-action="open-intent">去填 Brief</button></div>`;
+    }
     if (!state.bundle && !state.wallItems.length) {
       return `<div class="empty"><div class="slogan">墙还在长</div><p class="hint">正在把和 brief 更贴的参考搬上来…</p><button type="button" class="empty-cta" data-empty-action="open-intent">先看这次要搞清的事</button></div>`;
     }
@@ -1499,6 +1751,304 @@
 
   function currentResearch() {
     return RESEARCHES.find((x) => x.id === state.activeResearchId) || RESEARCHES[0];
+  }
+
+  function splitTags(v) {
+    return String(v || "")
+      .split(/[、,，;；\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+
+  function researchContextText() {
+    const r = currentResearch();
+    const input = state.bundle?.l1?.input || {};
+    const lanes = scopeCounts();
+    return [
+      `研究：${r.title}`,
+      `问题：${r.question || (el.researchQuestion && el.researchQuestion.value) || ""}`,
+      `产品：${input.product || "未标注"}；客群：${input.audience || "未标注"}；渠道：${input.channel || "渠道未标注"}；场合：${input.occasion || "未标注"}；气质：${input.culture_tone || "未标注"}`,
+      `必须有：${(input.must_have || []).join("、") || "未标注"}；必须避开：${(input.must_avoid || []).join("、") || "未标注"}`,
+      `主墙 ${state.feedCounts.main} 张；待复核 ${state.feedCounts.pending}`,
+      `按 Brief 动态分路：同类 ${lanes.same} · 不同类 ${lanes.adjacent} · 跨界 ${lanes.cross} · 货架 ${lanes.shelf}（货架是在售切片，不是第四品类）`,
+      `短名单 ${state.shortlistVisual.length} 款；方向假设卡 ${(state.bundle?.l4_cards || []).length} 张（示意·非完稿）`,
+      "铁律：不编造没采到的跨界/用户评论/开箱/成本；缺就写缺；不发起新采集；不把方向卡当完稿。",
+    ].join("\n");
+  }
+
+  function agentSystemPrompt(id) {
+    const meta = AGENT_LLM_META.find((m) => m.id === id) || AGENT_LLM_META[0];
+    const extra = {
+      orchestrator:
+        "你是奎燕设计智能体，KEY 视界的编排者。用中文、短句、像内部工作台同事。可以调度采集做分路、点点做打标/重筛，但本版不能真的去网上爬。先回答用户，必要时指出该点哪个页签。",
+      crawler:
+        "你是采集。只根据已落地主墙和 Brief 谈同类/不同类/跨界/货架。货架=在售切片。禁止声称已经连上淘宝深采或编造样本。",
+      dotdot:
+        "你是点点。按视觉/体验/商业三组说话。没采到的维度写未标注。批注重筛只在已落地墙上重排。",
+    };
+    return `${extra[id] || extra.orchestrator}\n职责：${meta.job}\n\n当前研究上下文：\n${researchContextText()}`;
+  }
+
+  async function probeLlmProxy() {
+    try {
+      const res = await fetch("/api/llm/health", { cache: "no-store" });
+      const j = res.ok ? await res.json() : null;
+      state.proxyOk = Boolean(j && j.ok);
+    } catch (_) {
+      state.proxyOk = false;
+    }
+    if (el.llmProxyHint) {
+      el.llmProxyHint.className = "llm-proxy " + (state.proxyOk ? "ok" : "warn");
+      el.llmProxyHint.textContent = state.proxyOk
+        ? "本机转发已接通。Key 只随这次请求送到对应模型，不会落盘。"
+        : "没找到本机转发（/api/llm/health）。静态托管会因浏览器跨域失败；请用 scripts/key_vision_server.py 打开本页。";
+    }
+    return state.proxyOk;
+  }
+
+  async function callLlm(agentId, messages, { json: wantJson } = {}) {
+    const cfg = llmConfigFor(agentId);
+    if (!cfg || !cfg.apiKey || !cfg.model) {
+      const err = new Error("NO_LLM");
+      err.code = "NO_LLM";
+      err.agent = agentId;
+      throw err;
+    }
+    const payload = {
+      agent: agentId,
+      provider: cfg.provider,
+      base_url: cfg.baseUrl,
+      api_key: cfg.apiKey,
+      model: cfg.model,
+      messages,
+    };
+    const res = await fetch("/api/llm/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    let data = {};
+    try {
+      data = await res.json();
+    } catch (_) {
+      data = {};
+    }
+    if (!res.ok || !data.ok) {
+      throw new Error(data.detail || data.error || `HTTP ${res.status}`);
+    }
+    const text = String(data.text || "").trim();
+    if (wantJson) {
+      const m = text.match(/\{[\s\S]*\}/);
+      if (!m) throw new Error("模型没有返回 JSON");
+      return JSON.parse(m[0]);
+    }
+    return text;
+  }
+
+  function renderLlmForm(focusId) {
+    loadLlmAgents();
+    state.llmFocus = focusId || state.llmFocus || "orchestrator";
+    const providerOpts = Object.entries(LLM_PROVIDERS)
+      .map(([id, p]) => `<option value="${id}">${escapeHtml(p.label)}</option>`)
+      .join("");
+    el.llmAgentFields.innerHTML = AGENT_LLM_META.map((m) => {
+      const cfg = state.llmAgents[m.id] || defaultAgentLlm(m.id);
+      const inherit = m.id !== "orchestrator";
+      return `<section class="llm-agent${m.id === state.llmFocus ? " active-edit" : ""}" data-agent="${m.id}">
+        <h3>${escapeHtml(m.name)}</h3>
+        <p class="llm-job">${escapeHtml(m.job)}</p>
+        ${
+          inherit
+            ? `<label class="llm-inherit"><input type="checkbox" data-llm-field="inherit" ${
+                cfg.inherit ? "checked" : ""
+              }/> 跟编排器用同一套 API</label>`
+            : ""
+        }
+        <div class="llm-grid" ${inherit && cfg.inherit ? "hidden" : ""}>
+          <label>提供商</label>
+          <select data-llm-field="provider">${providerOpts.replace(
+            `value="${cfg.provider}"`,
+            `value="${cfg.provider}" selected`
+          )}</select>
+          <label>接口地址</label>
+          <input data-llm-field="baseUrl" value="${escapeAttr(cfg.baseUrl || "")}" placeholder="https://api.example.com/v1" />
+          <label>模型</label>
+          <input data-llm-field="model" value="${escapeAttr(cfg.model || "")}" placeholder="model id" />
+          <label>API Key</label>
+          <input data-llm-field="apiKey" type="password" autocomplete="off" value="${escapeAttr(cfg.apiKey || "")}" placeholder="只存在这台浏览器" />
+        </div>
+      </section>`;
+    }).join("");
+    probeLlmProxy();
+  }
+
+  function readLlmForm() {
+    el.llmAgentFields.querySelectorAll(".llm-agent").forEach((sec) => {
+      const id = sec.dataset.agent;
+      const prev = state.llmAgents[id] || defaultAgentLlm(id);
+      const get = (name) => {
+        const node = sec.querySelector(`[data-llm-field="${name}"]`);
+        if (!node) return prev[name];
+        if (node.type === "checkbox") return node.checked;
+        return node.value;
+      };
+      state.llmAgents[id] = {
+        ...prev,
+        provider: get("provider"),
+        baseUrl: get("baseUrl"),
+        model: get("model"),
+        apiKey: get("apiKey"),
+        inherit: id === "orchestrator" ? false : Boolean(get("inherit")),
+      };
+    });
+  }
+
+  function openLlmSettings(agentId) {
+    loadLlmAgents();
+    if (agentId) state.llmFocus = agentId;
+    renderLlmForm(state.llmFocus);
+    if (el.llmOverlay) el.llmOverlay.hidden = false;
+  }
+
+  function closeLlmSettings() {
+    if (el.llmOverlay) el.llmOverlay.hidden = true;
+  }
+
+  function bindLlmFormEvents() {
+    if (!el.llmForm || el.llmForm.dataset.bound) return;
+    el.llmForm.dataset.bound = "1";
+    el.llmAgentFields.addEventListener("change", (e) => {
+      const field = e.target.closest("[data-llm-field]");
+      if (!field) return;
+      readLlmForm();
+      if (field.dataset.llmField === "provider") {
+        const sec = field.closest(".llm-agent");
+        const id = sec && sec.dataset.agent;
+        const p = LLM_PROVIDERS[field.value];
+        if (p && id) {
+          if (p.baseUrl) state.llmAgents[id].baseUrl = p.baseUrl;
+          if (p.model) state.llmAgents[id].model = p.model;
+        }
+      }
+      renderLlmForm(state.llmFocus);
+    });
+    el.llmForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      readLlmForm();
+      persistLlmAgents();
+      closeLlmSettings();
+      toast("三个智能体的 API 已保存在这台浏览器");
+      appendEvent({
+        agent: "系统",
+        time: "现在",
+        tag: "模型已接上",
+        tagClass: "consensus",
+        dot: "ok",
+        html: `<p>编排 ${llmReady("orchestrator") ? "已接" : "未接"} · 采集 ${
+          llmReady("crawler") ? "已接" : "未接"
+        } · 点点 ${llmReady("dotdot") ? "已接" : "未接"}。中间栏可以开始对话，决策筛选的批注可以交给点点重筛。</p>`,
+      });
+    });
+    if (el.llmTest) {
+      el.llmTest.addEventListener("click", async () => {
+        readLlmForm();
+        persistLlmAgents();
+        const id = state.llmFocus || "orchestrator";
+        el.llmTest.disabled = true;
+        try {
+          const text = await callLlm(id, [
+            { role: "system", content: agentSystemPrompt(id) },
+            { role: "user", content: "只回四个字：已接通。" },
+          ]);
+          toast(`${AGENT_LLM_META.find((m) => m.id === id).name}：${String(text).slice(0, 24)}`);
+        } catch (err) {
+          if (err.code === "NO_LLM") openLlmSettings(id);
+          toast(`测试失败：${err.message || err}`);
+        } finally {
+          el.llmTest.disabled = false;
+        }
+      });
+    }
+    if (el.llmClose) el.llmClose.addEventListener("click", closeLlmSettings);
+    if (el.llmOverlay) {
+      el.llmOverlay.addEventListener("click", (e) => {
+        if (e.target === el.llmOverlay) closeLlmSettings();
+      });
+    }
+  }
+
+  function mdLite(text) {
+    const safe = escapeHtml(text || "").replace(/\n/g, "<br>");
+    return `<p>${safe}</p>`;
+  }
+
+  async function askAgent(agentId, userText) {
+    const history = state.chatTurns.slice(-8);
+    const messages = [
+      { role: "system", content: agentSystemPrompt(agentId) },
+      ...history,
+      { role: "user", content: userText },
+    ];
+    const reply = await callLlm(agentId, messages);
+    state.chatTurns.push({ role: "user", content: userText });
+    state.chatTurns.push({ role: "assistant", content: reply });
+    if (state.chatTurns.length > 16) state.chatTurns = state.chatTurns.slice(-16);
+    return reply;
+  }
+
+  function createNewResearch() {
+    const id = `r-draft-${Date.now()}`;
+    const r = {
+      id,
+      title: "未命名研究",
+      date: todayISO(),
+      status: "running",
+      active: true,
+      custom: true,
+      emptyWall: true,
+      onlyBriefDefault: false,
+      question: "",
+      feeds: { main: [] },
+      brief: {
+        product: "",
+        audience: "",
+        channel: "",
+        occasion: "",
+        culture_tone: "",
+        must_have: [],
+        must_avoid: [],
+      },
+    };
+    RESEARCHES.forEach((x) => (x.active = false));
+    RESEARCHES.unshift(r);
+    persistCustomResearches();
+    applyResearch(id);
+  }
+
+  function saveCustomBriefFromDom() {
+    const r = currentResearch();
+    if (!r || !r.custom) return;
+    const panel = el.canvasBody.querySelector(".intent-panel");
+    if (!panel) return;
+    const val = (name) => {
+      const node = panel.querySelector(`[data-brief-field="${name}"]`);
+      return node ? node.value.trim() : "";
+    };
+    r.brief = r.brief || {};
+    r.brief.product = val("product");
+    r.brief.audience = val("audience");
+    r.brief.channel = val("channel");
+    r.brief.occasion = val("occasion");
+    r.brief.culture_tone = val("culture_tone");
+    r.brief.price_band = val("price_band");
+    r.brief.must_have = splitTags(val("must_have"));
+    r.brief.must_avoid = splitTags(val("must_avoid"));
+    if (r.brief.product) r.title = `${r.brief.product}竞品调研`;
+    r.question = (el.researchQuestion && el.researchQuestion.value) || r.question;
+    state.bundle = emptyBundleFor(r);
+    persistCustomResearches();
+    renderResearch();
+    if (el.researchTitle) el.researchTitle.textContent = r.title;
   }
 
   /* ---------- L4 决策筛选：只在已落地主墙上收短名单 ---------- */
@@ -1748,28 +2298,20 @@
     return (it.suggested_style_buckets || []).some((b) => wanted.has(b));
   }
 
-  function rescreenByComment() {
-    const comment = String(state.houComment || "").trim();
-    if (!comment) {
-      toast("先写一句批注，我再按它重排");
-      return;
-    }
+  function applyLocalRescreen(comment) {
     const cands = shortlistCandidates();
     const corpus = cands.map(itemBlob).join(" ");
-    const { neg, pos, unresolved } = parseComment(comment, corpus);
-    if (!neg.length && !pos.length) {
-      toast("这句批注在本轮字段里判不了，先没动短名单");
-      appendEvent({
-        agent: "奎燕设计智能体",
-        time: "现在",
-        tag: "按批注重筛",
-        tagClass: "challenge",
-        dot: "warn",
-        html: `<p>「${escapeHtml(comment.slice(0, 40))}」我在这轮数据里对不上——标题、检索词、风格桶里都没有能对应的词，色彩和开箱又多数未标注。短名单先没动。</p>
-          <div class="event-note">换个说法（例如「留白」「中式」「工艺材质」「礼赠开箱」）我就能在墙上重排；要真按色彩筛，得先把 L3 色彩维度补采。</div>`,
+    const parsed = parseComment(comment, corpus);
+    let { neg, pos, unresolved } = parsed;
+    COMMENT_BUCKET_HINTS.forEach((h) => {
+      h.words.forEach((w) => {
+        if (comment.includes(w) && !pos.includes(w) && !neg.includes(w)) {
+          if (/(不要|别|避开|去掉)/.test(comment) && comment.indexOf(w) > comment.search(/不要|别|避开|去掉/)) {
+            if (!neg.includes(w)) neg.push(w);
+          } else if (!pos.includes(w)) pos.push(w);
+        }
       });
-      return;
-    }
+    });
     const dropped = [];
     const kept = cands.filter((it) => {
       if (neg.some((w) => wordHitsItem(w, it))) {
@@ -1781,28 +2323,112 @@
     const hits = new Map();
     kept.forEach((it) => hits.set(it.id, pos.filter((w) => wordHitsItem(w, it))));
     const scoreFn = (it) => pickScore(it) + (hits.get(it.id) || []).length * 5;
-    const picked = pickDiverse(kept, SHORTLIST_TARGET, scoreFn);
+    const picked = pickDiverse(kept.length ? kept : cands, SHORTLIST_TARGET, scoreFn);
     setShortlist(picked, hits);
     state.shortlistTouched = true;
     state.shortlistAuto = true;
     renderCanvas();
-    toast("按批注在已落地的 452 张墙上重排了 · 没有新采集");
     const hitN = picked.filter((it) => (hits.get(it.id) || []).length).length;
+    const mapped = Boolean(neg.length || pos.length);
+    toast(mapped ? "按批注在已落地主墙上重排了 · 没有新采集" : "字段对不上这句，先按 Brief 重收了一轮");
     appendEvent({
-      agent: "奎燕设计智能体",
+      agent: "点点",
+      time: "现在",
+      tag: "按批注重筛",
+      tagClass: mapped ? "consensus" : "challenge",
+      dot: mapped ? "ok" : "warn",
+      html: `<p>按你这句「${escapeHtml(comment.slice(0, 40))}」在墙上重排：认出<strong>${escapeHtml(
+        pos.join("、") || "—"
+      )}</strong>${neg.length ? `，要躲开<strong>${escapeHtml(neg.join("、"))}</strong>` : ""}；短名单 ${picked.length} 款，直接命中 ${hitN}，剔除 ${dropped.length}。</p>
+        <div class="event-note">重筛只在已落地的 ${state.feedCounts.main} 张主墙上重排，没有发起新采集。${
+          unresolved.length
+            ? `「${escapeHtml(unresolved.slice(0, 3).join("、"))}」这类词本轮判不了。`
+            : ""
+        }${mapped ? "" : " 配好点点的 API，才能按自然语言重筛。"}</div>`,
+    });
+  }
+
+  async function rescreenWithLlm(comment, agentId) {
+    const cands = shortlistCandidates().slice(0, 40);
+    if (!cands.length) {
+      toast("墙上没有能进短名单的样本");
+      return;
+    }
+    const compact = cands.map((it) => ({
+      id: it.id,
+      title: humanTitle(it.title || it.id),
+      scope: scopeLabel(it),
+      source: humanSource(it.source),
+      query: it.query_used || "",
+      buckets: (it.suggested_style_buckets || []).map((b) => state.bucketIdToZh[b] || b),
+      brief: briefRelLabel(it),
+    }));
+    toast("点点正在按批注重筛…");
+    const data = await callLlm(
+      agentId,
+      [
+        {
+          role: "system",
+          content: `${agentSystemPrompt(agentId)}\n只返回 JSON：{"keep":["id"],"drop":["id"],"note":"一句中文说明"}。keep 必须来自给定 id，8到12个。禁止发明新样本。`,
+        },
+        { role: "user", content: `批注：${comment}\n候选：${JSON.stringify(compact)}` },
+      ],
+      { json: true }
+    );
+    const allow = new Set(cands.map((it) => it.id));
+    const keepIds = (data.keep || []).filter((id) => allow.has(id));
+    let picked = keepIds.map((id) => cands.find((it) => it.id === id)).filter(Boolean);
+    if (picked.length < SHORTLIST_MIN) {
+      cands.forEach((it) => {
+        if (picked.length >= SHORTLIST_TARGET) return;
+        if (!picked.some((x) => x.id === it.id)) picked.push(it);
+      });
+    }
+    picked = picked.slice(0, SHORTLIST_TARGET);
+    const hits = new Map();
+    picked.forEach((it) => hits.set(it.id, [comment.slice(0, 24)]));
+    setShortlist(picked, hits);
+    state.shortlistTouched = true;
+    state.shortlistAuto = true;
+    renderCanvas();
+    toast("点点已按批注重筛 · 没有新采集");
+    appendEvent({
+      agent: "点点",
       time: "现在",
       tag: "按批注重筛",
       tagClass: "consensus",
       dot: "ok",
-      html: `<p>按你这句「${escapeHtml(comment.slice(0, 40))}」在墙上重排：认出<strong>${escapeHtml(
-        pos.join("、") || "—"
-      )}</strong>${neg.length ? `，要躲开<strong>${escapeHtml(neg.join("、"))}</strong>` : ""}；短名单里 <strong>${hitN}</strong> 款直接命中，剔除 <strong>${dropped.length}</strong> 款，其余按风格桶铺开凑到 ${picked.length} 款。</p>
-        <div class="event-note">重筛只在已落地的 452 张主墙上重排，没有发起新采集。${
-          unresolved.length
-            ? `「${escapeHtml(unresolved.slice(0, 3).join("、"))}」这类词本轮判不了——色彩、开箱、用户反馈还没采。`
-            : "缺的路（跨界 0 / 用户反馈未采）还是缺。"
-        }</div>`,
+      html: `<p>${escapeHtml(data.note || "已按批注在已落地墙上重排。")} 短名单 ${picked.length} 款。</p>
+        <div class="event-note">重筛只动排序，不动 ${state.feedCounts.main} 张主墙的边界。</div>`,
     });
+  }
+
+  async function rescreenByComment() {
+    const box = document.getElementById("houCommentBox");
+    if (box) state.houComment = box.value;
+    const comment = String(state.houComment || "").trim();
+    if (!comment) {
+      toast("先写一句批注，再按它重筛");
+      if (box) box.focus();
+      return;
+    }
+    const agentId = llmReady("dotdot") ? "dotdot" : llmReady("orchestrator") ? "orchestrator" : "";
+    if (agentId) {
+      try {
+        await rescreenWithLlm(comment, agentId);
+        return;
+      } catch (err) {
+        appendEvent({
+          agent: "点点",
+          time: "现在",
+          tag: "模型没接通",
+          tagClass: "challenge",
+          dot: "warn",
+          html: `<p>点点这次没打通（${escapeHtml(err.message || String(err))}）。先用墙上已有字段做一轮本地重筛。</p>`,
+        });
+      }
+    }
+    applyLocalRescreen(comment);
   }
 
   /* ---------- L1 意图识别 ---------- */
@@ -1857,9 +2483,14 @@
         (arr || []).length ? "" : " kv-empty"
       }">${escapeHtml((arr || []).join(" · ") || "未标注")}</span></div>`;
 
+    const custom = Boolean(currentResearch().custom);
     const briefLoaded = Boolean(
       l1.raw_brief && (input.channel || input.audience || (input.must_have || []).length)
     );
+    const field = (name, label, value, placeholder) =>
+      `<div class="kv-edit"><label>${escapeHtml(label)}</label><input class="brief-input" data-brief-field="${name}" value="${escapeAttr(
+        value || ""
+      )}" placeholder="${escapeAttr(placeholder || "")}" /></div>`;
 
     return `
     <section class="panel intent-panel">
@@ -1868,6 +2499,26 @@
         <p class="panel-sub">客群、渠道、场合没钉住，后面的墙只是一堆图，不能当已经问清。</p>
       </div>
       ${
+        custom
+          ? `<p class="rp-warn">这是新建的一轮。墙是空的，不会抄青绿茶 452 张。先把 Brief 钉住；三个智能体配好 API 才能对话和打标。</p>
+      <div class="panel-block" data-sop="audience">
+        <h4>卖给谁 · 在哪卖 · 什么价</h4>
+        ${field("audience", "客群", input.audience, "例如 28–45 新中产")}
+        ${field("channel", "渠道", input.channel, "例如 礼赠 + 电商")}
+        ${field("price_band", "价格带", input.price_band, "例如 中高端")}
+        ${field("occasion", "场合", input.occasion, "例如 节日/商务馈赠")}
+      </div>
+      <div class="panel-block" data-sop="object">
+        <h4>分析对象</h4>
+        ${field("product", "产品", input.product, "例如 青绿茶礼盒")}
+      </div>
+      <div class="panel-block">
+        <h4>气质与红线</h4>
+        ${field("culture_tone", "气质", input.culture_tone, "例如 中式现代")}
+        ${field("must_have", "必须有", (input.must_have || []).join("、"), "顿号分隔")}
+        ${field("must_avoid", "必须避开", (input.must_avoid || []).join("、"), "顿号分隔")}
+      </div>`
+          : `${
         briefLoaded
           ? ""
           : `<p class="rp-warn">这轮只有落地的墙，Brief 还没录入。下面除了品名基本都是未标注，不能当已经问清的分析对象。</p>`
@@ -1901,7 +2552,8 @@
         <div class="tag-line"><span class="tag-label">必须有</span>${tagList(input.must_have, "tag-keep")}</div>
         <div class="tag-line"><span class="tag-label">必须避开</span>${tagList(input.must_avoid, "tag-kill")}</div>
         <div class="tag-line"><span class="tag-label">工艺前提</span>${tagList(input.constraints)}</div>
-      </div>
+      </div>`
+      }
 
       <div class="panel-block">
         <h4>奎燕会什么（先验）</h4>
@@ -1947,11 +2599,11 @@
     const commentBox = `
       <div class="l4-comment">
         <label class="l4-comment-label" for="houCommentBox">你的批注（按这句在已落地墙上重排）</label>
-        <textarea id="houCommentBox" rows="2" placeholder="例：不要金红，多留白，只要能拍开箱视频的">${escapeHtml(
+        <textarea id="houCommentBox" rows="3" placeholder="例：不要金红，多留白，只要能拍开箱视频的">${escapeHtml(
           comment
         )}</textarea>
         <div class="l4-comment-foot">
-          <span class="muted">重筛 = 在已落地的 452 张主墙上重排，不发起新采集</span>
+          <span class="muted">写完点重筛。有点点 API 就按这句话重排；没有就用墙上已有字段。不发起新采集。</span>
           <button type="button" class="l4-rescreen" data-shortlist-action="rescreen">按批注重筛</button>
         </div>
       </div>`;
@@ -2227,6 +2879,21 @@
 
   function seedStream() {
     el.stream.innerHTML = "";
+    state.chatTurns = [];
+    const r = currentResearch();
+    if (r.emptyWall || r.custom) {
+      appendEvent({
+        agent: "奎燕设计智能体",
+        time: "现在",
+        tag: "新一轮",
+        tagClass: "stage",
+        dot: "yellow",
+        html: `<p>新研究已建。墙是空的，我不会把青绿茶那 452 张抄过来。先在右边填 Brief。</p>
+          <div class="event-note">三个智能体要分工：编排跟你聊，采集按 Brief 分路（不新爬），点点打标和按批注重筛。点左栏齿轮或右上角配置 API。</div>
+          <div class="chips-row"><button type="button" class="artifact-link" data-artifact="brief">去填 Brief</button></div>`,
+      });
+      return;
+    }
     const input = state.bundle?.l1?.input || {};
     const counts = state.bundle?.l3?.counts || {};
     const cards = state.bundle?.l4_cards || [];
@@ -2526,14 +3193,53 @@
       });
       return;
     }
-    appendEvent({
-      agent: "奎燕设计智能体",
-      time: "现在",
-      tag: "回复",
-      tagClass: "consensus",
-      dot: "ok",
-      html: `<p>收到。可以说「看 Brief」「看版图」「帮我筛选」「出结论报告」，也可以直接写批注让我重筛——我只在墙上这 ${mainN} 张里给你排。</p>`,
-    });
+    const agentId = /点点|打标|维度/.test(t)
+      ? "dotdot"
+      : /采集|穷尽|货架通道/.test(t)
+        ? "crawler"
+        : "orchestrator";
+    if (!llmReady(agentId) && !llmReady("orchestrator")) {
+      appendEvent({
+        agent: "奎燕设计智能体",
+        time: "现在",
+        tag: "还没接模型",
+        tagClass: "challenge",
+        dot: "warn",
+        html: `<p>中间栏现在接不上对话。点右上角齿轮，给编排 / 采集 / 点点配 API。页签跳转还可以说「看 Brief」「看版图」「帮我筛选」「出结论」。</p>`,
+      });
+      openLlmSettings(agentId);
+      return;
+    }
+    const useId = llmReady(agentId) ? agentId : "orchestrator";
+    const meta = AGENT_LLM_META.find((m) => m.id === useId);
+    state.llmBusy = true;
+    if (el.sendBtn) el.sendBtn.disabled = true;
+    askAgent(useId, t)
+      .then((reply) => {
+        appendEvent({
+          agent: meta.name,
+          time: "现在",
+          tag: "对话",
+          tagClass: "consensus",
+          dot: "ok",
+          html: mdLite(reply),
+        });
+      })
+      .catch((err) => {
+        appendEvent({
+          agent: meta.name,
+          time: "现在",
+          tag: "没打通",
+          tagClass: "challenge",
+          dot: "kill",
+          html: `<p>${escapeHtml(err.message || String(err))}</p>
+            <div class="event-note">检查 API Key、模型名，以及是不是用 key_vision_server.py 打开的本页。</div>`,
+        });
+      })
+      .finally(() => {
+        state.llmBusy = false;
+        if (el.sendBtn) el.sendBtn.disabled = false;
+      });
   }
 
   async function applyResearch(id) {
@@ -2548,6 +3254,7 @@
     state.shortlistTouched = false;
     state.shortlistAuto = false;
     state.houComment = "";
+    state.chatTurns = [];
     state.decisions = {};
     state.activeCat = "all";
     state.activeSource = null;
@@ -2590,6 +3297,11 @@
         (state.bundle.l4_cards || []).forEach((c) => {
           state.decisions[c.card_id] = c.hou_decision || "pending";
         });
+      } else if (r.custom) {
+        if (!state._greenBundle && state.bundle?.l4_cards?.length) {
+          state._greenBundle = state.bundle;
+        }
+        state.bundle = emptyBundleFor(r);
       } else {
         if (!state._greenBundle && state.bundle?.l4_cards?.length) {
           state._greenBundle = state.bundle;
@@ -2610,19 +3322,35 @@
       await loadLiveFeeds(r);
       setCap("orchestrator", "online", `正在看「${r.title}」`);
       seedStream();
-      state.stage = 3;
-      syncStageButtons(3);
-      switchTab("visual", { fromStage: true });
-      appendEvent({
-        agent: "奎燕设计智能体",
-        time: "现在",
-        tag: "切换研究",
-        tagClass: "stage",
-        dot: "ok",
-        html: r.onlyBriefDefault
-          ? `<p>已切回青绿茶礼盒。主墙 <strong>${state.feedCounts.main}</strong> · 待复核 <strong>${state.feedCounts.pending}</strong>，短名单和批注都已清空重来。</p>`
-          : `<p>已打开「${escapeHtml(r.title)}」落地主墙 <strong>${state.feedCounts.main}</strong> 张。这轮 Brief 还没录入，只有墙：客群、红线、奎燕案例都是未标注，茶礼那轮的三张方向卡不会跟过来。贴 brief 筛选已关掉，避免用茶礼规则误杀。</p>`,
-      });
+      if (r.custom) {
+        state.stage = 1;
+        syncStageButtons(1);
+        switchTab("intent", { fromStage: true });
+        syncQuestionMode();
+        appendEvent({
+          agent: "奎燕设计智能体",
+          time: "现在",
+          tag: "切换研究",
+          tagClass: "stage",
+          dot: "ok",
+          html: `<p>已打开「${escapeHtml(r.title)}」。墙 0 张，Brief 待填。配三个智能体的 API 才能对话。</p>`,
+        });
+      } else {
+        state.stage = 3;
+        syncStageButtons(3);
+        switchTab("visual", { fromStage: true });
+        syncQuestionMode();
+        appendEvent({
+          agent: "奎燕设计智能体",
+          time: "现在",
+          tag: "切换研究",
+          tagClass: "stage",
+          dot: "ok",
+          html: r.onlyBriefDefault
+            ? `<p>已切回青绿茶礼盒。主墙 <strong>${state.feedCounts.main}</strong> · 待复核 <strong>${state.feedCounts.pending}</strong>，短名单和批注都已清空重来。分路按 Brief 动态算：同类 / 不同类 / 跨界，货架仍是在售切片。</p>`
+            : `<p>已打开「${escapeHtml(r.title)}」落地主墙 <strong>${state.feedCounts.main}</strong> 张。这轮 Brief 还没录入，只有墙：客群、红线、奎燕案例都是未标注，茶礼那轮的三张方向卡不会跟过来。贴 brief 筛选已关掉，避免用茶礼规则误杀。</p>`,
+        });
+      }
     } catch (err) {
       console.warn(err);
       toast("这轮研究的墙还没挂上");
@@ -2767,6 +3495,13 @@
     el.canvasBody.addEventListener("input", (e) => {
       const box = e.target.closest("#houCommentBox");
       if (box) state.houComment = box.value;
+      if (e.target.closest("[data-brief-field]")) saveCustomBriefFromDom();
+    });
+    el.canvasBody.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && e.target.closest("#houCommentBox")) {
+        e.preventDefault();
+        rescreenByComment();
+      }
     });
 
     el.canvasBody.addEventListener("click", (e) => {
@@ -2934,10 +3669,16 @@
     });
 
     el.capList.addEventListener("click", (e) => {
+      const gear = e.target.closest("[data-llm-agent]");
+      if (gear) {
+        e.preventDefault();
+        e.stopPropagation();
+        openLlmSettings(gear.dataset.llmAgent);
+        return;
+      }
       const card = e.target.closest(".cap-card");
       if (!card) return;
-      const c = state.caps.find((x) => x.id === card.dataset.id);
-      if (c) toast(`${c.name} · ${c.lastAction}`);
+      openLlmSettings(card.dataset.id);
     });
 
     el.researchList.addEventListener("click", (e) => {
@@ -2949,10 +3690,11 @@
     });
 
     if (el.btnNew) {
-      el.btnNew.addEventListener("click", () => {
-        toast("本版不能新建研究，请用左侧已保存的三轮");
-      });
+      el.btnNew.addEventListener("click", () => createNewResearch());
     }
+    if (el.btnSettings) el.btnSettings.addEventListener("click", () => openLlmSettings("orchestrator"));
+    if (el.btnCapConfig) el.btnCapConfig.addEventListener("click", () => openLlmSettings("orchestrator"));
+    bindLlmFormEvents();
 
     const attachRow = document.querySelector(".attach-row");
     if (attachRow) {
@@ -2963,7 +3705,14 @@
       });
     }
 
-    el.researchQuestion.addEventListener("input", updateQCount);
+    el.researchQuestion.addEventListener("input", () => {
+      updateQCount();
+      const r = currentResearch();
+      if (r && r.custom) {
+        r.question = el.researchQuestion.value;
+        persistCustomResearches();
+      }
+    });
 
     document.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-empty-action]");
@@ -3007,10 +3756,14 @@
     }, 200);
     setTimeout(() => { bootSettled = true; clearInterval(guard); if (!userArmedPending) forceProductWallDefaults("boot-settle"); }, 4000);
 
+    loadLlmAgents();
+    hydrateCustomResearches();
     renderCaps();
     renderResearch();
     renderSources();
     bindEvents();
+    syncLlmUi();
+    probeLlmProxy();
     closeInspector();
     updateSelectionBar();
     updateQCount();
@@ -3024,8 +3777,11 @@
 
       // 1) Live feeds first for the visual wall
       let feedsOk = false;
+      const bootR = RESEARCHES.find((x) => x.id === "r-green") || LANDING_RESEARCHES[0];
+      RESEARCHES.forEach((x) => (x.active = x.id === bootR.id));
+      state.activeResearchId = bootR.id;
       try {
-        await loadLiveFeeds(RESEARCHES[0]);
+        await loadLiveFeeds(bootR);
         feedsOk = true;
       } catch (feedErr) {
         console.warn("live feeds", feedErr);
@@ -3044,11 +3800,13 @@
       (state.bundle.l4_cards || []).forEach((c) => {
         state.decisions[c.card_id] = c.hou_decision || "pending";
       });
-      const q0 = RESEARCHES[0].question;
+      const q0 = bootR.question || "";
       if (el.researchQuestion) {
         el.researchQuestion.value = q0.slice(0, 200);
         updateQCount();
       }
+      if (el.researchTitle) el.researchTitle.textContent = bootR.title;
+      syncQuestionMode();
 
       if (!feedsOk) {
         state.wallItems = collectWallItemsFromBundleFallback();

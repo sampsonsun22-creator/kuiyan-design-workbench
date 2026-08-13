@@ -9,7 +9,7 @@ PIDFILE="${KEY_VISION_PID:-/tmp/key-vision-http.pid}"
 TUNLOG="${KEY_VISION_TUNNEL_LOG:-/tmp/key-vision-tunnel.log}"
 TUNPID="${KEY_VISION_TUNNEL_PID:-/tmp/key-vision-tunnel.pid}"
 URLFILE="${KEY_VISION_PUBLIC_URL:-/tmp/key-vision-public-url.txt}"
-CACHE_V="${KEY_VISION_CACHE:-452p3}"
+CACHE_V="${KEY_VISION_CACHE:-452p4}"
 
 if [[ ! -d "$DIR" ]]; then
   echo "missing $DIR" >&2
@@ -34,16 +34,25 @@ extract_tunnel_url() {
 }
 
 ensure_http() {
-  if listening; then
-    echo "KEY 视界 already on :${PORT}"
+  if curl -sf -o /dev/null --max-time 2 "http://127.0.0.1:${PORT}/api/llm/health"; then
+    echo "KEY 视界 already on :${PORT} with llm proxy"
     return 0
   fi
-  python3 -m http.server "$PORT" --bind 0.0.0.0 --directory "$DIR" >"$LOG" 2>&1 &
+  if listening; then
+    echo "replacing static server on :${PORT} with llm proxy"
+    if [[ -f "$PIDFILE" ]]; then
+      kill "$(cat "$PIDFILE")" >/dev/null 2>&1 || true
+      sleep 0.3
+    fi
+    fuser -k "${PORT}/tcp" >/dev/null 2>&1 || true
+    sleep 0.2
+  fi
+  KEY_VISION_PORT="$PORT" KEY_VISION_DIR="$DIR" python3 "$ROOT/scripts/key_vision_server.py" >"$LOG" 2>&1 &
   echo $! >"$PIDFILE"
   local i
   for i in $(seq 1 40); do
-    if listening; then
-      echo "KEY 视界 listening on :${PORT}"
+    if curl -sf -o /dev/null --max-time 2 "http://127.0.0.1:${PORT}/api/llm/health"; then
+      echo "KEY 视界 listening on :${PORT} (llm proxy)"
       return 0
     fi
     sleep 0.15

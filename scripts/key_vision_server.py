@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+"""KEY 视界 static client + LLM proxy.
+
+API keys are sent by the browser per request and never written to disk.
+Does not rewrite the 452/2680 jsonl lock.
+"""
+from __future__ import annotations
+
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_DIR = ROOT / "ship" / "key-vision"
+PORT = int(os.environ.get("KEY_VISION_PORT", "8767"))
+
+
+def join_url(base: str, suffix: str) -> str:
+    b = (base or "").strip().rstrip("/")
+    s = suffix if suffix.startswith("/") else "/" + suffix
+    if b.endswith(s) or b.endswith(s.rstrip("/")):
+        return b
+    tail = s.strip("/")
+    if tail and b.endswith(tail):
+        return b
+    return b + s
+
+
+def openai_chat(base: str, api_key: str, model: str, messages: list, timeout: int) -> str:
+    url = join_url(base or "https://api.openai.com/v1", "/chat/completions")
+    body = json.dumps(
+        {"model": model, "messages": messages, "temperature": 0.2},
+        ensure_ascii=False,
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=body,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    choices = data.get("choices") or []
+    if not choices:
+        raise RuntimeError("empty choices")
+    return ((choices[0].get("message") or {}).get("content")) or ""
+
+
+def anthropic_chat(base: str, api_key: str, model: str, messages: list, timeout: int) -> str:
+    url = join_url(base or "https://api.anthropic.com", "/v1/messages")
+    system = "\n\n".join(m.get("content") or "" for m in messages if m.get("role") == "system")
+    converted = []
+    for m in messages:
+        role = m.get("role")
+        if role not in ("user", "assistant"):
+            continue
+        converted.append({"role": role, "content": m.get("content") or ""})
+    if not converted:
+        converted = [{"role": "user", "content": "ping"}]
+    payload = {
+        "model": model,
+        "max_tokens": 1200,
+        "messages": converted,
+    }
+    if system:
+        payload["system"] = system
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=body,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    parts = data.get("content") or []
+    texts = [p.get("text") or "" for p in parts if isinstance(p, dict)]
+    return "".join(texts)
+
+
+class Handler(SimpleHTTPRequestHandler):
+    def end_headers(self) -> None:
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
+    def log_message(self, fmt: str, *args) -> None:
+        sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
+
+    def do_OPTIONS(self) -> None:
+        if self.path.startswith("/api/llm"):
+            self.send_response(204)
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Headers", "content-type")
+            self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+            self.end_headers()
+            return
+        self.send_error(404)
+
+    def do_GET(self) -> None:
+        if self.path.split("?", 1)[0] == "/api/llm/health":
+            self._json(200, {"ok": True, "proxy": True})
+            return
+        super().do_GET()
+
+    def do_POST(self) -> None:
+        if self.path.split("?", 1)[0] != "/api/llm/chat":
+            self.send_error(404)
+            return
+        length = int(self.headers.get("Content-Length") or 0)
+        if length > 1_500_000:
+            self._json(413, {"ok": False, "error": "payload too large"})
+            return
+        try:
+            payload = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            self._json(400, {"ok": False, "error": "invalid json"})
+            return
+        api_key = str(payload.get("api_key") or payload.get("apiKey") or "").strip()
+        model = str(payload.get("model") or "").strip()
+        base = str(payload.get("base_url") or payload.get("baseUrl") or "").strip()
+        provider = str(payload.get("provider") or "openai").strip().lower()
+        messages = payload.get("messages") or []
+        if not api_key or not model or not isinstance(messages, list):
+            self._json(400, {"ok": False, "error": "missing api_key / model / messages"})
+            return
+        kind = "anthropic" if provider == "anthropic" or "anthropic.com" in base else "openai"
+        try:
+            if kind == "anthropic":
+                text = anthropic_chat(base, api_key, model, messages, timeout=60)
+            else:
+                text = openai_chat(base, api_key, model, messages, timeout=60)
+        except urllib.error.HTTPError as err:
+            detail = err.read().decode("utf-8", "ignore")[:400]
+            self._json(err.code, {"ok": False, "error": f"upstream {err.code}", "detail": detail})
+            return
+        except Exception as err:  # noqa: BLE001 — surface provider errors to the lab UI
+            self._json(502, {"ok": False, "error": str(err)[:240]})
+            return
+        self._json(200, {"ok": True, "text": text, "model": model, "agent": payload.get("agent")})
+
+    def _json(self, code: int, obj: dict) -> None:
+        raw = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Content-Length", str(len(raw)))
+        self.end_headers()
+        self.wfile.write(raw)
+
+
+def main() -> int:
+    directory = Path(os.environ.get("KEY_VISION_DIR") or DEFAULT_DIR).resolve()
+    if not directory.exists():
+        print(f"missing {directory}", file=sys.stderr)
+        return 1
+    os.chdir(directory)
+    httpd = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
+    print(f"KEY 视界 {directory} on :{PORT} (llm proxy /api/llm/chat)")
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        return 0
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

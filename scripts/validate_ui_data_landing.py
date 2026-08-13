@@ -126,8 +126,22 @@ def main() -> int:
         err.append("market filter must stay hidden")
     if 'data-filter="year" hidden' not in html:
         err.append("year filter must stay hidden")
-    if "btnNewResearch" in html and "disabled" not in html.split("btnNewResearch", 1)[1][:120]:
-        err.append("新建研究 must be disabled")
+    if "btnNewResearch" in html:
+        chunk = html.split("btnNewResearch", 1)[1][:180]
+        if "disabled" in chunk:
+            err.append("新建研究 must be enabled")
+        if "新建研究" not in html:
+            err.append("index.html missing 新建研究 label")
+    if 'id="btnLlmSettings"' not in html or 'id="llmOverlay"' not in html:
+        err.append("missing three-agent LLM settings UI")
+    if "function createNewResearch" not in app:
+        err.append("app.js missing createNewResearch")
+    if "function openLlmSettings" not in app or "AGENT_LLM_META" not in app:
+        err.append("app.js missing per-agent LLM config")
+    if "async function rescreenByComment" not in app:
+        err.append("app.js missing async 按批注重筛")
+    if "briefLaneLex" not in app:
+        err.append("app.js missing Brief-aware lane reclassify")
 
     pack = ROOT / "ui-shell" / "data" / "product-pack.json"
     if pack.exists():

@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KEY 视界 · 设计竞品调研</title>
-  <link rel="stylesheet" href="styles.css?v=452p3" />
+  <link rel="stylesheet" href="styles.css?v=452p4" />
 </head>
 <body>
   <div class="app" id="app">
@@ -17,12 +17,15 @@
         <div class="brand-sub">奎燕 AI 研究室</div>
       </div>
 
-      <button type="button" class="btn-new" id="btnNewResearch" disabled title="本版不支持新建研究">
-        本版用左侧三轮已落地研究
+      <button type="button" class="btn-new" id="btnNewResearch" title="新建一轮研究，墙先空着">
+        <span class="plus" aria-hidden="true">+</span>新建研究
       </button>
 
       <section class="left-section">
-        <h3 class="left-h">能力栈</h3>
+        <div class="left-h-row">
+          <h3 class="left-h">能力栈</h3>
+          <button type="button" class="link-config" id="btnCapConfig">配置三个智能体</button>
+        </div>
         <ul class="cap-list" id="capList"></ul>
       </section>
 
@@ -36,8 +39,16 @@
     <main class="center" aria-label="协作室">
       <header class="center-head">
         <div class="center-title-row">
-          <h1>协作室</h1>
-          <span class="center-sub" id="researchTitle">青绿茶礼盒 · 竞品调研</span>
+          <div class="center-title-block">
+            <h1>协作室</h1>
+            <span class="center-sub" id="researchTitle">青绿茶礼盒 · 竞品调研</span>
+          </div>
+          <button type="button" class="btn-gear" id="btnLlmSettings" title="配置三个智能体的模型 API" aria-label="配置三个智能体的模型 API">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="1.7"/>
+              <path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" d="M19.4 13.1a1.2 1.2 0 0 0 .24-1.1 7.4 7.4 0 0 0 0-.2 1.2 1.2 0 0 0-.24-1.1l1.6-1.3-1.8-3.1-2 .8a7.2 7.2 0 0 0-1.9-1.1l-.3-2.1h-3.6l-.3 2.1a7.2 7.2 0 0 0-1.9 1.1l-2-.8-1.8 3.1 1.6 1.3a1.2 1.2 0 0 0-.24 1.1 7.4 7.4 0 0 0 0 .2 1.2 1.2 0 0 0 .24 1.1l-1.6 1.3 1.8 3.1 2-.8a7.2 7.2 0 0 0 1.9 1.1l.3 2.1h3.6l.3-2.1a7.2 7.2 0 0 0 1.9-1.1l2 .8 1.8-3.1-1.6-1.3Z"/>
+            </svg>
+          </button>
         </div>
         <div class="question-card">
           <div class="question-card-head">
@@ -73,7 +84,7 @@
           <button type="button" class="attach" title="表格" data-attach="table">▦</button>
           <button type="button" class="attach" title="证据" data-attach="evidence">📎</button>
         </div>
-        <textarea id="composerInput" rows="1" placeholder="可以说「看 Brief」「看版图」「帮我筛选」「出结论报告」…"></textarea>
+        <textarea id="composerInput" rows="1" placeholder="先配右上角三个智能体的 API，再在这里问这轮墙和 Brief…"></textarea>
         <button type="submit" class="send-btn" id="sendBtn">发送</button>
       </form>
     </main>
@@ -138,6 +149,27 @@
   </div>
 
   <div class="toast" id="toast"></div>
-  <script src="app.js?v=452p3"></script>
+
+  <div class="llm-overlay" id="llmOverlay" hidden>
+    <div class="llm-modal" role="dialog" aria-modal="true" aria-labelledby="llmTitle" id="llmDialog">
+      <div class="llm-modal-head">
+        <div>
+          <h2 id="llmTitle">三个智能体 · 模型 API</h2>
+          <p class="llm-lead">编排、采集、点点可以接不同模型。Key 只存在这台浏览器，不会写进仓库，也不会发起新采集。</p>
+        </div>
+        <button type="button" class="llm-close" id="llmClose" aria-label="关闭">×</button>
+      </div>
+      <div class="llm-proxy" id="llmProxyHint">正在检查本机转发…</div>
+      <form class="llm-form" id="llmForm">
+        <div class="llm-agents" id="llmAgentFields"></div>
+        <div class="llm-actions">
+          <button type="button" class="llm-test" id="llmTest">测试当前智能体</button>
+          <button type="submit" class="llm-save">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js?v=452p4"></script>
 </body>
 </html>
