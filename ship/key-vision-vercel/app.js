@@ -1572,15 +1572,17 @@
 
   function reasonFor(it, hits) {
     const bucketZh = dimValueZh(it, { id: "style_bucket", fields: ["suggested_style_buckets"] });
+    const query = it.query_used ? String(it.query_used).slice(0, 40) : "";
     const lines = [
       `路线：${scopeLabel(it)}${searchScope(it) === "shelf" ? "（在售 listing 样）" : ""}`,
       `贴 brief：${briefRelLabel(it)}${
         it.extra && it.extra.brief_relevance_v1 ? `（${it.extra.brief_relevance_v1}）` : ""
       }`,
       `风格桶：${bucketZh || "未标注"}`,
-      `来源：${humanSource(it.source)} · ${it.source_type || "未标注"}`,
+      `来源：${humanSource(it.source) || "未标注"} · ${it.source_type || "未标注"}`,
+      `检索词：${query || "未标注"}`,
     ];
-    if (it.query_used) lines.push(`检索词：${String(it.query_used).slice(0, 40)}`);
+    if (it.author_or_brand) lines.push(`品牌/作者：${String(it.author_or_brand).slice(0, 40)}`);
     if (hits && hits.length) lines.push(`命中你的批注：${hits.join(" / ")}`);
     return lines;
   }
@@ -1909,8 +1911,10 @@
         <div class="empty"><div class="slogan">短名单现在是空的</div>
         <p class="hint">${
           cands
-            ? `还有 ${cands} 张可选。要我按 Brief + 风格桶重新收一轮吗？`
-            : "这轮墙上还没有能进短名单的参考。"
+            ? `墙上还有 ${cands} 张能进短名单。要我按 Brief 命中 + 风格桶多样性再收一轮吗？`
+            : currentResearch().onlyBriefDefault !== false
+              ? "「只看贴 brief」把能进短名单的都筛掉了，或者这轮墙还没有可用图。可以关掉贴 brief 筛选，或换一轮已落地的研究。"
+              : "这轮墙上还没有带图、能进短名单的参考。跨界 / 评论 / 开箱都还没采，这里不会补假样本。"
         }</p>
         <button type="button" class="empty-cta" data-shortlist-action="refill">重新收一轮</button></div>
       </section>`;
@@ -1944,8 +1948,8 @@
               .join("")}</ul>
             <div class="sl-gap">${
               missing.length
-                ? `还没标：${escapeHtml(missing.join(" / "))}；开箱、用户反馈、成本本轮未采`
-                : "维度已标齐；开箱、用户反馈、成本本轮未采"
+                ? `还没标：${escapeHtml(missing.join(" / "))}。开箱、用户反馈、成本本轮未采，不写进理由。`
+                : "色彩 / 造型 / 排版 / 风格桶这几项有值；开箱、用户反馈、成本本轮未采，不写进理由。"
             }</div>
           </div>
           <div class="sl-actions">
@@ -1994,6 +1998,10 @@
     const list = state.shortlistVisual;
     const cards = state.bundle?.l4_cards || [];
     const cov = coverageStats();
+
+    const emptyBanner = list.length
+      ? ""
+      : `<p class="rp-warn">尚未完成筛选：短名单是空的。下面 1–3、6 段只报告覆盖缺口，第 4、5 段还不能当选型结论。</p>`;
 
     const sec1 = `
       <section class="rp-sec">
@@ -2075,18 +2083,18 @@
         </section>`
       : `<section class="rp-sec">
           <h4><span class="rp-n">4</span>入选参考</h4>
-          <p class="rp-warn">尚未完成筛选：短名单是空的。这份报告先当「覆盖缺口报告」看，别当选型结论。</p>
+          <p class="rp-warn">短名单是空的，这一段没有入选款。先去 L4 收 8–12 款，或点「重新收一轮」。在那之前，不要把这份报告当成已经选完。</p>
           <button type="button" class="empty-cta" data-empty-action="open-shortlist">去 L4 收短名单</button>
         </section>`;
 
     const sec5 = `
       <section class="rp-sec">
         <h4><span class="rp-n">5</span>差异化机会</h4>
-        <p class="rp-note">相对货架那 ${counts.shelf} 条在售样和同类主墙，能看见的空白：详情页第一眼多是满版热闹，礼赠符号靠平面贴金；开箱结构少有人当内容点做。下面三张是<strong>方向假设</strong>，不是完稿，也还没有用户反馈与成本数据背书。</p>
+        <p class="rp-note">这一段只写能从样本结构数出来的空白，不写没采到的开箱、评论、成本判断。本轮：跨界 ${counts.cross}、不同类 ${counts.adjacent}、货架 ${counts.shelf}（listing 样）。同类铺开了，另外两路不够谈趋势。</p>
         ${
           cards.length
-            ? `<div class="rp-cards">${renderStrategy()}</div>`
-            : `<p class="muted">这轮研究还没写方向假设卡；青绿茶礼盒那轮有三张。</p>`
+            ? `<p class="rp-note">下面三张是<strong>方向假设</strong>，挂在结论层，不是 L4 短名单，也不是完稿。</p><div class="rp-cards">${renderStrategy()}</div>`
+            : `<p class="muted">本轮没有方向假设卡。能交付的是 L4 短名单和上面的覆盖缺口；不会在这里编一套「还没生成」的完稿。</p>`
         }
       </section>`;
 
@@ -2116,7 +2124,7 @@
         <h3>L5 结论报告 · 差异化机会</h3>
         <p class="panel-sub">可复核的决策备忘：只用已落地的主墙 ${mainN} 张和你定的短名单，没有新采集，也没有补数。</p>
       </div>
-      ${sec1}${sec2}${sec3}${sec4}${sec5}${sec6}
+      ${emptyBanner}${sec1}${sec2}${sec3}${sec4}${sec5}${sec6}
     </section>`;
   }
 
