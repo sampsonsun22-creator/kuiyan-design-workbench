@@ -9,8 +9,8 @@
 ## 本地预览
 
 ```bash
-python3 -m http.server 8767
-# 打开 http://127.0.0.1:8767/
+python3 -m http.server 8767 --bind 0.0.0.0
+# 打开 http://127.0.0.1:8767/?v=452live
 ```
 
 ## 数据怎么读

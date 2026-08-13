@@ -219,7 +219,9 @@
   /** Hosts that currently hotlink-fail from this shell; demote so first paint stays usable. */
   function isFragileImageHost(url) {
     if (!url) return true;
-    return /huaban\.com|gd-hbimg|hbimg\.huaban/i.test(url);
+    return /huaban\.com|gd-hbimg|hbimg\.huaban|xhscdn|xiaohongshu|img\.zcool\.cn|\bzcool\.cn\b/i.test(
+      url
+    );
   }
 
   function demoteFragileWallOrder(items) {
@@ -1051,7 +1053,7 @@
             }
             <div class="thumb"><img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="${escapeAttr(
               img
-            )}" alt="${escapeAttr(it.title || "")}" onerror="this.onerror=null;this.classList.add('img-broken');const c=this.closest('.wall-card');if(c){c.classList.add('img-broken-card','qc-pending','pending-review');c.classList.remove('qc-pass','selected');c.hidden=true;}" /></div>
+            )}" alt="${escapeAttr(it.title || "")}" onerror="this.onerror=null;this.classList.add('img-broken');const c=this.closest('.wall-card');if(c){c.classList.add('img-broken-card');}" /><div class="thumb-fallback" aria-hidden="true">图链失效</div></div>
             <div class="meta">
               <div class="title">${escapeHtml(humanTitle(it.title || it.id))}</div>
               <div class="src">${escapeHtml(srcLine)}</div>
@@ -1346,6 +1348,7 @@
     let html = `<div class="wall-summary">
       <span>${escapeHtml(tone)} · ${escapeHtml(channel)}</span>
       <span>${briefSummary}</span>
+      <span class="wall-summary-gap">花瓣 / 小红书 / 站酷图链常失效，卡片仍留着，可点开看字段</span>
     </div>`;
     const rec = state.bundle?.l3?.ai_recommended_buckets || [];
     if (rec.length) {

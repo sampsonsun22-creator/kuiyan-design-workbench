@@ -88,6 +88,10 @@ def main() -> int:
         err.append("重筛 must state it is not a new crawl")
     if "本轮跨界样本 0，不编造" not in app:
         err.append("cross chip missing honest empty state")
+    if "c.hidden=true" in app:
+        err.append("broken thumbs must stay on the wall (do not hide the card)")
+    if "图链失效" not in app:
+        err.append("broken thumbs need a visible 图链失效 placeholder")
     if "本轮未采集" not in app:
         err.append("app.js missing 本轮未采集 wording for uncollected dimensions")
     for faked in ("色块与留白节奏可借鉴", "开箱清单"):

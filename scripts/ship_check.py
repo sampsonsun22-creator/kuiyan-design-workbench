@@ -123,6 +123,10 @@ def main() -> int:
     for bad in ("演示数据", "Data Crawler", "开锁台", "暂无数据"):
         if bad in app:
             err.append(f"app.js still contains {bad!r}")
+    if "c.hidden=true" in app:
+        err.append("ship app.js still hides broken wall cards")
+    if "图链失效" not in app:
+        err.append("ship app.js missing 图链失效 placeholder")
 
     strict = subprocess.run(
         [sys.executable, str(ROOT / "scripts" / "assert_shell_strict.py")],
