@@ -94,7 +94,11 @@ async function main() {
       (await page.locator("#sourceChips .source-kicker").innerText()) === "出处",
       "source bar labeled 出处"
     );
-    note(await page.locator('#sourceChips [data-source="all"]').count().then((n) => n === 1), "source bar has 全部");
+    note(await page.locator("#wallFilters").count().then((n) => n === 1), "unified 出处+分类 filter panel");
+    note(
+      await page.locator('#sourceChips [data-source="__other__"]').count().then((n) => n === 1),
+      "long-tail sources collapsed into 其他"
+    );
     const pillH = await page.locator("#sourceChips .source-card").first().evaluate((el) =>
       el.getBoundingClientRect().height
     );

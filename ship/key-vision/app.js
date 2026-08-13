@@ -132,6 +132,7 @@
     decisions: {},
     selectedIds: new Set(),
     focusId: null,
+    extraSourceIds: [],
     inspectorOpen: false,
     activeSource: null,
     activeCat: "all",
@@ -179,6 +180,7 @@
     canvasBody: $("canvasBody"),
     sourceChips: $("sourceChips"),
     categoryChips: $("categoryChips"),
+    wallFilters: $("wallFilters"),
     filters: $("filters"),
     inspector: $("inspector"),
     inspectorBody: $("inspectorBody"),
@@ -511,7 +513,7 @@
     }
     const allBtn = `<button type="button" class="source-card ${
       state.activeSource ? "" : "active"
-    }" data-source="all" title="看全部来源">全部</button>`;
+    }" data-source="all" title="看全部来源">全部</button><span class="source-split" aria-hidden="true"></span>`;
     el.sourceChips.innerHTML =
       `<span class="source-kicker">出处</span>` +
       allBtn +
@@ -524,7 +526,8 @@
         state.activeSource === s.id ? "active" : ""
       }" data-source="${s.id}" title="${escapeAttr(tip)}">
         <span class="sdot ${escapeAttr(s.status || "ok")}"></span>
-        <span class="sc-name">${escapeHtml(short)} · ${s.count}</span>
+        <span class="sc-name">${escapeHtml(short)}</span>
+        <span class="sc-n">· ${s.count}</span>
       </button>`;
         })
         .join("");
@@ -668,17 +671,22 @@
       };
     });
     const extras = Object.entries(counts)
-      .filter(([id]) => !pinnedIds.has(id))
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 6)
-      .map(([id, count]) => ({
-        id,
-        label: (SOURCE_META[id] && SOURCE_META[id].label) || humanSource(id),
-        status: "ok",
-        statusText: `已上墙 ${count}`,
-        count,
-      }));
-    state.sources = [...pinned, ...extras];
+      .filter(([id]) => !pinnedIds.has(id) && (counts[id] || 0) > 0)
+      .sort((a, b) => b[1] - a[1]);
+    state.extraSourceIds = extras.map(([id]) => id);
+    const extraCount = extras.reduce((n, [, c]) => n + c, 0);
+    const other = extraCount
+      ? [
+          {
+            id: "__other__",
+            label: "其他",
+            status: "ok",
+            statusText: extras.map(([id, c]) => `${humanSource(id)} ${c}`).join(" · "),
+            count: extraCount,
+          },
+        ]
+      : [];
+    state.sources = [...pinned, ...other];
     renderSources();
     renderRoleChips();
     const styleSel = el.filters && el.filters.querySelector('[data-filter="style"]');
@@ -739,6 +747,9 @@
     if (dirSel) dirSel.hidden = true;
     if (toneSel) toneSel.hidden = true;
     if (marketSel) marketSel.hidden = true;
+    if (el.wallFilters) {
+      el.wallFilters.style.display = isVisual ? "" : "none";
+    }
     if (el.categoryChips) {
       el.categoryChips.style.display = isVisual ? "" : "none";
     }
@@ -1305,7 +1316,10 @@
     } else if (state.activeCat === "case") {
       items = items.filter((it) => wallRole(it) === "primary");
     }
-    if (state.activeSource) {
+    if (state.activeSource === "__other__") {
+      const extra = new Set(state.extraSourceIds || []);
+      items = items.filter((it) => extra.has(String(it.source || "").toLowerCase()));
+    } else if (state.activeSource) {
       items = items.filter(
         (it) =>
           String(it.source || "").toLowerCase() ===
@@ -1501,7 +1515,14 @@
               : ""
           }
         </div>
-        ${page ? originAnchorHtml(item, { className: "insp-link insp-url", showUrl: true }) : ""}
+        <div class="insp-url-box">
+          <div class="insp-url-label">原始页面地址</div>
+          ${
+            page
+              ? originAnchorHtml(item, { className: "insp-link insp-url", showUrl: true })
+              : `<p class="src-missing">原页未标注 — 没有可核对的链接，提案里先别引用。</p>`
+          }
+        </div>
       </div>
       <p class="insp-summary">${escapeHtml(
         `口径：${scopeLabel(item)} · ${briefRelLabel(item)}${
@@ -3736,7 +3757,13 @@
         toast("这张还没有可打开的原页");
         return;
       }
-      const done = () => toast("原页链接已复制，可贴给客户核对");
+      const done = () => {
+        copyBtn.textContent = "已复制";
+        toast("原页链接已复制，可贴给客户核对");
+        window.setTimeout(() => {
+          if (copyBtn.isConnected) copyBtn.textContent = "复制链接";
+        }, 1600);
+      };
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(url).then(done).catch(() => fallbackCopy(url, done));
       } else {

@@ -99,9 +99,11 @@
           <button type="button" class="tab" role="tab" data-tab="report" aria-selected="false">结论报告</button>
         </div>
 
+        <div class="wall-filters" id="wallFilters">
         <div class="source-cards" id="sourceChips" aria-label="出处筛选"></div>
 
         <div class="category-chips" id="categoryChips" aria-label="素材类别">
+          <span class="source-kicker">分类</span>
           <button type="button" class="cat-chip active" data-cat="all">全部</button>
           <button type="button" class="cat-chip" data-cat="primary">同类</button>
           <button type="button" class="cat-chip" data-cat="analogy">不同类</button>
@@ -109,6 +111,7 @@
           <button type="button" class="cat-chip" data-cat="shelf">货架</button>
           <button type="button" class="cat-chip pending-toggle" id="pendingToggle" data-pending="0" aria-pressed="false">含待复核</button>
           <button type="button" class="cat-chip brief-toggle active" id="briefToggle" data-brief="1" aria-pressed="true">只看贴 brief</button>
+        </div>
         </div>
         <div class="wall-count-bar" id="wallCountBar" aria-live="polite">主墙 — · 待复核 —</div>
 

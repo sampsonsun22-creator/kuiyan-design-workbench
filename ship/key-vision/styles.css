@@ -708,17 +708,33 @@ button, input, textarea, select {
 }
 
 /* Source status — compact provenance pills, not a dashboard of fat cards */
+/* Unified 出处 + 分类 filter, not a channel dashboard */
+.wall-filters {
+  margin: 8px 14px 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  flex: none;
+  overflow: hidden;
+}
 .source-cards {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px 0;
+  padding: 8px 10px;
   overflow-x: auto;
   overflow-y: hidden;
   flex: none;
   overscroll-behavior-x: contain;
   scrollbar-width: thin;
+}
+.source-split {
+  width: 1px;
+  height: 14px;
+  background: var(--line);
+  flex: none;
+  margin: 0 2px;
 }
 .source-kicker {
   flex: none;
@@ -750,11 +766,17 @@ button, input, textarea, select {
 .source-card.active {
   border-color: var(--ink);
   background: var(--surface);
-  box-shadow: var(--shadow);
+  box-shadow: none;
 }
 .source-card .sc-name {
   font-size: 11.5px;
   font-weight: 600;
+  white-space: nowrap;
+}
+.source-card .sc-n {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-muted);
   white-space: nowrap;
 }
 .source-card .sdot {
@@ -772,8 +794,10 @@ button, input, textarea, select {
 .category-chips {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
-  padding: 10px 14px 0;
+  padding: 8px 10px;
+  border-top: 1px solid var(--line);
   flex: none;
 }
 
@@ -952,7 +976,7 @@ button, input, textarea, select {
     #e4e0d6 16px
   );
 }
-.wall-card .meta { padding: 8px 8px 10px; }
+.wall-card .meta { padding: 8px 8px 0; }
 .wall-card .title {
   font-size: 11.5px;
   font-weight: 600;
@@ -961,11 +985,14 @@ button, input, textarea, select {
   text-overflow: ellipsis;
 }
 .wall-card .src {
-  margin-top: 2px;
+  margin: 6px -8px 0;
+  padding: 7px 8px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
   font-size: 10px;
   color: var(--text-muted);
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 6px;
   min-width: 0;
 }
@@ -1329,6 +1356,19 @@ button, input, textarea, select {
 }
 .insp-copy-url:hover, .insp-open:hover { background: var(--key-yellow-press); }
 .insp-copy-url:hover { background: #ECEAE3; }
+.insp-url-box {
+  margin-top: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+.insp-url-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
 .insp-url {
   display: block;
   font-size: 11px;
