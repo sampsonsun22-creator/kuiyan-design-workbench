@@ -1004,14 +1004,14 @@ button, input, textarea, select {
 }
 .wall-card .src-link {
   flex: none;
-  height: 18px;
-  padding: 0 7px;
+  height: 20px;
+  padding: 0 8px;
   border-radius: 999px;
   background: var(--key-yellow);
   border: 1px solid var(--ink);
   color: var(--ink);
   font-weight: 700;
-  font-size: 10px;
+  font-size: 10.5px;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -1019,6 +1019,10 @@ button, input, textarea, select {
 }
 .wall-card .src-link:hover {
   background: var(--key-yellow-press);
+}
+.wall-card .src-link:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
 }
 .src-missing {
   flex: none;
@@ -1354,7 +1358,7 @@ button, input, textarea, select {
   background: var(--surface);
   border-color: var(--line);
 }
-.insp-copy-url:hover, .insp-open:hover { background: var(--key-yellow-press); }
+.insp-open:hover { background: var(--key-yellow-press); }
 .insp-copy-url:hover { background: #ECEAE3; }
 .insp-url-box {
   margin-top: 2px;

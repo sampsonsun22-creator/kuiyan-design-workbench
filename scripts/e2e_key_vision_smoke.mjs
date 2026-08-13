@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p5`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p6`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -125,10 +125,14 @@ async function main() {
     await page.waitForFunction(() => /452/.test(document.getElementById("wallCountBar")?.textContent || ""));
 
     await page.locator(".wall-card .thumb").first().click();
-    await page.waitForSelector("#inspectorBody a.insp-link");
-    const inspHref = await page.locator("#inspectorBody a.insp-url").getAttribute("href");
+    await page.waitForSelector("#inspectorBody a.insp-open, #inspectorBody .insp-url-box");
+    const inspHref =
+      (await page.locator("#inspectorBody a.insp-open").getAttribute("href").catch(() => null)) ||
+      (await page.locator("#inspectorBody [data-copy-url]").getAttribute("data-copy-url").catch(() => null));
     note(/^https?:\/\//.test(inspHref || ""), `inspector origin ${inspHref}`);
     note(await page.locator("#inspectorBody [data-copy-url]").count().then((n) => n === 1), "inspector has 复制链接");
+    const inspUrlTxt = await page.locator("#inspectorBody .insp-url").innerText().catch(() => "");
+    note(/^https?:\/\//.test(inspUrlTxt), `inspector shows full URL as text ${inspUrlTxt.slice(0, 60)}`);
     const inspTxt = await page.locator("#inspectorBody .inspector-origin").innerText();
     note(/behance|packaging|小红书|花瓣|pinterest|站酷|京东|淘宝/i.test(inspTxt), `inspector provenance ${inspTxt.slice(0, 80)}`);
     await page.locator("#inspectorToggle").click();

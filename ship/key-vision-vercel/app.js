@@ -1519,7 +1519,7 @@
           <div class="insp-url-label">原始页面地址</div>
           ${
             page
-              ? originAnchorHtml(item, { className: "insp-link insp-url", showUrl: true })
+              ? `<span class="insp-url">${escapeHtml(page)}</span>`
               : `<p class="src-missing">原页未标注 — 没有可核对的链接，提案里先别引用。</p>`
           }
         </div>
@@ -1556,7 +1556,6 @@
           <li>风格桶：${escapeHtml(bucketZh.join(" / ") || "未标注")}</li>
           <li>结构：${escapeHtml(struct.length ? struct.slice(0, 4).join(" / ") : "未标注")}</li>
           <li>检索：${escapeHtml(item.query_used ? String(item.query_used).slice(0, 80) : "未标注")}</li>
-          <li>原页：${originAnchorHtml(item, { className: "insp-link", showHost: true })}</li>
         </ul>
       </div>
       <div class="insp-block">
