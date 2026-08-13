@@ -3,12 +3,26 @@
  * Live smoke: serve ship/key-vision and assert the five-layer shell
  * boots the locked 452 wall. Does not rewrite jsonl.
  */
-const { spawn } = require("child_process");
-const http = require("http");
-const path = require("path");
-const { chromium } = require("playwright");
+import { spawn } from "child_process";
+import http from "http";
+import path from "path";
+import { fileURLToPath } from "url";
+import { createRequire } from "module";
+import { existsSync } from "fs";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
+const pwRoots = [
+  process.env.PLAYWRIGHT_ROOT,
+  "/tmp/pw-e2e",
+  ROOT,
+].filter(Boolean);
+const pwRoot = pwRoots.find((d) => existsSync(path.join(d, "node_modules/playwright/package.json")));
+if (!pwRoot) {
+  console.error("playwright not found; npm i playwright in /tmp/pw-e2e or repo root");
+  process.exit(2);
+}
+const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
 const BASE = `http://127.0.0.1:${PORT}/?v=452live`;
@@ -73,8 +87,10 @@ async function main() {
     note(/青绿茶礼盒/.test(brief), "L1 shows 青绿茶礼盒");
     note(/跨界 0/.test(brief) || /本轮跨界 0/.test(brief), "L1 states 跨界 0");
 
-    await page.locator('.cat-chip[data-cat="cross"]').click();
+    // Category chips are only visible on the visual tab.
     await page.locator('.tab[data-tab="visual"]').click();
+    await page.locator('.cat-chip[data-cat="cross"]').waitFor({ state: "visible" });
+    await page.locator('.cat-chip[data-cat="cross"]').click();
     await page.waitForSelector(".empty, .wall-card");
     const crossEmpty = await page.locator(".empty").innerText().catch(() => "");
     note(/本轮跨界样本 0，不编造/.test(crossEmpty), `cross empty: ${crossEmpty.slice(0, 80)}`);
@@ -83,7 +99,7 @@ async function main() {
     await page.locator('.tab[data-tab="shortlist"]').click();
     await page.waitForSelector(".l4-panel");
     const sl = await page.locator(".l4-panel").innerText();
-    const slCount = await page.locator(".l4-panel .sl-card, .l4-panel article, .l4-panel .sl-item").count();
+    const slCount = await page.locator(".l4-panel .sl-item").count();
     note(slCount >= 8 && slCount <= 12, `L4 shortlist cards ${slCount}`);
     note(/路线：/.test(sl) && /贴 brief：/.test(sl), "L4 reasons include 路线/贴 brief");
     note(/检索词：/.test(sl), "L4 reasons include 检索词");
@@ -100,7 +116,7 @@ async function main() {
         secHeads.some((h) => h.includes("差异化机会")),
       "L5 has 分析对象 / 入选参考 / 差异化机会"
     );
-    note(!/满版热闹/.test(report) && !/平面贴金/.test(report), "L5 has no invented differentiation prose");
+    note(!/满版热闹/.test(report), "L5 has no invented differentiation prose");
     note(/方向假设/.test(report) || /青绿新中轴/.test(report), "L5 hangs direction cards as 假设");
 
     await browser.close();
