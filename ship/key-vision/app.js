@@ -1427,14 +1427,16 @@
   }
 
   function resolveCardImage(c) {
-    const local = c.cover_image || c.local_ref_image || "";
-    if (local && !/^http:/i.test(local)) return local;
+    // Prefer live wall/montage https so public hosts work without multi-MB local assets.
     for (const m of c.reference_montage || []) {
       if (m.image_url && /^https:/i.test(m.image_url)) return m.image_url;
       const it = findWallItem(m.item_id);
       const u = it && imgFor(it);
       if (u && /^https:/i.test(u)) return u;
     }
+    const local = c.cover_image || c.local_ref_image || "";
+    if (local && /^https:/i.test(local)) return local;
+    if (local && !/^https?:/i.test(local)) return local;
     return "";
   }
 
