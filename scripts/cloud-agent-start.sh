@@ -9,7 +9,7 @@ PIDFILE="${KEY_VISION_PID:-/tmp/key-vision-http.pid}"
 TUNLOG="${KEY_VISION_TUNNEL_LOG:-/tmp/key-vision-tunnel.log}"
 TUNPID="${KEY_VISION_TUNNEL_PID:-/tmp/key-vision-tunnel.pid}"
 URLFILE="${KEY_VISION_PUBLIC_URL:-/tmp/key-vision-public-url.txt}"
-CACHE_V="${KEY_VISION_CACHE:-452p6}"
+CACHE_V="${KEY_VISION_CACHE:-452p11}"
 
 if [[ ! -d "$DIR" ]]; then
   echo "missing $DIR" >&2

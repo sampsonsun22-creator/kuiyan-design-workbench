@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p10`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p11`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -71,6 +71,15 @@ async function main() {
     note(await page.locator("#userDock").count().then((n) => n === 1), "user permission dock");
     note(await page.locator("#libraryLanes").count().then((n) => n === 1), "library lane chips");
     note(await page.locator("#composerInput").count().then((n) => n === 1), "LLM composer present");
+    note(await page.locator("#composerModel").count().then((n) => n === 1), "composer model chip");
+    note(await page.locator("#railSearch").count().then((n) => n === 1), "rail task search");
+    const bootStream = (await page.locator("#activityStream").innerText()).trim();
+    note(/检索自有库/.test(bootStream) && /452/.test(bootStream), `boot stream retrieve log: ${bootStream.slice(0, 60)}`);
+    note(await page.locator("#activityStream .run").count().then((n) => n >= 3), "Codex-style run stamps on boot");
+    note(
+      await page.locator("#runStep").evaluate((n) => /3\/5/.test(n.textContent || "")),
+      "step footer 3/5"
+    );
     note((await page.locator('.tab[data-tab="intent"]').innerText()).trim() === "Brief", "tab Brief");
     note((await page.locator('.tab[data-tab="visual"]').innerText()).trim() === "参考", "tab 参考");
     note((await page.locator('.tab[data-tab="shortlist"]').innerText()).trim() === "短名单", "tab 短名单");

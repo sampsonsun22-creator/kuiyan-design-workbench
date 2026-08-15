@@ -167,6 +167,8 @@
     artifactOpen: true,
     holdResults: false,
     briefAskKey: "",
+    railQuery: "",
+    _runTimers: [],
   };
 
   const SHORTLIST_TARGET = 12;
@@ -225,6 +227,9 @@
     gutterResult: $("gutterResult"),
     resultChromeTitle: $("resultChromeTitle"),
     composerPlus: $("composerPlus"),
+    composerModel: $("composerModel"),
+    railSearch: $("railSearch"),
+    runStep: $("runStep"),
     appRoot: $("app"),
   };
 
@@ -295,6 +300,11 @@
       el.composerInput.placeholder = any
         ? "随心输入：问这轮墙和 Brief，或说 看库 / 帮我筛选 / 出结论。"
         : "随心输入。先点右上角齿轮配 API，才能真正对话。";
+    }
+    if (el.composerModel) {
+      const cfg = llmConfigFor("orchestrator");
+      const short = String((cfg && cfg.model) || "奎燕").split("/").pop();
+      el.composerModel.textContent = llmReady("orchestrator") ? short : "奎燕";
     }
   }
 
@@ -560,14 +570,14 @@
     }
     const slot = missing[0];
     state.briefAskKey = slot.key;
-    appendEvent({
-      agent: "奎燕设计智能体",
-      time: "现在",
-      tag: "追问",
-      tagClass: "stage",
-      dot: "yellow",
+    appendRun({
+      kind: "ask",
+      actor: "奎燕设计智能体",
+      title: "追问",
+      detail: slot.label,
+      status: "done",
       html: `<p>${escapeHtml(slot.ask)}</p>
-        <div class="event-note">还缺「${escapeHtml(slot.label)}」。先在对话里说清楚，问清之前右边不弹出。</div>`,
+        <p class="run-quiet">还缺「${escapeHtml(slot.label)}」。先在对话里说清楚，问清之前右边不弹出。</p>`,
     });
     return true;
   }
@@ -780,8 +790,12 @@
   }
 
   function renderResearch() {
-    el.researchList.innerHTML = RESEARCHES.map(
-      (r) => `
+    const q = String(state.railQuery || "").trim().toLowerCase();
+    const list = RESEARCHES.filter((r) => !q || String(r.title || "").toLowerCase().includes(q));
+    el.researchList.innerHTML = list.length
+      ? list
+          .map(
+            (r) => `
       <li class="research-card ${r.active ? "active" : ""}" data-id="${r.id}">
         <div class="rtitle">${escapeHtml(r.title)}</div>
         <div class="rmeta">
@@ -789,7 +803,9 @@
           <span class="badge ${r.status}">${r.status === "running" ? "进行中" : "已完成"}</span>
         </div>
       </li>`
-    ).join("");
+          )
+          .join("")
+      : `<li class="research-empty">没有匹配的任务</li>`;
   }
 
   function renderSources() {
@@ -1086,6 +1102,7 @@
     if (syncTab && meta) switchTab(meta.tab, { fromStage: true });
     if (appendEvent) pushStageEvent(n);
     syncPhaseWhisper();
+    syncRunStep(n);
   }
 
   function switchTab(tab, { fromStage = false, reveal = false } = {}) {
@@ -3263,89 +3280,274 @@
     if (preserveScroll && el.canvasBody) el.canvasBody.scrollTop = prev;
   }
 
-  function appendEvent({ agent, time, tag, tagClass, dot, html }) {
+  function clockNow() {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  }
+
+  function clearRunTimers() {
+    (state._runTimers || []).forEach((id) => clearTimeout(id));
+    state._runTimers = [];
+  }
+
+  function later(ms, fn) {
+    const id = setTimeout(fn, ms);
+    (state._runTimers || (state._runTimers = [])).push(id);
+    return id;
+  }
+
+  function libraryStats() {
+    const input = state.bundle?.l1?.input || {};
+    const counts = state.bundle?.l3?.counts || {};
+    const cards = state.bundle?.l4_cards || [];
+    const lanes = scopeCounts();
+    const mainN = state.feedCounts.main || counts.main_wall || 0;
+    const pendN = state.feedCounts.pending || counts.pending_review || 0;
+    const product = input.product || (currentResearch() && currentResearch().title) || "";
+    const tone = input.culture_tone || "中式现代";
+    const sbN = (state.wallItems || []).reduce(
+      (a, it) => a + ((it.suggested_style_buckets || []).length ? 1 : 0),
+      0
+    );
+    return { input, counts, cards, lanes, mainN, pendN, product, tone, sbN };
+  }
+
+  function wallThumbs(limit = 8) {
+    const out = [];
+    for (const it of state.wallItems || []) {
+      const src = imgFor(it);
+      if (!src || !/^https?:/i.test(src) || isFragileImageHost(src)) continue;
+      out.push({ src, title: it.title || "" });
+      if (out.length >= limit) break;
+    }
+    return out;
+  }
+
+  function renderThumbStrip(thumbs) {
+    if (!thumbs || !thumbs.length) return "";
+    return `<div class="run-thumbs" role="list">${thumbs
+      .map(
+        (t) => `<button type="button" class="run-thumb" data-artifact="map" title="${escapeAttr(
+          t.title || ""
+        )}" role="listitem"><img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="${escapeAttr(
+          t.src
+        )}" alt="" /></button>`
+      )
+      .join("")}</div>`;
+  }
+
+  function syncRunStep(n) {
+    if (!el.runStep) return;
+    const stage = Number(n || state.stage || 0);
+    const r = currentResearch();
+    if (!stage || (r && (r.emptyWall || r.custom) && state.holdResults)) {
+      el.runStep.hidden = true;
+      el.runStep.textContent = "";
+      return;
+    }
+    const meta = STAGES.find((s) => s.id === stage);
+    el.runStep.hidden = false;
+    el.runStep.textContent = `第 ${stage}/5 步 · ${meta ? meta.label : ""}`;
+  }
+
+  function appendRun({
+    kind = "run",
+    actor = "奎燕设计智能体",
+    title = "",
+    detail = "",
+    status = "done",
+    tag = "",
+    tagClass = "",
+    time = "",
+    thumbs = [],
+    html = "",
+    actions = [],
+  } = {}) {
     const node = document.createElement("article");
-    node.className = "event";
-    node.innerHTML = `
-      <div class="event-dot ${dot || ""}"></div>
-      <div class="event-card">
-        <div class="event-meta">
-          <span class="event-agent">${escapeHtml(agent)}</span>
-          ${tag ? `<span class="event-tag ${tagClass || ""}">${escapeHtml(tag)}</span>` : ""}
-          <span>${escapeHtml(time || "")}</span>
+    const statusClass =
+      status === "working" ? "is-working" : status === "warn" ? "is-warn" : status === "fail" ? "is-fail" : "is-done";
+    node.className = `event run run-${kind} ${statusClass}`;
+    const actionHtml = (actions || []).length
+      ? `<div class="chips-row">${actions
+          .map(
+            (a) =>
+              `<button type="button" class="artifact-link" data-artifact="${escapeAttr(a.artifact)}">${escapeHtml(
+                a.label
+              )}</button>`
+          )
+          .join("")}</div>`
+      : "";
+    if (kind === "user") {
+      node.innerHTML = `<div class="run-body"><div class="run-user-bubble">${escapeHtml(
+        detail || title || ""
+      )}</div></div>`;
+    } else {
+      node.innerHTML = `
+      <div class="run-gutter"><span class="run-ico" aria-hidden="true"></span></div>
+      <div class="run-body">
+        <div class="run-line">
+          <span class="run-verb">${escapeHtml(title || tag || actor)}</span>
+          ${detail ? `<span class="run-obj">${escapeHtml(detail)}</span>` : ""}
+          ${tag && tag !== title ? `<span class="event-tag ${tagClass || ""}">${escapeHtml(tag)}</span>` : ""}
+          <span class="run-actor">${escapeHtml(actor)}</span>
+          <span class="run-time">${escapeHtml(time || clockNow())}</span>
         </div>
-        ${html}
+        ${html ? `<div class="run-extra event-card">${html}</div>` : ""}
+        ${renderThumbStrip(thumbs)}
+        ${actionHtml}
       </div>`;
+    }
     el.stream.appendChild(node);
     el.stream.scrollTop = el.stream.scrollHeight;
     return node;
   }
 
+  function finishRun(node, patch = {}) {
+    if (!node) return node;
+    node.classList.remove("is-working", "is-done", "is-warn", "is-fail");
+    const st = patch.status || "done";
+    node.classList.add(st === "warn" ? "is-warn" : st === "fail" ? "is-fail" : "is-done");
+    const verb = node.querySelector(".run-verb");
+    let obj = node.querySelector(".run-obj");
+    if (patch.title && verb) verb.textContent = patch.title;
+    if (patch.detail != null) {
+      if (obj) obj.textContent = patch.detail;
+      else if (verb) {
+        obj = document.createElement("span");
+        obj.className = "run-obj";
+        obj.textContent = patch.detail;
+        verb.after(obj);
+      }
+    }
+    if (patch.html != null) {
+      let extra = node.querySelector(".run-extra");
+      if (!extra) {
+        extra = document.createElement("div");
+        extra.className = "run-extra event-card";
+        const body = node.querySelector(".run-body");
+        const thumbs = body && body.querySelector(".run-thumbs");
+        if (thumbs) body.insertBefore(extra, thumbs);
+        else if (body) body.appendChild(extra);
+      }
+      extra.innerHTML = patch.html;
+    }
+    if (patch.thumbs) {
+      const body = node.querySelector(".run-body");
+      if (body) {
+        const old = body.querySelector(".run-thumbs");
+        if (old) old.remove();
+        if (patch.thumbs.length) body.insertAdjacentHTML("beforeend", renderThumbStrip(patch.thumbs));
+      }
+    }
+    if (el.stream) el.stream.scrollTop = el.stream.scrollHeight;
+    return node;
+  }
+
+  function appendEvent({ agent, time, tag, tagClass, dot, html }) {
+    if (agent === "你") {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = html || "";
+      return appendRun({
+        kind: "user",
+        title: tag || "留言",
+        detail: (tmp.textContent || "").trim(),
+        time: time === "现在" ? clockNow() : time,
+      });
+    }
+    const status = dot === "warn" ? "warn" : dot === "kill" ? "fail" : /追问/.test(tag || "") ? "working" : "done";
+    return appendRun({
+      kind: /追问/.test(tag || "") ? "ask" : "run",
+      actor: agent,
+      title: tag || agent,
+      status,
+      tagClass,
+      time: time === "现在" ? clockNow() : time,
+      html,
+    });
+  }
+
+  function playLibraryRun({ animate = false } = {}) {
+    const { lanes, mainN, pendN, sbN } = libraryStats();
+    const thumbs = wallThumbs(8);
+    const paintDone = () => {
+      appendRun({
+        title: "检索自有库",
+        detail: `${mainN} 张`,
+        thumbs,
+        html: pendN ? `<p class="run-quiet">待复核 ${pendN} 没算进来。不发起新采集。</p>` : `<p class="run-quiet">不发起新采集，只读本机库。</p>`,
+        actions: [{ artifact: "map", label: "打开参考墙" }],
+      });
+      appendRun({
+        actor: "点点",
+        title: "风格打标",
+        detail: `${sbN}/${mainN}`,
+        html: `<p class="run-quiet">东方 / 国际 / 简约按已有桶映射。开箱、反馈、成本、头部/新锐大多未标。</p>`,
+      });
+      appendRun({
+        title: "分类拆解",
+        detail: `同类 ${lanes.same} · 不同类 ${lanes.adjacent} · 跨界 ${lanes.cross} · 货架 ${lanes.shelf}`,
+      });
+      syncRunStep(3);
+    };
+    if (!animate) {
+      paintDone();
+      return;
+    }
+    const retrieve = appendRun({ title: "检索自有库", detail: "只读本机库…", status: "working" });
+    later(280, () => {
+      finishRun(retrieve, {
+        status: "done",
+        detail: `${mainN} 张`,
+        thumbs,
+        html: pendN ? `<p class="run-quiet">待复核 ${pendN} 没算进来。不发起新采集。</p>` : "",
+      });
+      const tag = appendRun({ actor: "点点", title: "风格打标", detail: "对照已有桶…", status: "working" });
+      later(240, () => {
+        finishRun(tag, { status: "done", detail: `${sbN}/${mainN}` });
+        appendRun({
+          title: "写入参考墙",
+          detail: `同类 ${lanes.same} · 不同类 ${lanes.adjacent} · 跨界 ${lanes.cross} · 货架 ${lanes.shelf}`,
+          actions: [{ artifact: "map", label: "打开参考墙" }],
+        });
+        syncRunStep(3);
+      });
+    });
+  }
+
   function seedStream() {
+    clearRunTimers();
     el.stream.innerHTML = "";
     state.chatTurns = [];
     const r = currentResearch();
     if (r.emptyWall || r.custom) {
+      syncRunStep(0);
       return;
     }
-    const input = state.bundle?.l1?.input || {};
-    const counts = state.bundle?.l3?.counts || {};
-    const cards = state.bundle?.l4_cards || [];
-    const lanes = scopeCounts();
-
-    const mainN = state.feedCounts.main || counts.main_wall || 0;
-    const pendN = state.feedCounts.pending || counts.pending_review || 0;
-    const product = input.product || currentResearch().title;
-    const tone = input.culture_tone || "中式现代";
-    const sbN = state.wallItems.reduce(
-      (a, it) => a + ((it.suggested_style_buckets || []).length ? 1 : 0),
-      0
-    );
-
-    appendEvent({
-      agent: "奎燕设计智能体",
-      time: "现在",
-      tag: "这轮先这样看",
-      tagClass: "stage",
-      dot: "ok",
-      html: `<p>产品是 <strong>${escapeHtml(product)}</strong>，卖给 <strong>${escapeHtml(
-        input.audience || "客群未标注"
-      )}</strong>，渠道 ${escapeHtml(input.channel || "未标注")}，气质 ${escapeHtml(tone)}。</p>
-        <div class="event-note">自有库已挂上 ${mainN} 张（待复核 ${pendN} 没算进来）。中国在售和概念/飞机稿可以分开看。跨界 ${lanes.cross}、不同类 ${lanes.adjacent}，缺的我不补。</div>
-        <div class="chips-row">
-          <button type="button" class="artifact-link" data-artifact="map">打开自有库</button>
-          <button type="button" class="artifact-link" data-artifact="shortlist">先收一版给老板</button>
-          <button type="button" class="artifact-link" data-artifact="report">直接看报告</button>
-        </div>`,
+    const { input, cards, product, tone } = libraryStats();
+    appendRun({
+      title: "听清 Brief",
+      detail: `${product} · ${input.audience || "客群未标注"}`,
+      html: `<p class="run-quiet">渠道 ${escapeHtml(input.channel || "未标注")} · 气质 ${escapeHtml(
+        tone
+      )}。先问清再检索。</p>`,
     });
-
-    appendEvent({
-      agent: "点点",
-      time: "现在",
-      tag: "打标",
-      tagClass: "consensus",
-      dot: "ok",
-      html: `<p>风格桶标到 <strong>${sbN}/${mainN}</strong>。东方 / 国际 / 简约这些市场话术，我按已有桶映射，不是另爬一套。</p>
-        <div class="event-note">开箱、用户反馈、成本、头部/新锐体量本轮库里大多没标。老板筛选时我会写未标注，不会编。</div>`,
-    });
-
+    playLibraryRun({ animate: false });
     const cardLines = cards
       .slice(0, 3)
       .map((c) => `<li><strong>${escapeHtml(c.title)}</strong> — ${escapeHtml(c.one_liner || "")}</li>`)
       .join("");
-
-    appendEvent({
-      agent: "奎燕设计智能体",
-      time: "12:03",
-      tag: "L5 结论报告",
-      tagClass: "consensus",
-      dot: "ok",
-      html: `<p>你选定参考之后，我出一份可下载的差异化报告。到报告为止，<strong>还不会有设计完稿</strong>。</p>
-        ${cardLines ? `<p>青绿茶这轮挂了三张方向假设（示意 · 非完稿）：</p><ul>${cardLines}</ul>` : ""}
-        <div class="chips-row">
-          <button type="button" class="artifact-link" data-artifact="report">打开报告</button>
-        </div>`,
-    });
+    if (cardLines) {
+      appendRun({
+        title: "方向假设 · 非完稿",
+        detail: `${cards.length} 张`,
+        html: `<p class="run-quiet">到报告为止还不会有设计完稿。青绿茶这轮挂了三张方向假设：</p><ul>${cardLines}</ul>`,
+        actions: [
+          { artifact: "shortlist", label: "先收一版给老板" },
+          { artifact: "report", label: "打开结论" },
+        ],
+      });
+    }
+    syncRunStep(3);
   }
 
   function pushStageEvent(n) {
@@ -3353,63 +3555,49 @@
     const mainN = state.feedCounts.main || 0;
     const map = {
       1: () =>
-        appendEvent({
-          agent: "奎燕设计智能体",
-          time: "现在",
-          tag: "L1 意图识别",
-          tagClass: "stage",
-          dot: "yellow",
-          html: `<p>回到 Brief。先看客群、渠道、场合对不对，再看产品与红线。</p>
-            <div class="chips-row"><button type="button" class="artifact-link" data-artifact="brief">看 Brief</button></div>`,
+        appendRun({
+          title: "听清 Brief",
+          detail: "回到客群 / 渠道 / 场合",
+          actions: [{ artifact: "brief", label: "看 Brief" }],
         }),
       2: () => {
         setCap("crawler", "idle", `同类 ${lanes.same} · 不同类 ${lanes.adjacent} · 跨界 ${lanes.cross} · 货架 ${lanes.shelf}`);
-        appendEvent({
-          agent: "采集",
-          time: "现在",
-          tag: "L2 搜索穷尽",
-          tagClass: "",
-          dot: "yellow",
-          html: `<p>三路的账在这儿：同类 ${lanes.same} · 不同类 ${lanes.adjacent} · 跨界 ${lanes.cross} · 货架 ${lanes.shelf}。本版不发起新采集，穷尽还差跨界那一路。</p>
-            <div class="chips-row"><button type="button" class="artifact-link" data-artifact="map">打开竞品版图</button></div>`,
+        appendRun({
+          actor: "采集",
+          title: "穷尽自有库",
+          detail: `同类 ${lanes.same} · 不同类 ${lanes.adjacent} · 跨界 ${lanes.cross} · 货架 ${lanes.shelf}`,
+          html: `<p class="run-quiet">本版不发起新采集，穷尽还差跨界那一路。</p>`,
+          actions: [{ artifact: "map", label: "打开参考墙" }],
         });
       },
       3: () => {
         setCap("dotdot", "idle", "维度标签已就绪，缺值写未标注");
-        appendEvent({
-          agent: "点点",
-          time: "现在",
-          tag: "L3 分类拆解",
-          tagClass: "consensus",
-          dot: "ok",
-          html: `<p>墙按风格桶铺开了。点一张，右侧按视觉 / 体验 / 商业三组给你看标了什么、什么还没标。</p>
-            <div class="chips-row"><button type="button" class="artifact-link" data-artifact="map">点一张看维度</button></div>`,
+        appendRun({
+          actor: "点点",
+          title: "分类拆解",
+          detail: "视觉 / 体验 / 商业",
+          html: `<p class="run-quiet">点一张，看标了什么、什么还没标。</p>`,
+          actions: [{ artifact: "map", label: "打开参考墙" }],
         });
       },
       4: () => {
-        appendEvent({
-          agent: "奎燕设计智能体",
-          time: "现在",
-          tag: "L4 决策筛选",
-          tagClass: "challenge",
-          dot: "warn",
-          html: `<p>短名单在右边，每款都写了为什么进来。拿掉不合意的，或者写句批注（例如「不要金红，多留白」）让我在这 ${mainN} 张里重排。</p>
-            <div class="chips-row"><button type="button" class="artifact-link" data-artifact="shortlist">打开短名单</button></div>`,
+        appendRun({
+          title: "决策筛选",
+          detail: `${mainN} 张里收短名单`,
+          status: "warn",
+          html: `<p class="run-quiet">拿掉不合意的，或写一句批注让我重排。不发起新采集。</p>`,
+          actions: [{ artifact: "shortlist", label: "打开短名单" }],
         });
       },
       5: () => {
-        const n = state.shortlistVisual.length;
-        appendEvent({
-          agent: "奎燕设计智能体",
-          time: "现在",
-          tag: "L5 结论报告",
-          tagClass: "consensus",
-          dot: "ok",
-          html: n
-            ? `<p>按 ${n} 款短名单出了六段结论。差异化那段是方向假设，不是完稿；跨界 0、用户反馈未采这些缺口，我都写在最后一段了。</p>
-               <div class="chips-row"><button type="button" class="artifact-link" data-artifact="report">看结论报告</button></div>`
-            : `<p>短名单空着，这份只能算覆盖缺口报告，别当选型结论看。</p>
-               <div class="chips-row"><button type="button" class="artifact-link" data-artifact="shortlist">先去收短名单</button></div>`,
+        const kept = state.shortlistVisual.length;
+        appendRun({
+          title: "结论报告",
+          detail: kept ? `${kept} 款短名单` : "缺口报告",
+          html: kept
+            ? `<p class="run-quiet">六段结论。差异化是方向假设，不是完稿；跨界 0、用户反馈未采都写在最后。</p>`
+            : `<p class="run-quiet">短名单空着，这份只能算覆盖缺口报告。</p>`,
+          actions: [{ artifact: kept ? "report" : "shortlist", label: kept ? "看结论" : "先去收短名单" }],
         });
       },
     };
@@ -3471,37 +3659,24 @@
   function handleSend(text) {
     const t = text.trim();
     if (!t) return;
-    appendEvent({
-      agent: "你",
-      time: "现在",
-      tag: "留言",
-      tagClass: "",
-      dot: "yellow",
-      html: `<div class="event-note">${escapeHtml(t)}</div>`,
-    });
+    appendRun({ kind: "user", detail: t });
 
     if (state.briefAskKey || (currentResearch().custom && missingBriefSlots().length)) {
       const filled = absorbBriefAnswer(t);
       if (filled) {
         const slot = BRIEF_SLOTS.find((s) => s.key === filled);
-        appendEvent({
-          agent: "奎燕设计智能体",
-          time: "现在",
-          tag: "已记下",
-          tagClass: "consensus",
-          dot: "ok",
+        appendRun({
+          title: "记下",
+          detail: `${slot ? slot.label : filled} · ${t.slice(0, 40)}`,
           html: `<p>「${escapeHtml(slot ? slot.label : filled)}」记下了：${escapeHtml(t.slice(0, 80))}。</p>`,
         });
         if (el.canvasBody && state.tab === "intent") renderCanvas({ preserveScroll: true });
         if (askNextBriefSlot()) return;
-        appendEvent({
-          agent: "奎燕设计智能体",
-          time: "现在",
-          tag: "可以检索了",
-          tagClass: "consensus",
-          dot: "ok",
-          html: `<p>Brief 这几项够用了。问清的结果在右边。下一步我只检索自有库，不对外网站点新爬。</p>
-            <div class="chips-row"><button type="button" class="artifact-link" data-artifact="map">打开自有库</button></div>`,
+        appendRun({
+          title: "可以检索了",
+          detail: "Brief 够用",
+          html: `<p class="run-quiet">问清的结果在右边。下一步只检索自有库，不对外网站点新爬。</p>`,
+          actions: [{ artifact: "map", label: "打开自有库" }],
         });
         setStage(1, { appendEvent: false });
         revealAndSwitch("intent", { fromStage: true });
@@ -3540,20 +3715,18 @@
       return;
     }
     if (/版图|视觉|看墙|地图|穷尽|搜索|跨界|不同类|货架|自有库|打开库|参考墙|看参考/.test(t)) {
-      setStage(3);
+      setStage(3, { appendEvent: false });
       revealAndSwitch("visual", { fromStage: true });
-      appendEvent({
-        agent: "奎燕设计智能体",
-        time: "现在",
-        tag: "L2 · L3",
-        tagClass: "consensus",
-        dot: "ok",
-        html: `<p>版图在右边：同类 ${lanes.same} · 不同类 ${lanes.adjacent} · 跨界 ${lanes.cross} · 货架 ${lanes.shelf}，主墙共 ${mainN}，待复核 ${pendN} 没算进来。${
-          rec ? `先盯这几桶：${escapeHtml(rec)}。` : ""
-        }</p>
-        ${lanes.cross ? "" : `<div class="event-note">跨界那个 chip 点进去是空的——本轮确实一张没采，不编造。</div>`}
-        <div class="chips-row"><button type="button" class="artifact-link" data-artifact="map">打开竞品版图</button></div>`,
-      });
+      playLibraryRun({ animate: true });
+      if (rec) {
+        later(560, () =>
+          appendRun({
+            title: "先盯这几桶",
+            detail: rec,
+            html: lanes.cross ? "" : `<p class="run-quiet">跨界 chip 点进去是空的——本轮确实一张没采，不编造。</p>`,
+          })
+        );
+      }
       return;
     }
     if (/筛选|短名单|选参考|收几张|挑|入选/.test(t)) {
@@ -3569,29 +3742,25 @@
     if (/方向|策略|三张|卡/.test(t)) {
       setStage(5);
       revealAndSwitch("report", { fromStage: true });
-      appendEvent({
-        agent: "奎燕设计智能体",
-        time: "现在",
-        tag: "方向假设",
-        tagClass: cards.length ? "challenge" : "",
-        dot: cards.length ? "warn" : "ok",
+      appendRun({
+        title: "方向假设 · 非完稿",
+        detail: cards.length ? cardNames : "这轮还没有",
+        status: cards.length ? "warn" : "done",
         html: cards.length
-          ? `<p>方向卡挂在结论报告第 5 段「差异化机会」里：<strong>${escapeHtml(cardNames)}</strong>。都是方向假设 · 非完稿，先看前面的样本结构再决定留哪张。</p>`
-          : `<p>这轮还没有方向假设卡；青绿茶礼盒那轮有三张。</p>`,
+          ? `<p class="run-quiet">挂在结论第 5 段「差异化机会」里，先看样本结构再决定留哪张。</p>`
+          : `<p class="run-quiet">青绿茶礼盒那轮有三张方向假设。</p>`,
       });
       return;
     }
     if (/crawler|采集|同步/.test(lower) || /同步|采集/.test(t)) {
       setCap("crawler", "idle", `主墙 ${mainN} · 待复核 ${pendN}`);
-      setStage(2);
+      setStage(2, { appendEvent: false });
       revealAndSwitch("visual", { fromStage: true });
-      appendEvent({
-        agent: "采集",
-        time: "现在",
-        tag: "L2 搜索穷尽",
-        tagClass: "consensus",
-        dot: "ok",
-        html: `<p>本版不发起新采集。已落地主墙 ${mainN} · 待复核 ${pendN}；跨界 ${lanes.cross}、货架 ${lanes.shelf} 都还是缺口，我不假装连上了。</p>`,
+      appendRun({
+        actor: "采集",
+        title: "不发起新采集",
+        detail: `主墙 ${mainN} · 待复核 ${pendN}`,
+        html: `<p class="run-quiet">跨界 ${lanes.cross}、货架 ${lanes.shelf} 都还是缺口，我不假装连上了。</p>`,
       });
       return;
     }
@@ -3601,13 +3770,10 @@
         ? "crawler"
         : "orchestrator";
     if (!llmReady(agentId) && !llmReady("orchestrator")) {
-      appendEvent({
-        agent: "奎燕设计智能体",
-        time: "现在",
-        tag: "还没接模型",
-        tagClass: "challenge",
-        dot: "warn",
-        html: `<p>中间栏现在接不上对话。点右上角齿轮，给编排 / 采集 / 点点配 API。页签跳转还可以说「看 Brief」「看版图」「帮我筛选」「出结论」。</p>`,
+      appendRun({
+        title: "还没接模型",
+        status: "warn",
+        html: `<p class="run-quiet">点右上角齿轮，给编排 / 采集 / 点点配 API。也可以直接说「看 Brief」「看版图」「帮我筛选」「出结论」。</p>`,
       });
       openLlmSettings(agentId);
       return;
@@ -3616,26 +3782,23 @@
     const meta = AGENT_LLM_META.find((m) => m.id === useId);
     state.llmBusy = true;
     if (el.sendBtn) el.sendBtn.disabled = true;
+    const pending = appendRun({
+      actor: meta.name,
+      title: meta.name,
+      detail: "在想…",
+      status: "working",
+    });
     askAgent(useId, t)
       .then((reply) => {
-        appendEvent({
-          agent: meta.name,
-          time: "现在",
-          tag: "对话",
-          tagClass: "consensus",
-          dot: "ok",
-          html: mdLite(reply),
-        });
+        finishRun(pending, { status: "done", detail: "回复", html: mdLite(reply) });
       })
       .catch((err) => {
-        appendEvent({
-          agent: meta.name,
-          time: "现在",
-          tag: "没打通",
-          tagClass: "challenge",
-          dot: "kill",
+        finishRun(pending, {
+          status: "fail",
+          title: "没打通",
+          detail: "",
           html: `<p>${escapeHtml(err.message || String(err))}</p>
-            <div class="event-note">检查 API Key、模型名，以及是不是用 key_vision_server.py 打开的本页。</div>`,
+            <p class="run-quiet">检查 API Key、模型名，以及是不是用 key_vision_server.py 打开的本页。</p>`,
         });
       })
       .finally(() => {
@@ -3751,17 +3914,14 @@
         syncStageButtons(3);
         switchTab("visual", { fromStage: true, reveal: true });
         syncQuestionMode();
-        appendEvent({
-          agent: "奎燕设计智能体",
-          time: "现在",
-          tag: "切换研究",
-          tagClass: "stage",
-          dot: "ok",
-          html: r.onlyBriefDefault
-            ? `<p>已切回青绿茶礼盒。主墙 <strong>${state.feedCounts.main}</strong> · 待复核 <strong>${state.feedCounts.pending}</strong>，短名单和批注都已清空重来。分路按 Brief 动态算：同类 / 不同类 / 跨界，货架仍是在售切片。</p>`
-            : `<p>已打开「${escapeHtml(r.title)}」自有库 <strong>${state.feedCounts.main}</strong> 张。这轮 Brief 还没录入，客群、红线都是未标注。茶礼那轮的方向卡不会跟过来。</p>`,
-        });
-        if (!r.onlyBriefDefault) askNextBriefSlot();
+        if (!r.onlyBriefDefault) {
+          appendRun({
+            title: "打开自有库",
+            detail: `${state.feedCounts.main} 张`,
+            html: `<p class="run-quiet">这轮 Brief 还没录入，客群、红线都是未标注。茶礼那轮的方向卡不会跟过来。</p>`,
+          });
+          askNextBriefSlot();
+        }
       }
     } catch (err) {
       console.warn(err);
@@ -3831,18 +3991,11 @@
         state.sources.find((s) => s.id === id) ||
         (SOURCE_META[id] ? { id, label: SOURCE_META[id].label, status: "ok", statusText: "" } : null);
       state.wallVisibleLimit = WALL_BATCH_INITIAL;
-      appendEvent({
-        agent: "采集",
-        time: "现在",
-        tag: "看源",
-        tagClass: "",
-        dot: src?.status === "working" ? "warn" : "ok",
-        html: `<p>${escapeHtml(
-          !id || id === "all" ? "全部出处" : src?.label || id
-        )}：${escapeHtml(
-          !id || id === "all" ? "取消来源过滤" : src?.statusText || "按来源过滤主墙"
-        )}。</p>`,
-      });
+      toast(
+        !id || id === "all"
+          ? "全部出处"
+          : `${src?.label || id}：${src?.statusText || "按来源过滤主墙"}`
+      );
       if (state.tab !== "visual") switchTab("visual", { fromStage: true });
       else renderCanvas();
     });
@@ -4157,6 +4310,15 @@
     if (el.composerPlus) {
       el.composerPlus.addEventListener("click", () => toast("本版不支持上传附件"));
     }
+    if (el.composerModel) {
+      el.composerModel.addEventListener("click", () => openLlmSettings("orchestrator"));
+    }
+    if (el.railSearch) {
+      el.railSearch.addEventListener("input", () => {
+        state.railQuery = el.railSearch.value || "";
+        renderResearch();
+      });
+    }
     bindLayoutPanes();
     syncResultChrome();
     if (el.libraryLanes) {
@@ -4202,14 +4364,10 @@
         if (act === "llm") openLlmSettings("orchestrator");
         else if (act === "profile") toast("席位资料本机保存，不写进仓库");
         else if (act === "help") {
-          appendEvent({
-            agent: "奎燕设计智能体",
-            time: "现在",
-            tag: "怎么用",
-            tagClass: "stage",
-            dot: "yellow",
-            html: `<p>左边是任务和席位。中间跟我聊：Brief 粗我就追问。生成的库、短名单、报告在右边弹出，中间的细条可以拖，栏宽会记住。</p>
-              <div class="event-note">底层还是问清 → 检索库 → 打标 → 筛选 → 报告。界面不再做成五步向导，避免把思维卡死。</div>`,
+          appendRun({
+            title: "怎么用",
+            html: `<p>左边是任务和席位。中间是我的运行日志：检索、打标、写入墙都会一条条跳出来。Brief 粗我就追问。库、短名单、报告在右边弹出，细条可以拖，栏宽会记住。</p>
+              <p class="run-quiet">底层还是问清 → 检索库 → 打标 → 筛选 → 报告。界面不再做成五步向导。</p>`,
           });
         }
       });
@@ -4364,14 +4522,7 @@
       switchTab("visual", { fromStage: true });
       if (!userArmedPending) forceProductWallDefaults("after-visual");
       seedStream();
-      appendEvent({
-        agent: "采集",
-        time: "现在",
-        tag: "主墙已挂上",
-        tagClass: "consensus",
-        dot: "ok",
-        html: `<p>参考墙已挂上：主墙 <strong>${state.feedCounts.main}</strong> 张可用 · 待复核 <strong>${state.feedCounts.pending}</strong>。先刷一屏，不够再往下翻。</p>`,
-      });
+      syncRunStep(3);
     } catch (err) {
       console.error(err);
       el.canvasBody.innerHTML = `<div class="empty"><div class="slogan">这会儿还没挂上参考</div><p class="hint">加载出了点问题，稍后再试。</p>
