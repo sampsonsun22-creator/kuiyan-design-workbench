@@ -442,18 +442,18 @@
   function bindLayoutPanes() {
     const root = el.appRoot;
     if (!root) return;
-    const STORE = "key-vision-layout-v1";
+    const STORE = "key-vision-layout-v2";
     const defaults = () => ({
-      railW: 252,
-      resultW: Math.round(Math.min(680, Math.max(420, window.innerWidth * 0.42))),
+      railW: 240,
+      resultW: Math.round(Math.min(520, Math.max(400, window.innerWidth * 0.34))),
     });
     const read = () => {
       try {
         const saved = JSON.parse(localStorage.getItem(STORE) || "{}") || {};
         const d = defaults();
         return {
-          railW: clamp(Number(saved.railW) || d.railW, 200, 420),
-          resultW: clamp(Number(saved.resultW) || d.resultW, 360, Math.max(420, window.innerWidth - 520)),
+          railW: clamp(Number(saved.railW) || d.railW, 200, 360),
+          resultW: clamp(Number(saved.resultW) || d.resultW, 360, Math.max(400, window.innerWidth - 700)),
         };
       } catch (_) {
         return defaults();
@@ -486,8 +486,8 @@
           const dx = ev.clientX - startX;
           const next =
             key === "railW"
-              ? clamp(start + dx, 200, 420)
-              : clamp(start - dx, 360, Math.max(420, window.innerWidth - 520));
+              ? clamp(start + dx, 200, 360)
+              : clamp(start - dx, 360, Math.max(400, window.innerWidth - 700));
           layout[key] = next;
           if (frame) return;
           frame = requestAnimationFrame(() => {
@@ -518,8 +518,8 @@
         const signed = key === "resultW" ? -dir : dir;
         layout[key] =
           key === "railW"
-            ? clamp(layout[key] + signed * step, 200, 420)
-            : clamp(layout[key] + signed * step, 360, Math.max(420, window.innerWidth - 520));
+            ? clamp(layout[key] + signed * step, 200, 360)
+            : clamp(layout[key] + signed * step, 360, Math.max(400, window.innerWidth - 700));
         apply();
         persist();
       });

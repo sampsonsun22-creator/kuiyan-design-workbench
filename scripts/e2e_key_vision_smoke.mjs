@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p11`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p12`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
