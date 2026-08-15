@@ -10,7 +10,7 @@
     "icon": "python3 scripts/make_icon.py",
     "pack": "electron-builder --dir",
     "dist": "electron-builder --mac --win",
-    "dist:win": "python3 scripts/make_icon.py && electron-builder --win nsis zip portable --publish never"
+    "dist:win": "python3 scripts/make_icon.py && electron-builder --win zip portable --publish never && bash scripts/make_nsis.sh"
   },
   "author": "奎燕 AI 研究室",
   "license": "UNLICENSED",
