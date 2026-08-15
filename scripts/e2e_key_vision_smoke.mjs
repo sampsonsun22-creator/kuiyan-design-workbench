@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p12`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p13`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -73,6 +73,9 @@ async function main() {
     note(await page.locator("#composerInput").count().then((n) => n === 1), "LLM composer present");
     note(await page.locator("#composerModel").count().then((n) => n === 1), "composer model chip");
     note(await page.locator("#railSearch").count().then((n) => n === 1), "rail task search");
+    note((await page.locator("#btnNewResearch").innerText()).includes("新建分析"), "new analysis button");
+    note(await page.locator("#btnNavResult").innerText().then((t) => t.includes("素材库")), "rail 素材库");
+    note(await page.locator("#activityStream .brief-table").count().then((n) => n === 1), "Brief table in stream");
     const bootStream = (await page.locator("#activityStream").innerText()).trim();
     note(/检索自有库/.test(bootStream) && /452/.test(bootStream), `boot stream retrieve log: ${bootStream.slice(0, 60)}`);
     note(await page.locator("#activityStream .run").count().then((n) => n >= 3), "Codex-style run stamps on boot");

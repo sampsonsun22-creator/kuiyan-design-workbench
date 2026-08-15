@@ -1,14 +1,16 @@
 {
   "name": "key-vision-desktop",
   "productName": "KEY 视界",
-  "version": "0.4.527",
+  "version": "0.5.0",
   "private": true,
   "description": "奎燕竞品分析智能体 · Windows / macOS 客户端",
   "main": "main.cjs",
   "scripts": {
     "start": "electron .",
+    "icon": "python3 scripts/make_icon.py",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder --mac --win"
+    "dist": "electron-builder --mac --win",
+    "dist:win": "python3 scripts/make_icon.py && electron-builder --win zip portable --publish never"
   },
   "author": "奎燕 AI 研究室",
   "license": "UNLICENSED",
@@ -19,9 +21,12 @@
   "build": {
     "appId": "com.kuiyan.keyvision",
     "productName": "KEY 视界",
+    "icon": "build/icon.png",
     "files": [
       "main.cjs",
-      "preload.cjs"
+      "preload.cjs",
+      "build/icon.png",
+      "build/icon.ico"
     ],
     "extraResources": [
       {
@@ -29,23 +34,36 @@
         "to": "key-vision",
         "filter": [
           "**/*",
-          "!**/.vercel/**"
+          "!**/.vercel/**",
+          "!**/*.mp4"
         ]
       }
     ],
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "build"
     },
     "mac": {
       "category": "public.app-category.graphics-design",
-      "target": ["dmg", "zip"]
+      "target": ["dmg", "zip"],
+      "icon": "build/icon.png"
     },
     "win": {
-      "target": ["nsis", "zip"]
+      "icon": "build/icon.ico",
+      "target": [
+        { "target": "zip", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "signAndEditExecutable": false,
+      "artifactName": "KEY-Vision-${version}-win-${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "KEY-Vision-${version}-Windows.exe"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "KEY-Vision-Setup-${version}.exe"
     }
   }
 }

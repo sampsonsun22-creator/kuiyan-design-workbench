@@ -6,27 +6,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KEY 视界 · 奎燕竞品分析</title>
   <link rel="icon" href="assets/brand/logo-key-lockup-on-light.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=452p12" />
+  <link rel="stylesheet" href="styles.css?v=452p13" />
 </head>
 <body class="studio">
   <div class="app studio-app artifact-open" id="app">
     <aside class="rail" aria-label="任务栏">
-      <div class="rail-brand" aria-label="KEY 视界">
-        <img class="rail-mark" src="assets/brand/logo-key-lockup-on-light.svg" alt="{KEY} 奎燕品牌创新社" />
-        <div class="rail-name">KEY 视界</div>
-        <div class="rail-sub">奎燕竞品分析</div>
+      <div class="rail-brand rail-brand-key" aria-label="KEY 视界">
+        <img class="rail-mark sr-only" src="assets/brand/logo-key-lockup-on-light.svg" alt="{KEY} 奎燕品牌创新社" />
+        <div class="rail-key">{ KEY }</div>
+        <div class="rail-name">奎燕品牌创新社</div>
+        <div class="rail-sub">KEY BRAND DESIGN</div>
       </div>
 
       <button type="button" class="btn-new" id="btnNewResearch" title="新建研究，墙先空着" aria-label="新建研究">
-        <span class="plus" aria-hidden="true">+</span>新任务
+        <span class="plus" aria-hidden="true">+</span>新建分析
       </button>
 
       <nav class="rail-nav" aria-label="工作区">
         <button type="button" class="rail-nav-btn active" id="btnNavChat" data-nav="chat">
           <span class="rail-nav-ico" aria-hidden="true">◎</span>对话
         </button>
-        <button type="button" class="rail-nav-btn" id="btnNavResult" data-nav="result" aria-pressed="true">
-          <span class="rail-nav-ico" aria-hidden="true">▣</span>结果
+        <button type="button" class="rail-nav-btn" id="btnNavResult" data-nav="library" aria-pressed="true">
+          <span class="rail-nav-ico" aria-hidden="true">▣</span>素材库
+        </button>
+        <button type="button" class="rail-nav-btn" id="btnNavTags" data-nav="tags">
+          <span class="rail-nav-ico" aria-hidden="true">#</span>标签体系
+        </button>
+        <button type="button" class="rail-nav-btn" id="btnNavReport" data-nav="report">
+          <span class="rail-nav-ico" aria-hidden="true">≡</span>报告
         </button>
       </nav>
 
@@ -76,6 +83,11 @@
         <div class="workspace-title-block">
           <h1 id="researchTitle">青绿茶礼盒 · 竞品调研</h1>
           <p class="phase-whisper" id="phaseWhisper">先把卖给谁问清楚，再从自有库里检索。</p>
+          <div class="workspace-meta" id="workspaceMeta">
+            <span class="meta-chip">市场 · 中国大陆</span>
+            <span class="meta-chip" id="metaModel">模型 · 奎燕</span>
+            <span class="meta-chip" title="只检索本机自有库，不对外网站点新爬">本机演示</span>
+          </div>
         </div>
         <div class="workspace-actions">
           <button type="button" class="ghost-btn" id="btnToggleArtifact" aria-pressed="true">收起结果</button>
@@ -103,13 +115,17 @@
             <button type="button" class="attach" title="表格" data-attach="table">▦</button>
             <button type="button" class="attach" title="证据" data-attach="evidence">📎</button>
           </div>
-          <button type="button" class="composer-plus" id="composerPlus" title="附件" data-attach="evidence" aria-label="附件">+</button>
-          <span class="composer-chip" id="composerLibChip" title="只检索本机自有库，不对外网站点新爬">本机库</span>
-          <textarea id="composerInput" rows="1" placeholder="跟我说这包卖给谁，或让我从库里收一轮…"></textarea>
-          <button type="button" class="composer-chip composer-model" id="composerModel" title="模型与权限">奎燕</button>
-          <button type="submit" class="send-btn" id="sendBtn" aria-label="发送" title="发送">
-            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
+          <textarea id="composerInput" rows="2" placeholder="输入你的问题，或用 / 看库、帮我筛选、出结论…"></textarea>
+          <div class="composer-tools">
+            <button type="button" class="composer-plus" id="composerPlus" title="附件" data-attach="evidence" aria-label="附件">+</button>
+            <button type="button" class="composer-chip" id="composerLibChip" title="只检索本机自有库，不对外网站点新爬">本机库</button>
+            <button type="button" class="composer-chip" id="composerSlash" title="可用指令">指令</button>
+            <span class="composer-spacer"></span>
+            <button type="button" class="composer-chip composer-model" id="composerModel" title="模型与权限">奎燕</button>
+            <button type="submit" class="send-btn" id="sendBtn" aria-label="发送" title="发送">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 12h12M12 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
         </form>
       </div>
     </section>
@@ -174,8 +190,10 @@
             <span class="sel-count" id="selCount">先看这 0 张</span>
             <div class="sel-actions">
               <button type="button" data-sel-action="compare" hidden>对比一下</button>
-              <button type="button" data-sel-action="shortlist">收进短名单</button>
-              <button type="button" class="sel-primary" data-sel-action="open">打开原页</button>
+              <button type="button" class="sel-primary" data-sel-action="shortlist">入选</button>
+              <button type="button" data-sel-action="keep">保留作参考</button>
+              <button type="button" data-sel-action="exclude">排除</button>
+              <button type="button" data-sel-action="open">打开原页</button>
             </div>
           </div>
         </div>
@@ -217,6 +235,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=452p12"></script>
+  <script src="app.js?v=452p13"></script>
 </body>
 </html>

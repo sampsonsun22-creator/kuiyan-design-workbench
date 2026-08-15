@@ -228,8 +228,13 @@
     resultChromeTitle: $("resultChromeTitle"),
     composerPlus: $("composerPlus"),
     composerModel: $("composerModel"),
+    composerLibChip: $("composerLibChip"),
+    composerSlash: $("composerSlash"),
     railSearch: $("railSearch"),
     runStep: $("runStep"),
+    btnNavTags: $("btnNavTags"),
+    btnNavReport: $("btnNavReport"),
+    metaModel: $("metaModel"),
     appRoot: $("app"),
   };
 
@@ -305,6 +310,11 @@
       const cfg = llmConfigFor("orchestrator");
       const short = String((cfg && cfg.model) || "奎燕").split("/").pop();
       el.composerModel.textContent = llmReady("orchestrator") ? short : "奎燕";
+    }
+    if (el.metaModel) {
+      const cfg = llmConfigFor("orchestrator");
+      const short = String((cfg && cfg.model) || "奎燕").split("/").pop();
+      el.metaModel.textContent = llmReady("orchestrator") ? `模型 · ${short}` : "模型 · 奎燕";
     }
   }
 
@@ -415,13 +425,22 @@
 
   function syncResultChrome() {
     if (el.resultChromeTitle) {
-      el.resultChromeTitle.textContent = RESULT_TAB_LABEL[state.tab] || "结果";
+      const label = RESULT_TAB_LABEL[state.tab] || "结果";
+      const n =
+        state.tab === "visual"
+          ? state.feedCounts.main || 0
+          : state.tab === "shortlist"
+            ? state.shortlistVisual.length
+            : "";
+      el.resultChromeTitle.textContent = n === "" ? label : `${label} · ${n}`;
     }
     if (el.btnNavChat) el.btnNavChat.classList.toggle("active", !state.artifactOpen);
     if (el.btnNavResult) {
-      el.btnNavResult.classList.toggle("active", state.artifactOpen);
-      el.btnNavResult.setAttribute("aria-pressed", state.artifactOpen ? "true" : "false");
+      const on = state.artifactOpen && state.tab === "visual";
+      el.btnNavResult.classList.toggle("active", on);
+      el.btnNavResult.setAttribute("aria-pressed", on ? "true" : "false");
     }
+    if (el.btnNavReport) el.btnNavReport.classList.toggle("active", state.artifactOpen && state.tab === "report");
   }
 
   function setArtifactOpen(open) {
@@ -797,10 +816,13 @@
           .map(
             (r) => `
       <li class="research-card ${r.active ? "active" : ""}" data-id="${r.id}">
-        <div class="rtitle">${escapeHtml(r.title)}</div>
-        <div class="rmeta">
-          <span>${escapeHtml(r.date)}</span>
-          <span class="badge ${r.status}">${r.status === "running" ? "进行中" : "已完成"}</span>
+        <span class="task-dot ${r.status === "running" ? "running" : "done"}" aria-hidden="true"></span>
+        <div>
+          <div class="rtitle">${escapeHtml(r.title)}</div>
+          <div class="rmeta">
+            <span>${escapeHtml(r.date)}</span>
+            <span class="badge ${r.status}">${r.status === "running" ? "进行中" : "已完成"}</span>
+          </div>
         </div>
       </li>`
           )
@@ -1717,6 +1739,18 @@
                 }</span>
                 ${originAnchorHtml(it)}
               </div>
+            </div>
+            ${
+              (it.suggested_style_buckets || []).length
+                ? `<div class="card-tags">${(it.suggested_style_buckets || [])
+                    .slice(0, 2)
+                    .map((id) => `<span class="card-tag">${escapeHtml(state.bucketIdToZh[id] || id)}</span>`)
+                    .join("")}</div>`
+                : ""
+            }
+            <div class="card-foot">
+              <span class="card-score">荐 ${pickScore(it)}</span>
+              <span class="card-verify ${page ? "ok" : "miss"}">${page ? "原页已核" : "原页未标注"}</span>
             </div>
           </article>`;
   }
@@ -3296,6 +3330,24 @@
     return id;
   }
 
+  function briefTableHtml(input = {}) {
+    const rows = [
+      ["分析对象", input.product],
+      ["卖给谁", input.audience],
+      ["价格带", input.price_band],
+      ["品牌定位", input.culture_tone],
+      ["使用场景", input.occasion],
+      ["渠道市场", input.channel],
+      ["课题类型", input.job_type],
+    ];
+    return `<table class="brief-table"><tbody>${rows
+      .map(
+        ([k, v]) =>
+          `<tr><th>${escapeHtml(k)}</th><td class="${v ? "" : "empty"}">${escapeHtml(v || "未标注")}</td></tr>`
+      )
+      .join("")}</tbody></table>`;
+  }
+
   function libraryStats() {
     const input = state.bundle?.l1?.input || {};
     const counts = state.bundle?.l3?.counts || {};
@@ -3383,7 +3435,7 @@
       )}</div></div>`;
     } else {
       node.innerHTML = `
-      <div class="run-gutter"><span class="run-ico" aria-hidden="true"></span></div>
+      <div class="run-gutter"><span class="run-mark" aria-hidden="true">{K}</span></div>
       <div class="run-body">
         <div class="run-line">
           <span class="run-verb">${escapeHtml(title || tag || actor)}</span>
@@ -3523,13 +3575,11 @@
       syncRunStep(0);
       return;
     }
-    const { input, cards, product, tone } = libraryStats();
+    const { input, cards, product } = libraryStats();
     appendRun({
       title: "听清 Brief",
-      detail: `${product} · ${input.audience || "客群未标注"}`,
-      html: `<p class="run-quiet">渠道 ${escapeHtml(input.channel || "未标注")} · 气质 ${escapeHtml(
-        tone
-      )}。先问清再检索。</p>`,
+      detail: product || "已问清的项",
+      html: briefTableHtml(input),
     });
     playLibraryRun({ animate: false });
     const cardLines = cards
@@ -4203,6 +4253,21 @@
         }
         return;
       }
+      if (act === "keep") {
+        toast(n ? `这 ${n} 张先留在参考墙，不进短名单` : "先勾几张");
+        return;
+      }
+      if (act === "exclude") {
+        ids.forEach((id) => {
+          state.selectedIds.delete(id);
+          state.shortlistRemoved.add(id);
+          state.shortlistVisual = state.shortlistVisual.filter((x) => x.id !== id);
+        });
+        updateSelectionBar();
+        syncWallSelectionClasses();
+        toast(n ? `已从本轮选择里排除 ${n} 张，墙还留着` : "先勾几张");
+        return;
+      }
       if (act === "open") {
         const it = findWallItem(state.focusId || ids[0]);
         const href = pageUrlOf(it);
@@ -4297,7 +4362,18 @@
       el.btnToggleArtifact.addEventListener("click", () => setArtifactOpen(!state.artifactOpen));
     }
     if (el.btnNavResult) {
-      el.btnNavResult.addEventListener("click", () => setArtifactOpen(true));
+      el.btnNavResult.addEventListener("click", () => revealAndSwitch("visual", { fromStage: true }));
+    }
+    if (el.btnNavTags) {
+      el.btnNavTags.addEventListener("click", () => {
+        revealAndSwitch("visual", { fromStage: true });
+        const styles = document.getElementById("marketStyles");
+        if (styles) styles.scrollIntoView({ block: "nearest" });
+        toast("风格标签来自已有桶，不是另爬一套");
+      });
+    }
+    if (el.btnNavReport) {
+      el.btnNavReport.addEventListener("click", () => revealAndSwitch("report", { fromStage: true }));
     }
     if (el.btnNavChat) {
       el.btnNavChat.addEventListener("click", () => {
@@ -4309,6 +4385,18 @@
     }
     if (el.composerPlus) {
       el.composerPlus.addEventListener("click", () => toast("本版不支持上传附件"));
+    }
+    if (el.composerLibChip) {
+      el.composerLibChip.addEventListener("click", () => {
+        revealAndSwitch("visual", { fromStage: true });
+        playLibraryRun({ animate: true });
+      });
+    }
+    if (el.composerSlash) {
+      el.composerSlash.addEventListener("click", () => {
+        toast("可以说：看库 / 帮我筛选 / 出结论 / 看 Brief");
+        if (el.composerInput) el.composerInput.focus();
+      });
     }
     if (el.composerModel) {
       el.composerModel.addEventListener("click", () => openLlmSettings("orchestrator"));

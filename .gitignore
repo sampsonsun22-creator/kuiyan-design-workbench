@@ -4,6 +4,7 @@
 node_modules/
 desktop/node_modules/
 desktop/dist/
+desktop/build/icon-*.png
 .vercel/
 __pycache__/
 *.pyc

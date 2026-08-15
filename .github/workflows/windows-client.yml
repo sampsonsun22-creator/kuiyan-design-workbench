@@ -1,0 +1,35 @@
+name: Windows client
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "desktop/**"
+      - "ui-shell/**"
+      - ".github/workflows/windows-client.yml"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install and pack
+        working-directory: desktop
+        run: |
+          python scripts/make_icon.py
+          npm install
+          npx electron-builder --win nsis zip portable --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KEY-Vision-Windows
+          path: |
+            desktop/dist/KEY-Vision-*.exe
+            desktop/dist/KEY-Vision-*.zip
+          if-no-files-found: error
