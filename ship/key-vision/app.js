@@ -165,6 +165,7 @@
     activeMarketStyle: "",
     marketStyles: [],
     artifactOpen: true,
+    holdResults: false,
     briefAskKey: "",
   };
 
@@ -381,17 +382,25 @@
     5: "按你留下的参考出可下载报告。到这里为止，还不会有包装完稿。",
   };
 
+  function isDraftInterview(r = currentResearch()) {
+    return Boolean(r && r.custom && r.emptyWall && missingBriefSlots().length);
+  }
+
   function syncPhaseWhisper() {
     if (!el.phaseWhisper) return;
+    if (isDraftInterview()) {
+      el.phaseWhisper.textContent = "先开口。问清之前，右边不弹出结果。";
+      return;
+    }
     el.phaseWhisper.textContent = PHASE_WHISPER[state.stage] || PHASE_WHISPER[1];
   }
 
   const RESULT_TAB_LABEL = {
-    intent: "问清",
-    visual: "自有库",
-    shortlist: "老板选",
-    report: "报告",
-    strategy: "报告",
+    intent: "Brief",
+    visual: "参考",
+    shortlist: "短名单",
+    report: "结论",
+    strategy: "结论",
   };
 
   function syncResultChrome() {
@@ -407,6 +416,7 @@
 
   function setArtifactOpen(open) {
     state.artifactOpen = Boolean(open);
+    if (state.artifactOpen) state.holdResults = false;
     if (el.appRoot) el.appRoot.classList.toggle("artifact-open", state.artifactOpen);
     if (el.btnToggleArtifact) {
       el.btnToggleArtifact.setAttribute("aria-pressed", state.artifactOpen ? "true" : "false");
@@ -557,8 +567,7 @@
       tagClass: "stage",
       dot: "yellow",
       html: `<p>${escapeHtml(slot.ask)}</p>
-        <div class="event-note">你给的 Brief 还缺「${escapeHtml(slot.label)}」。问清这一项，我才从自有库里检索，不会假装已经穷尽。</div>
-        <div class="chips-row"><button type="button" class="artifact-link" data-artifact="brief">看已问清的项</button></div>`,
+        <div class="event-note">还缺「${escapeHtml(slot.label)}」。先在对话里说清楚，问清之前右边不弹出。</div>`,
     });
     return true;
   }
@@ -1079,7 +1088,7 @@
     syncPhaseWhisper();
   }
 
-  function switchTab(tab, { fromStage = false } = {}) {
+  function switchTab(tab, { fromStage = false, reveal = false } = {}) {
     if (tab === "strategy") tab = "report";
     state.tab = tab;
     document.querySelectorAll(".tab").forEach((t) => {
@@ -1089,8 +1098,8 @@
     });
     updateFilterRow();
     renderCanvas();
-    setArtifactOpen(true);
-    syncResultChrome();
+    if (reveal || !state.holdResults) setArtifactOpen(true);
+    else syncResultChrome();
     syncPhaseWhisper();
     if (!fromStage) {
       const map = { intent: 1, visual: 3, shortlist: 4, report: 5, strategy: 5 };
@@ -1099,6 +1108,11 @@
         syncStageButtons(state.stage);
       }
     }
+  }
+
+  function revealAndSwitch(tab, opts = {}) {
+    state.holdResults = false;
+    switchTab(tab, { ...opts, reveal: true });
   }
 
   function collectWallItems() {
@@ -3272,17 +3286,6 @@
     state.chatTurns = [];
     const r = currentResearch();
     if (r.emptyWall || r.custom) {
-      appendEvent({
-        agent: "奎燕设计智能体",
-        time: "现在",
-        tag: "新任务",
-        tagClass: "stage",
-        dot: "yellow",
-        html: `<p>新任务已建。自有库这轮是空的，我不会把青绿茶那 452 张抄过来。</p>
-          <div class="event-note">先把卖给谁、什么价、线上还是线下、0-1 还是升级问清楚。模型 API 配在左下角席位里。</div>
-          <div class="chips-row"><button type="button" class="artifact-link" data-artifact="brief">看已问清的项</button></div>`,
-      });
-      askNextBriefSlot();
       return;
     }
     const input = state.bundle?.l1?.input || {};
@@ -3452,16 +3455,16 @@
   function handleArtifact(kind) {
     if (kind === "brief" || kind === "intent") {
       setStage(1, { appendEvent: false });
-      switchTab("intent", { fromStage: true });
+      revealAndSwitch("intent", { fromStage: true });
     } else if (kind === "map" || kind === "visual") {
       setStage(3, { appendEvent: false });
-      switchTab("visual", { fromStage: true });
+      revealAndSwitch("visual", { fromStage: true });
     } else if (kind === "shortlist") {
       setStage(4, { appendEvent: false });
-      switchTab("shortlist", { fromStage: true });
+      revealAndSwitch("shortlist", { fromStage: true });
     } else if (kind === "report" || kind === "strategy") {
       setStage(5, { appendEvent: false });
-      switchTab("report", { fromStage: true });
+      revealAndSwitch("report", { fromStage: true });
     }
   }
 
@@ -3497,11 +3500,11 @@
           tag: "可以检索了",
           tagClass: "consensus",
           dot: "ok",
-          html: `<p>Brief 这几项够用了。下一步我只检索自有库，不对外网站点新爬。</p>
+          html: `<p>Brief 这几项够用了。问清的结果在右边。下一步我只检索自有库，不对外网站点新爬。</p>
             <div class="chips-row"><button type="button" class="artifact-link" data-artifact="map">打开自有库</button></div>`,
         });
-        setStage(2, { appendEvent: false });
-        switchTab("visual", { fromStage: true });
+        setStage(1, { appendEvent: false });
+        revealAndSwitch("intent", { fromStage: true });
         return;
       }
     }
@@ -3521,24 +3524,24 @@
     if (/重筛|重排|按批注/.test(t)) {
       state.houComment = t;
       setStage(4, { appendEvent: false });
-      switchTab("shortlist", { fromStage: true });
+      revealAndSwitch("shortlist", { fromStage: true });
       rescreenByComment();
       return;
     }
-    if (/brief|意图|分析对象|听清/i.test(t)) {
+    if (/brief|意图|分析对象|听清|对齐/i.test(t)) {
       setStage(1);
-      switchTab("intent", { fromStage: true });
+      revealAndSwitch("intent", { fromStage: true });
       return;
     }
     if (/下载报告|导出报告/.test(t)) {
       setStage(5);
-      switchTab("report", { fromStage: true });
+      revealAndSwitch("report", { fromStage: true });
       downloadReportNotes();
       return;
     }
-    if (/版图|视觉|看墙|地图|穷尽|搜索|跨界|不同类|货架|自有库|打开库/.test(t)) {
+    if (/版图|视觉|看墙|地图|穷尽|搜索|跨界|不同类|货架|自有库|打开库|参考墙|看参考/.test(t)) {
       setStage(3);
-      switchTab("visual", { fromStage: true });
+      revealAndSwitch("visual", { fromStage: true });
       appendEvent({
         agent: "奎燕设计智能体",
         time: "现在",
@@ -3553,19 +3556,19 @@
       });
       return;
     }
-    if (/筛选|短名单|选参考|收几张|挑/.test(t)) {
+    if (/筛选|短名单|选参考|收几张|挑|入选/.test(t)) {
       setStage(4);
-      switchTab("shortlist", { fromStage: true });
+      revealAndSwitch("shortlist", { fromStage: true });
       return;
     }
-    if (/报告|结论|差异化|机会|下一步/.test(t)) {
+    if (/报告|结论|差异化|机会|下一步|纪要/.test(t)) {
       setStage(5);
-      switchTab("report", { fromStage: true });
+      revealAndSwitch("report", { fromStage: true });
       return;
     }
     if (/方向|策略|三张|卡/.test(t)) {
       setStage(5);
-      switchTab("report", { fromStage: true });
+      revealAndSwitch("report", { fromStage: true });
       appendEvent({
         agent: "奎燕设计智能体",
         time: "现在",
@@ -3581,7 +3584,7 @@
     if (/crawler|采集|同步/.test(lower) || /同步|采集/.test(t)) {
       setCap("crawler", "idle", `主墙 ${mainN} · 待复核 ${pendN}`);
       setStage(2);
-      switchTab("visual", { fromStage: true });
+      revealAndSwitch("visual", { fromStage: true });
       appendEvent({
         agent: "采集",
         time: "现在",
@@ -3691,7 +3694,7 @@
         el.briefToggle.dataset.brief = "0";
       }
     }
-    toast(`正在打开「${r.title}」…`);
+    if (!(r.custom && r.emptyWall)) toast(`正在打开「${r.title}」…`);
     try {
       if (r.id === "r-green") {
         if (state._greenBundle) state.bundle = state._greenBundle;
@@ -3727,20 +3730,26 @@
       if (r.custom) {
         state.stage = 1;
         syncStageButtons(1);
-        switchTab("intent", { fromStage: true });
-        syncQuestionMode();
-        appendEvent({
-          agent: "奎燕设计智能体",
-          time: "现在",
-          tag: "切换研究",
-          tagClass: "stage",
-          dot: "ok",
-          html: `<p>已打开「${escapeHtml(r.title)}」。墙 0 张，Brief 待填。配三个智能体的 API 才能对话。</p>`,
+        state.holdResults = isDraftInterview(r);
+        state.tab = "intent";
+        document.querySelectorAll(".tab").forEach((t) => {
+          const on = t.dataset.tab === "intent";
+          t.classList.toggle("active", on);
+          t.setAttribute("aria-selected", on ? "true" : "false");
         });
+        if (el.canvasBody) el.canvasBody.innerHTML = "";
+        setArtifactOpen(!state.holdResults);
+        if (!state.holdResults) renderCanvas();
+        syncQuestionMode();
+        syncPhaseWhisper();
+        syncResultChrome();
+        if (el.composerInput) el.composerInput.focus();
+        toast(state.holdResults ? "新任务是空白的。先开口，我再问。" : `正在打开「${r.title}」`);
       } else {
+        state.holdResults = false;
         state.stage = 3;
         syncStageButtons(3);
-        switchTab("visual", { fromStage: true });
+        switchTab("visual", { fromStage: true, reveal: true });
         syncQuestionMode();
         appendEvent({
           agent: "奎燕设计智能体",

@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p9`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p10`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -71,6 +71,10 @@ async function main() {
     note(await page.locator("#userDock").count().then((n) => n === 1), "user permission dock");
     note(await page.locator("#libraryLanes").count().then((n) => n === 1), "library lane chips");
     note(await page.locator("#composerInput").count().then((n) => n === 1), "LLM composer present");
+    note((await page.locator('.tab[data-tab="intent"]').innerText()).trim() === "Brief", "tab Brief");
+    note((await page.locator('.tab[data-tab="visual"]').innerText()).trim() === "参考", "tab 参考");
+    note((await page.locator('.tab[data-tab="shortlist"]').innerText()).trim() === "短名单", "tab 短名单");
+    note((await page.locator('.tab[data-tab="report"]').innerText()).trim() === "结论", "tab 结论");
     note(await page.locator(".gutter-rail").count().then((n) => n === 1), "resizable task gutter");
     note(await page.locator(".gutter-result").count().then((n) => n === 1), "resizable result gutter");
     note(await page.locator("#app.artifact-open").count().then((n) => n === 1), "result pane open by default");
@@ -211,9 +215,27 @@ async function main() {
     await page.locator("#llmClose").click();
 
     await page.locator("#btnNewResearch").click();
-    await page.waitForSelector(".intent-panel");
-    const newBrief = await page.locator(".intent-panel").innerText();
-    note(/这是新建的一轮|墙是空的/.test(newBrief), `new research brief: ${newBrief.slice(0, 60)}`);
+    await page.waitForFunction(() => /未命名/.test(document.getElementById("researchTitle")?.textContent || ""));
+    note(
+      await page.locator("#app.artifact-open").count().then((n) => n === 0),
+      "new task does not pop the result pane"
+    );
+    note(
+      await page.locator(".intent-panel").count().then((n) => n === 0),
+      "new task has no canned L1 form"
+    );
+    const newStream = (await page.locator("#activityStream").innerText()).trim();
+    note(
+      !/新任务已建|这是新建的一轮|L1 意图识别|已打开「未命名/.test(newStream),
+      `new task stream stays blank: ${newStream.slice(0, 40)}`
+    );
+    await page.fill("#composerInput", "青绿茶礼盒");
+    await page.locator("#sendBtn").click();
+    await page.waitForFunction(() => /记下|卖给谁|人群/.test(document.getElementById("activityStream")?.textContent || ""));
+    note(
+      await page.locator("#app.artifact-open").count().then((n) => n === 0),
+      "first chat turn still keeps results closed"
+    );
     await page.locator('.research-card[data-id="r-green"]').click();
     await page.locator('.tab[data-tab="visual"]').click();
     await page.waitForFunction(() => /452/.test(document.getElementById("wallCountBar")?.textContent || ""));
