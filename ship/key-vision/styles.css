@@ -617,6 +617,7 @@ button, input, textarea, select {
 .send-btn:disabled { opacity: 0.55; cursor: wait; }
 
 .attach-row { display: flex; gap: 4px; padding-bottom: 2px; }
+.attach-row[hidden] { display: none !important; }
 .attach {
   width: 32px;
   height: 32px;
@@ -2244,7 +2245,7 @@ body.studio.is-resizing img {
 
 .studio-app {
   --rail-w: 252px;
-  --result-w: min(52vw, 820px);
+  --result-w: min(42vw, 680px);
   --gutter-w: 8px;
   display: grid;
   grid-template-columns: var(--rail-w) var(--gutter-w) minmax(320px, 1fr) var(--gutter-w) var(--result-w);
@@ -2770,7 +2771,7 @@ body.studio.is-resizing img {
   cursor: pointer;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 860px) {
   .studio-app,
   .studio-app.artifact-open {
     grid-template-columns: var(--rail-w) var(--gutter-w) minmax(0, 1fr);

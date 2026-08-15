@@ -425,7 +425,7 @@
     const STORE = "key-vision-layout-v1";
     const defaults = () => ({
       railW: 252,
-      resultW: Math.round(Math.min(820, Math.max(420, window.innerWidth * 0.46))),
+      resultW: Math.round(Math.min(680, Math.max(420, window.innerWidth * 0.42))),
     });
     const read = () => {
       try {
