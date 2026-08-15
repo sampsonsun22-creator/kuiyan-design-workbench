@@ -184,14 +184,14 @@ async function main() {
     await page.locator('.tab[data-tab="visual"]').click();
     await page.locator('.cat-chip[data-cat="cross"]').waitFor({ state: "visible" });
     await page.locator('.cat-chip[data-cat="cross"]').click();
-    await page.waitForSelector(".empty, .wall-card");
-    const crossEmpty = await page.locator(".empty").innerText().catch(() => "");
+    await page.waitForSelector("#canvasBody .empty, #canvasBody .wall-card");
+    const crossEmpty = await page.locator("#canvasBody .empty").innerText().catch(() => "");
     note(/本轮跨界样本 0，不编造/.test(crossEmpty), `cross empty: ${crossEmpty.slice(0, 80)}`);
 
     await page.locator('.cat-chip[data-cat="all"]').click();
     await page.locator('.lib-chip[data-lib="head"]').click();
-    await page.waitForSelector(".empty, .wall-card");
-    const headEmpty = await page.locator(".empty").innerText().catch(() => "");
+    await page.waitForSelector("#canvasBody .empty, #canvasBody .wall-card");
+    const headEmpty = await page.locator("#canvasBody .empty").innerText().catch(() => "");
     note(/本轮库未标/.test(headEmpty) && /头部/.test(headEmpty), `head volume empty: ${headEmpty.slice(0, 80)}`);
     await page.locator('.lib-chip[data-lib=""]').click();
     await page.waitForFunction(() => /452/.test(document.getElementById("wallCountBar")?.textContent || ""));
