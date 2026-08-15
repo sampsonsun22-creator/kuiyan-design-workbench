@@ -21,6 +21,7 @@ REQUIRED = [
     SHIP / "data" / "product-bundle.json",
     SHIP / "data" / "FEED-STATUS.json",
     SHIP / "data" / "style-buckets-v1.json",
+    SHIP / "data" / "market-styles-v1.json",
     SHIP_MAIN,
     SHIP_PEND,
 ]

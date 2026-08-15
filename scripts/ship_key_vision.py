@@ -34,6 +34,7 @@ def main() -> int:
         "data/DO-NOT-RESTORE-1820.md",
         "data/FEED-STATUS.json",
         "data/style-buckets-v1.json",
+        "data/market-styles-v1.json",
         "data/classify-dimensions-v1.json",
         "data/l2_main_wall.jsonl",
         "data/l2_pending_review.jsonl",

@@ -1,0 +1,51 @@
+{
+  "name": "key-vision-desktop",
+  "productName": "KEY 视界",
+  "version": "0.4.527",
+  "private": true,
+  "description": "奎燕竞品分析智能体 · Windows / macOS 客户端",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --mac --win"
+  },
+  "author": "奎燕 AI 研究室",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "electron": "^37.2.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.kuiyan.keyvision",
+    "productName": "KEY 视界",
+    "files": [
+      "main.cjs",
+      "preload.cjs"
+    ],
+    "extraResources": [
+      {
+        "from": "../ui-shell",
+        "to": "key-vision",
+        "filter": [
+          "**/*",
+          "!**/.vercel/**"
+        ]
+      }
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.graphics-design",
+      "target": ["dmg", "zip"]
+    },
+    "win": {
+      "target": ["nsis", "zip"]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

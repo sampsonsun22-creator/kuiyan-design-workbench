@@ -1,154 +1,165 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta name="referrer" content="no-referrer" />
+  <meta name="referrer" content="no-referrer" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>KEY 视界 · 设计竞品调研</title>
-  <link rel="stylesheet" href="styles.css?v=452p6" />
+  <title>KEY 视界 · 奎燕竞品分析</title>
+  <link rel="stylesheet" href="styles.css?v=452p7" />
 </head>
-<body>
-  <div class="app" id="app">
-    <!-- LEFT -->
-    <aside class="left" aria-label="导航与能力栈">
-      <div class="brand-brick" aria-label="KEY 视界">
-        <div class="brand-mark">{KEY}</div>
-        <div class="brand-name">KEY 视界</div>
-        <div class="brand-sub">奎燕 AI 研究室</div>
+<body class="studio">
+  <div class="app studio-app artifact-open" id="app">
+    <aside class="rail" aria-label="任务栏">
+      <div class="rail-brand" aria-label="KEY 视界">
+        <img class="rail-mark" src="assets/brand/logo-key-mark-on-dark.svg" alt="{KEY}" />
+        <div class="rail-name">KEY 视界</div>
+        <div class="rail-sub">奎燕竞品分析</div>
       </div>
 
-      <button type="button" class="btn-new" id="btnNewResearch" title="新建一轮研究，墙先空着">
-        <span class="plus" aria-hidden="true">+</span>新建研究
+      <button type="button" class="btn-new" id="btnNewResearch" title="新建研究，墙先空着" aria-label="新建研究">
+        <span class="plus" aria-hidden="true">+</span>新任务
       </button>
 
-      <section class="left-section">
-        <div class="left-h-row">
-          <h3 class="left-h">能力栈</h3>
-          <button type="button" class="link-config" id="btnCapConfig">配置三个智能体</button>
-        </div>
-        <ul class="cap-list" id="capList"></ul>
-      </section>
-
-      <section class="left-section saved">
-        <h3 class="left-h">已保存的研究</h3>
+      <section class="rail-section">
+        <h3 class="rail-h">任务</h3>
         <ul class="research-list" id="researchList"></ul>
       </section>
+
+      <div class="sr-only" hidden>
+        <ul class="cap-list" id="capList"></ul>
+        <button type="button" id="btnCapConfig">配置三个智能体</button>
+        <nav class="stages" id="stages" aria-hidden="true">
+          <button type="button" class="stage done" data-stage="1"><span class="n">✓</span>听清 Brief</button>
+          <button type="button" class="stage done" data-stage="2"><span class="n">✓</span>穷尽搜索</button>
+          <button type="button" class="stage active" data-stage="3"><span class="n">3</span>分类拆解</button>
+          <button type="button" class="stage" data-stage="4"><span class="n">4</span>决策筛选</button>
+          <button type="button" class="stage" data-stage="5"><span class="n">5</span>结论报告</button>
+        </nav>
+      </div>
+
+      <div class="user-dock" id="userDock">
+        <button type="button" class="user-chip" id="userChip" aria-expanded="false" aria-controls="userMenu">
+          <span class="user-avatar" aria-hidden="true">奎</span>
+          <span class="user-meta">
+            <span class="user-name" id="userName">奎燕席</span>
+            <span class="user-plan" id="userPlan">内部 · 决策席</span>
+          </span>
+          <span class="user-caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="user-menu" id="userMenu" hidden>
+          <button type="button" data-user-action="llm">模型与权限</button>
+          <button type="button" data-user-action="profile">席位资料</button>
+          <button type="button" data-user-action="help">这轮怎么用</button>
+        </div>
+      </div>
     </aside>
 
-    <!-- CENTER -->
-    <main class="center" aria-label="协作室">
-      <header class="center-head">
-        <div class="center-title-row">
-          <div class="center-title-block">
-            <h1>协作室</h1>
-            <span class="center-sub" id="researchTitle">青绿茶礼盒 · 竞品调研</span>
-          </div>
-          <button type="button" class="btn-gear" id="btnLlmSettings" title="配置三个智能体的模型 API" aria-label="配置三个智能体的模型 API">
+    <div class="workspace">
+      <header class="workspace-head">
+        <div class="workspace-title-block">
+          <h1 id="researchTitle">青绿茶礼盒 · 竞品调研</h1>
+          <p class="phase-whisper" id="phaseWhisper">先把卖给谁问清楚，再从自有库里检索。</p>
+        </div>
+        <div class="workspace-actions">
+          <button type="button" class="ghost-btn" id="btnToggleArtifact" aria-pressed="true">看库</button>
+          <button type="button" class="btn-gear" id="btnLlmSettings" title="配置模型 API" aria-label="配置模型 API">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
               <circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="1.7"/>
               <path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" d="M19.4 13.1a1.2 1.2 0 0 0 .24-1.1 7.4 7.4 0 0 0 0-.2 1.2 1.2 0 0 0-.24-1.1l1.6-1.3-1.8-3.1-2 .8a7.2 7.2 0 0 0-1.9-1.1l-.3-2.1h-3.6l-.3 2.1a7.2 7.2 0 0 0-1.9 1.1l-2-.8-1.8 3.1 1.6 1.3a1.2 1.2 0 0 0-.24 1.1 7.4 7.4 0 0 0 0 .2 1.2 1.2 0 0 0 .24 1.1l-1.6 1.3 1.8 3.1 2-.8a7.2 7.2 0 0 0 1.9 1.1l.3 2.1h3.6l.3-2.1a7.2 7.2 0 0 0 1.9-1.1l2 .8 1.8-3.1-1.6-1.3Z"/>
             </svg>
           </button>
         </div>
-        <div class="question-card">
-          <div class="question-card-head">
-            <span class="q-label">这次要搞清的事</span>
-            <span class="q-edit" hidden aria-hidden="true">✎</span>
-          </div>
-          <textarea
-            id="researchQuestion"
-            rows="3"
-            maxlength="200"
-            readonly
-          >新品牌青绿茶礼盒：中式现代气质下，礼赠+电商渠道如何做出开箱记忆点与差异化？</textarea>
-          <div class="question-card-foot">
-            <span class="q-hint">本轮研究问题（只读）</span>
-            <span class="q-count" id="qCount">58/200</span>
-          </div>
-        </div>
       </header>
 
-      <nav class="stages" id="stages" aria-label="研究阶段">
-        <button type="button" class="stage done" data-stage="1"><span class="n">✓</span>听清 Brief</button>
-        <button type="button" class="stage done" data-stage="2"><span class="n">✓</span>穷尽搜索</button>
-        <button type="button" class="stage active" data-stage="3"><span class="n">3</span>分类拆解</button>
-        <button type="button" class="stage" data-stage="4"><span class="n">4</span>决策筛选</button>
-        <button type="button" class="stage" data-stage="5"><span class="n">5</span>结论报告</button>
-      </nav>
-
-      <div class="stream" id="activityStream" role="log" aria-live="polite"></div>
-
-      <form class="composer" id="composer">
-        <div class="attach-row" hidden aria-hidden="true" aria-label="附件">
-          <button type="button" class="attach" title="图片" data-attach="image">🖼</button>
-          <button type="button" class="attach" title="表格" data-attach="table">▦</button>
-          <button type="button" class="attach" title="证据" data-attach="evidence">📎</button>
-        </div>
-        <textarea id="composerInput" rows="1" placeholder="先配右上角三个智能体的 API，再在这里问这轮墙和 Brief…"></textarea>
-        <button type="submit" class="send-btn" id="sendBtn">发送</button>
-      </form>
-    </main>
-
-    <!-- RIGHT -->
-    <aside class="right" aria-label="结果画布">
-      <div class="right-main" id="rightMain">
-        <div class="tabs" role="tablist">
-          <button type="button" class="tab" role="tab" data-tab="intent" aria-selected="false">Brief</button>
-          <button type="button" class="tab active" role="tab" data-tab="visual" aria-selected="true">竞品版图</button>
-          <button type="button" class="tab" role="tab" data-tab="shortlist" aria-selected="false">决策筛选</button>
-          <button type="button" class="tab" role="tab" data-tab="report" aria-selected="false">结论报告</button>
-        </div>
-
-        <div class="wall-filters" id="wallFilters">
-        <div class="source-cards" id="sourceChips" aria-label="出处筛选"></div>
-
-        <div class="category-chips" id="categoryChips" aria-label="素材类别">
-          <span class="source-kicker">分类</span>
-          <button type="button" class="cat-chip active" data-cat="all">全部</button>
-          <button type="button" class="cat-chip" data-cat="primary">同类</button>
-          <button type="button" class="cat-chip" data-cat="analogy">不同类</button>
-          <button type="button" class="cat-chip" data-cat="cross">跨界</button>
-          <button type="button" class="cat-chip" data-cat="shelf">货架</button>
-          <button type="button" class="cat-chip pending-toggle" id="pendingToggle" data-pending="0" aria-pressed="false">含待复核</button>
-          <button type="button" class="cat-chip brief-toggle active" id="briefToggle" data-brief="1" aria-pressed="true">只看贴 brief</button>
-        </div>
-        </div>
-        <div class="wall-count-bar" id="wallCountBar" aria-live="polite">主墙 — · 待复核 —</div>
-
-        <div class="filters" id="filters">
-          <select aria-label="风格" data-filter="style"><option>风格 · 全部</option><option>中式现代</option><option>国际简约</option><option>工艺材质感</option></select>
-          <select aria-label="来源" data-filter="source" class="filter-source"><option>来源 · 全部</option><option>Behance</option><option>站酷</option><option>Packaging of the World</option></select>
-          <select aria-label="方向" data-filter="direction" class="filter-direction" hidden><option>方向 · 全部</option><option>开箱记忆</option><option>货架识别</option><option>礼赠仪式</option></select>
-          <select aria-label="气质" data-filter="tone" class="filter-tone" hidden><option>气质 · 全部</option><option>中式现代</option><option>国际简约</option><option>地域文旅</option></select>
-          <select aria-label="市场" data-filter="market" hidden><option value="">市场 · 礼赠+电商</option><option>礼赠</option><option>电商</option></select>
-          <select aria-label="年份" data-filter="year" hidden><option value="">年份 · 近 3 年</option><option>2024–2026</option><option>全部</option></select>
-        </div>
-
-        <div class="canvas-wrap">
-          <div class="canvas-body" id="canvasBody"></div>
-          <div class="selection-bar hidden" id="selectionBar" aria-live="polite">
-            <span class="sel-count" id="selCount">先看这 0 张</span>
-            <div class="sel-actions">
-              <button type="button" data-sel-action="compare" hidden>对比一下</button>
-              <button type="button" data-sel-action="shortlist">收进短名单</button>
-              <button type="button" class="sel-primary" data-sel-action="open">打开原页</button>
-            </div>
-          </div>
-        </div>
+      <div class="sr-only">
+        <textarea id="researchQuestion" rows="3" maxlength="200" readonly></textarea>
+        <span class="q-hint">本轮研究问题（只读）</span>
+        <span class="q-count" id="qCount">0/200</span>
       </div>
 
-      <aside class="inspector hidden" id="inspector" aria-label="这张和你要的，对得上吗">
-        <div class="inspector-inner">
-          <div class="inspector-head">
-            <h3>这张和你要的，对得上吗</h3>
-            <button type="button" class="inspector-close" id="inspectorToggle" title="关闭">×</button>
+      <div class="workspace-body">
+        <section class="thread" aria-label="人机对话">
+          <div class="stream" id="activityStream" role="log" aria-live="polite"></div>
+          <form class="composer studio-composer" id="composer">
+            <div class="attach-row" hidden aria-hidden="true" aria-label="附件">
+              <button type="button" class="attach" title="图片" data-attach="image">🖼</button>
+              <button type="button" class="attach" title="表格" data-attach="table">▦</button>
+              <button type="button" class="attach" title="证据" data-attach="evidence">📎</button>
+            </div>
+            <textarea id="composerInput" rows="1" placeholder="先说这包卖给谁，或让我从库里按风格收一轮…"></textarea>
+            <button type="submit" class="send-btn" id="sendBtn">发送</button>
+          </form>
+        </section>
+
+        <aside class="right artifact" id="artifactPane" aria-label="结果画布">
+          <div class="right-main" id="rightMain">
+            <div class="tabs artifact-tabs" role="tablist">
+              <button type="button" class="tab" role="tab" data-tab="intent" aria-selected="false">问清</button>
+              <button type="button" class="tab active" role="tab" data-tab="visual" aria-selected="true">自有库</button>
+              <button type="button" class="tab" role="tab" data-tab="shortlist" aria-selected="false">老板选</button>
+              <button type="button" class="tab" role="tab" data-tab="report" aria-selected="false">报告</button>
+            </div>
+
+            <div class="wall-filters" id="wallFilters">
+              <div class="source-cards" id="sourceChips" aria-label="出处筛选"></div>
+              <div class="category-chips" id="categoryChips" aria-label="素材类别">
+                <span class="source-kicker">分类</span>
+                <button type="button" class="cat-chip active" data-cat="all">全部</button>
+                <button type="button" class="cat-chip" data-cat="primary">同类</button>
+                <button type="button" class="cat-chip" data-cat="analogy">不同类</button>
+                <button type="button" class="cat-chip" data-cat="cross">跨界</button>
+                <button type="button" class="cat-chip" data-cat="shelf">货架</button>
+                <button type="button" class="cat-chip pending-toggle" id="pendingToggle" data-pending="0" aria-pressed="false">含待复核</button>
+                <button type="button" class="cat-chip brief-toggle active" id="briefToggle" data-brief="1" aria-pressed="true">只看贴 brief</button>
+              </div>
+              <div class="library-lanes" id="libraryLanes" aria-label="中国在售库切片">
+                <span class="source-kicker">库切片</span>
+                <button type="button" class="lib-chip active" data-lib="">全部库</button>
+                <button type="button" class="lib-chip" data-lib="sold">国内在售</button>
+                <button type="button" class="lib-chip" data-lib="concept">概念 / 飞机稿</button>
+                <button type="button" class="lib-chip" data-lib="head">头部体量</button>
+                <button type="button" class="lib-chip" data-lib="rising">新锐增速</button>
+              </div>
+              <div class="market-styles" id="marketStyles" aria-label="市场风格"></div>
+            </div>
+            <div class="wall-count-bar" id="wallCountBar" aria-live="polite">主墙 — · 待复核 —</div>
+
+            <div class="filters" id="filters">
+              <select aria-label="风格" data-filter="style"><option>风格 · 全部</option><option>中式现代</option><option>国际简约</option><option>工艺材质感</option></select>
+              <select aria-label="来源" data-filter="source" class="filter-source"><option>来源 · 全部</option><option>Behance</option><option>站酷</option><option>Packaging of the World</option></select>
+              <select aria-label="方向" data-filter="direction" class="filter-direction" hidden><option>方向 · 全部</option><option>开箱记忆</option><option>货架识别</option><option>礼赠仪式</option></select>
+              <select aria-label="气质" data-filter="tone" class="filter-tone" hidden><option>气质 · 全部</option><option>中式现代</option><option>国际简约</option><option>地域文旅</option></select>
+              <select aria-label="市场" data-filter="market" hidden><option value="">市场 · 礼赠+电商</option><option>礼赠</option><option>电商</option></select>
+              <select aria-label="年份" data-filter="year" hidden><option value="">年份 · 近 3 年</option><option>2024–2026</option><option>全部</option></select>
+            </div>
+
+            <div class="canvas-wrap">
+              <div class="canvas-body" id="canvasBody"></div>
+              <div class="selection-bar hidden" id="selectionBar" aria-live="polite">
+                <span class="sel-count" id="selCount">先看这 0 张</span>
+                <div class="sel-actions">
+                  <button type="button" data-sel-action="compare" hidden>对比一下</button>
+                  <button type="button" data-sel-action="shortlist">收进短名单</button>
+                  <button type="button" class="sel-primary" data-sel-action="open">打开原页</button>
+                </div>
+              </div>
+            </div>
           </div>
-          <div id="inspectorBody" class="inspector-body">
-            <p class="muted">点一张图，我帮你对照 Brief 说人话。</p>
-          </div>
-        </div>
-      </aside>
-    </aside>
+
+          <aside class="inspector hidden" id="inspector" aria-label="这张和你要的，对得上吗">
+            <div class="inspector-inner">
+              <div class="inspector-head">
+                <h3>这张和你要的，对得上吗</h3>
+                <button type="button" class="inspector-close" id="inspectorToggle" title="关闭">×</button>
+              </div>
+              <div id="inspectorBody" class="inspector-body">
+                <p class="muted">点一张图，我帮你对照 Brief 说人话。</p>
+              </div>
+            </div>
+          </aside>
+        </aside>
+      </div>
+    </div>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -157,8 +168,8 @@
     <div class="llm-modal" role="dialog" aria-modal="true" aria-labelledby="llmTitle" id="llmDialog">
       <div class="llm-modal-head">
         <div>
-          <h2 id="llmTitle">三个智能体 · 模型 API</h2>
-          <p class="llm-lead">编排、采集、点点可以接不同模型。Key 只存在这台浏览器，不会写进仓库，也不会发起新采集。</p>
+          <h2 id="llmTitle">模型与权限</h2>
+          <p class="llm-lead">编排、检索、打标可以接不同模型。Key 只存在这台机器，不会写进仓库，也不会去外网站点新爬。</p>
         </div>
         <button type="button" class="llm-close" id="llmClose" aria-label="关闭">×</button>
       </div>
@@ -173,6 +184,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=452p6"></script>
+  <script src="app.js?v=452p7"></script>
 </body>
 </html>

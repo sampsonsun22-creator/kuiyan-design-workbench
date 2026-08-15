@@ -1,5 +1,5 @@
 /* KEY 视界 · Light Research Lab shell
- * P0: Inspector 320 / 选中底栏 / 黄 pill / 品牌三行 / 人情味文案
+ * Studio: 任务栏 + 对话 + 自有库画布。底层五步不做成向导。
  */
 (() => {
   const STAGES = [
@@ -40,13 +40,13 @@
       id: "orchestrator",
       name: "奎燕设计智能体",
       status: "online",
-      lastAction: "五层：Brief → 版图 → 拆解 → 筛选 → 结论",
+      lastAction: "问清 Brief → 检索自有库 → 打标 → 老板选 → 报告",
     },
     {
       id: "crawler",
       name: "采集",
       status: "idle",
-      lastAction: "同类已铺开 · 跨界未采 · 货架只有 listing 样",
+      lastAction: "只检索自有库 · 不对外网站点新爬",
     },
     {
       id: "dotdot",
@@ -115,7 +115,7 @@
     {
       id: "crawler",
       name: "采集",
-      job: "按 Brief 把已落地主墙分成同类 / 不同类 / 跨界。货架是在售切片，不是第四品类。本版不发起新爬取。",
+      job: "只检索已入库的自有库，按 Brief 分成同类 / 不同类 / 跨界。货架是在售切片。本版不对外网站点新爬。",
     },
     {
       id: "dotdot",
@@ -161,6 +161,11 @@
     llmAgents: {},
     llmFocus: "orchestrator",
     proxyOk: null,
+    activeLibLane: "",
+    activeMarketStyle: "",
+    marketStyles: [],
+    artifactOpen: true,
+    briefAskKey: "",
   };
 
   const SHORTLIST_TARGET = 12;
@@ -206,6 +211,13 @@
     wallCountBar: $("wallCountBar"),
     pendingToggle: $("pendingToggle"),
     briefToggle: $("briefToggle"),
+    phaseWhisper: $("phaseWhisper"),
+    libraryLanes: $("libraryLanes"),
+    marketStyles: $("marketStyles"),
+    userChip: $("userChip"),
+    userMenu: $("userMenu"),
+    btnToggleArtifact: $("btnToggleArtifact"),
+    appRoot: $("app"),
   };
 
   function toast(msg) {
@@ -325,6 +337,7 @@
           occasion: input.occasion || "",
           culture_tone: input.culture_tone || "",
           price_band: input.price_band || "",
+          job_type: input.job_type || "",
           must_have: input.must_have || [],
           must_avoid: input.must_avoid || [],
         },
@@ -340,6 +353,160 @@
     const editable = Boolean(r && r.custom);
     if (el.researchQuestion) el.researchQuestion.readOnly = !editable;
     if (el.qHint) el.qHint.textContent = editable ? "本轮研究问题（可改）" : "本轮研究问题（只读）";
+    syncPhaseWhisper();
+  }
+
+  const BRIEF_SLOTS = [
+    { key: "product", label: "分析对象", ask: "这轮要分析的具体产品是什么？例如青绿茶礼盒、白酒礼盒。" },
+    { key: "audience", label: "人群", ask: "卖给谁？年龄、身份，送礼还是自用。" },
+    { key: "price_band", label: "价格带", ask: "价格带大概在哪一档？大众、中端、中高端还是高端。" },
+    { key: "culture_tone", label: "品牌定位", ask: "品牌气质怎么说？东方、国际简约、专业、时尚，还是别的。" },
+    { key: "occasion", label: "使用场景", ask: "主要用在什么场合？节日礼赠、商务、还是日常自用？" },
+    { key: "channel", label: "渠道市场", ask: "线上、线下，还是都有？电商、商超、专柜？" },
+    { key: "job_type", label: "课题类型", ask: "这是 0-1 新包装，还是现有包装升级？" },
+  ];
+
+  const PHASE_WHISPER = {
+    1: "先把卖给谁、什么价、线上还是线下问清楚。Brief 粗，我就追问。",
+    2: "只检索这台机器上的自有库。中国在售、概念稿分开看，不对外网站点新爬。",
+    3: "按市场主流风格打标。没标的写未标注，不编一套好看的分类。",
+    4: "老板看评分、拿掉、写一句再筛。这是一个来回，不是一次性向导。",
+    5: "按你留下的参考出可下载报告。到这里为止，还不会有包装完稿。",
+  };
+
+  function syncPhaseWhisper() {
+    if (!el.phaseWhisper) return;
+    el.phaseWhisper.textContent = PHASE_WHISPER[state.stage] || PHASE_WHISPER[1];
+  }
+
+  function setArtifactOpen(open) {
+    state.artifactOpen = Boolean(open);
+    if (el.appRoot) el.appRoot.classList.toggle("artifact-open", state.artifactOpen);
+    if (el.btnToggleArtifact) {
+      el.btnToggleArtifact.setAttribute("aria-pressed", state.artifactOpen ? "true" : "false");
+      el.btnToggleArtifact.textContent = state.artifactOpen ? "收起库" : "看库";
+    }
+  }
+
+  function briefInput() {
+    const r = currentResearch();
+    return { ...(state.bundle?.l1?.input || {}), ...(r && r.brief ? r.brief : {}) };
+  }
+
+  function missingBriefSlots() {
+    const input = briefInput();
+    return BRIEF_SLOTS.filter((slot) => {
+      const v = input[slot.key];
+      if (Array.isArray(v)) return !v.length;
+      return !String(v || "").trim();
+    });
+  }
+
+  function absorbBriefAnswer(text) {
+    const r = currentResearch();
+    if (!r) return null;
+    const key = state.briefAskKey || (missingBriefSlots()[0] && missingBriefSlots()[0].key);
+    if (!key) return null;
+    const value = String(text || "").trim().slice(0, 80);
+    if (!value) return null;
+    r.brief = r.brief || {};
+    r.brief[key] = value;
+    if (r.custom && key === "product") r.title = `${value}竞品调研`;
+    if (r.custom) persistCustomResearches();
+    const l1 = state.bundle && state.bundle.l1 ? state.bundle.l1 : { input: {}, intent: {} };
+    l1.input = { ...(l1.input || {}), [key]: value };
+    if (state.bundle) state.bundle.l1 = l1;
+    if (el.researchTitle && r.title) el.researchTitle.textContent = r.title;
+    state.briefAskKey = "";
+    return key;
+  }
+
+  function askNextBriefSlot() {
+    const missing = missingBriefSlots();
+    if (!missing.length) {
+      state.briefAskKey = "";
+      return false;
+    }
+    const slot = missing[0];
+    state.briefAskKey = slot.key;
+    appendEvent({
+      agent: "奎燕设计智能体",
+      time: "现在",
+      tag: "追问",
+      tagClass: "stage",
+      dot: "yellow",
+      html: `<p>${escapeHtml(slot.ask)}</p>
+        <div class="event-note">你给的 Brief 还缺「${escapeHtml(slot.label)}」。问清这一项，我才从自有库里检索，不会假装已经穷尽。</div>
+        <div class="chips-row"><button type="button" class="artifact-link" data-artifact="brief">看已问清的项</button></div>`,
+    });
+    return true;
+  }
+
+  function libraryLaneOf(it) {
+    const src = String(it.source || "").toLowerCase();
+    const volume = String((it.extra && it.extra.volume) || it.volume || "").toLowerCase();
+    if (volume === "head" || volume === "头部") return "head";
+    if (volume === "rising" || volume === "新锐") return "rising";
+    if (wallRole(it) === "shelf" || /taobao|tmall|jd|douyin|tiktok/.test(src)) return "sold";
+    if (/behance|pinterest|huaban|packagingoftheworld|dribbble|zcool/.test(src)) return "concept";
+    return "";
+  }
+
+  function itemMatchesMarketStyle(it, styleId) {
+    const style = (state.marketStyles || []).find((s) => s.id === styleId);
+    if (!style) return true;
+    const ids = new Set(style.bucket_ids || []);
+    const names = new Set(
+      (style.bucket_ids || []).map((id) => state.bucketIdToZh[id] || "").filter(Boolean)
+    );
+    if (names.has(it.bucket)) return true;
+    return (it.suggested_style_buckets || []).some((id) => ids.has(id));
+  }
+
+  async function loadMarketStyles() {
+    try {
+      const res = await fetch("data/market-styles-v1.json");
+      if (!res.ok) return;
+      const doc = await res.json();
+      state.marketStyles = doc.styles || [];
+      renderMarketStyles();
+    } catch (_) {}
+  }
+
+  function renderMarketStyles() {
+    if (!el.marketStyles) return;
+    const styles = state.marketStyles || [];
+    if (!styles.length) {
+      el.marketStyles.innerHTML = "";
+      return;
+    }
+    el.marketStyles.innerHTML = `<span class="source-kicker">风格</span>${styles
+      .map((s) => {
+        const on = state.activeMarketStyle === s.id;
+        return `<button type="button" class="mstyle-chip${on ? " active" : ""}" data-mstyle="${escapeAttr(
+          s.id
+        )}">${escapeHtml(s.name_zh)}</button>`;
+      })
+      .join("")}`;
+  }
+
+  function downloadReportNotes() {
+    const panel = el.canvasBody && el.canvasBody.querySelector(".report-panel");
+    const text = panel ? String(panel.innerText || "").replace(/\n{3,}/g, "\n\n").trim() : "";
+    if (!text) {
+      toast("报告还没出来");
+      return;
+    }
+    const title = (currentResearch().title || "KEY视界报告").replace(/[\\/:*?"<>|]/g, "");
+    const blob = new Blob([`KEY 视界 · ${title}\n\n${text}\n`], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${title}-差异化报告.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast("报告已下载，不是包装完稿");
   }
 
   
@@ -788,6 +955,7 @@
     const meta = STAGES.find((s) => s.id === n);
     if (syncTab && meta) switchTab(meta.tab, { fromStage: true });
     if (appendEvent) pushStageEvent(n);
+    syncPhaseWhisper();
   }
 
   function switchTab(tab, { fromStage = false } = {}) {
@@ -800,6 +968,8 @@
     });
     updateFilterRow();
     renderCanvas();
+    setArtifactOpen(true);
+    syncPhaseWhisper();
     if (!fromStage) {
       const map = { intent: 1, visual: 3, shortlist: 4, report: 5, strategy: 5 };
       if (map[tab] && map[tab] !== state.stage) {
@@ -1329,6 +1499,12 @@
     if (state.activeStyleFilter) {
       items = items.filter((it) => it.bucket === state.activeStyleFilter);
     }
+    if (state.activeLibLane) {
+      items = items.filter((it) => libraryLaneOf(it) === state.activeLibLane);
+    }
+    if (state.activeMarketStyle) {
+      items = items.filter((it) => itemMatchesMarketStyle(it, state.activeMarketStyle));
+    }
     // Brief gate: ON → only match; OFF → prefer match, demote low/off.
     // 含待复核: pending stay first; apply brief rules within each group.
     function applyBriefOrder(list) {
@@ -1659,6 +1835,12 @@
       ...Object.keys(byBucket).filter((n) => !preferred.includes(n)),
     ];
     if (!order.length) {
+      if (state.activeLibLane === "head" || state.activeLibLane === "rising") {
+        const zh = state.activeLibLane === "head" ? "头部体量" : "新锐增速";
+        return `<div class="empty"><div class="slogan">本轮库未标「${escapeHtml(zh)}」</div>
+        <p class="hint">自有库还没有体量/增速字段，这里不按品牌名猜谁是头部、谁是新锐。等入库时标上 volume，再回来筛。</p>
+        <button type="button" class="empty-cta" data-empty-action="show-all">看看全部参考</button></div>`;
+      }
       if (state.activeCat === "cross") {
         return `<div class="empty"><div class="slogan">本轮跨界样本 0，不编造</div>
         <p class="hint">Brief 的类比计划里写了香氛、国潮美妆这类跨界目标，但这一轮一张都没采到，所以这里就是空的。<br>缺口已经写进 L5 报告的「风险与下一步」，等开跨界采集再回来看。</p>
@@ -2099,6 +2281,8 @@
         channel: "",
         occasion: "",
         culture_tone: "",
+        price_band: "",
+        job_type: "",
         must_have: [],
         must_avoid: [],
       },
@@ -2125,6 +2309,7 @@
     r.brief.occasion = val("occasion");
     r.brief.culture_tone = val("culture_tone");
     r.brief.price_band = val("price_band");
+    r.brief.job_type = val("job_type");
     r.brief.must_have = splitTags(val("must_have"));
     r.brief.must_avoid = splitTags(val("must_avoid"));
     if (r.brief.product) r.title = `${r.brief.product}竞品调研`;
@@ -2591,6 +2776,7 @@
         ${field("channel", "渠道", input.channel, "例如 礼赠 + 电商")}
         ${field("price_band", "价格带", input.price_band, "例如 中高端")}
         ${field("occasion", "场合", input.occasion, "例如 节日/商务馈赠")}
+        ${field("job_type", "课题类型", input.job_type, "0-1 新包装 / 现有升级")}
       </div>
       <div class="panel-block" data-sop="object">
         <h4>分析对象</h4>
@@ -2615,6 +2801,7 @@
           ${kvRow("渠道", input.channel)}
           ${kvRow("价格带", input.price_band)}
           ${kvRow("场合", input.occasion)}
+          ${kvRow("课题类型", input.job_type)}
         </div>
       </div>
 
@@ -2729,7 +2916,7 @@
             imgFor(it)
           )}" alt="" onerror="this.onerror=null;this.classList.add('img-broken');const f=this.nextElementSibling;if(f)f.hidden=false;" /><div class="thumb-fallback" hidden>图链失效</div></div>
           <div class="sl-body">
-            <div class="sl-title">${escapeHtml(humanTitle(it.title || it.id))}</div>
+            <div class="sl-title">${escapeHtml(humanTitle(it.title || it.id))}<span class="sl-score" title="只按已有字段打分">荐 ${pickScore(it)}</span></div>
             <div class="sl-scope"><span class="scope-pill scope-${escapeAttr(
               searchScope(it)
             )}">${escapeHtml(scopeLabel(it))}</span><span class="sl-src">${escapeHtml(
@@ -2919,6 +3106,7 @@
           <p class="panel-sub">可复核的决策备忘：只用已落地的主墙 ${mainN} 张和你定的短名单，没有新采集，也没有补数。</p>
         </div>
         <button type="button" class="rp-copy" data-report-action="copy">复制本页要点</button>
+        <button type="button" class="rp-download" data-report-action="download">下载报告</button>
       </div>
       ${emptyBanner}${sec1}${sec2}${sec3}${sec4}${sec5}${sec6}
     </section>`;
@@ -2965,13 +3153,14 @@
       appendEvent({
         agent: "奎燕设计智能体",
         time: "现在",
-        tag: "新一轮",
+        tag: "新任务",
         tagClass: "stage",
         dot: "yellow",
-        html: `<p>新研究已建。墙是空的，我不会把青绿茶那 452 张抄过来。先在右边填 Brief。</p>
-          <div class="event-note">三个智能体要分工：编排跟你聊，采集按 Brief 分路（不新爬），点点打标和按批注重筛。点左栏齿轮或右上角配置 API。</div>
-          <div class="chips-row"><button type="button" class="artifact-link" data-artifact="brief">去填 Brief</button></div>`,
+        html: `<p>新任务已建。自有库这轮是空的，我不会把青绿茶那 452 张抄过来。</p>
+          <div class="event-note">先把卖给谁、什么价、线上还是线下、0-1 还是升级问清楚。模型 API 配在左下角席位里。</div>
+          <div class="chips-row"><button type="button" class="artifact-link" data-artifact="brief">看已问清的项</button></div>`,
       });
+      askNextBriefSlot();
       return;
     }
     const input = state.bundle?.l1?.input || {};
@@ -2990,56 +3179,29 @@
 
     appendEvent({
       agent: "奎燕设计智能体",
-      time: "11:58",
-      tag: "L1 意图识别",
+      time: "现在",
+      tag: "这轮先这样看",
       tagClass: "stage",
       dot: "ok",
-      html: `<p>先钉客群和渠道：<strong>${escapeHtml(input.audience || "客群未标注")}</strong> · ${escapeHtml(
-        input.channel || "渠道未标注"
-      )}。产品是 <strong>${escapeHtml(product)}</strong>，${escapeHtml(tone)}。客群没钉住，这面墙不能当已经问清。</p>
-        <div class="event-note">必须有：${escapeHtml((input.must_have || []).slice(0, 3).join("、") || "未标注")}
-        <br>必须避开：${escapeHtml((input.must_avoid || []).slice(0, 2).join("、") || "未标注")}</div>
+      html: `<p>产品是 <strong>${escapeHtml(product)}</strong>，卖给 <strong>${escapeHtml(
+        input.audience || "客群未标注"
+      )}</strong>，渠道 ${escapeHtml(input.channel || "未标注")}，气质 ${escapeHtml(tone)}。</p>
+        <div class="event-note">自有库已挂上 ${mainN} 张（待复核 ${pendN} 没算进来）。中国在售和概念/飞机稿可以分开看。跨界 ${lanes.cross}、不同类 ${lanes.adjacent}，缺的我不补。</div>
         <div class="chips-row">
-          <button type="button" class="artifact-link" data-artifact="brief">看分析对象</button>
-        </div>`,
-    });
-
-    appendEvent({
-      agent: "采集",
-      time: "12:00",
-      tag: "L2 搜索穷尽",
-      tagClass: "",
-      dot: "yellow",
-      html: `<p>三路铺开的真实结果：同类 <strong>${lanes.same}</strong> · 不同类 <strong>${lanes.adjacent}</strong> · 跨界 <strong>${lanes.cross}</strong> · 货架 <strong>${lanes.shelf}</strong>（在售切片）。主墙 ${mainN}，另有 ${pendN} 张待复核没进来。</p>
-        <div class="event-note">说句实话：跨界这一路本轮一张没采，不同类只有 ${lanes.adjacent} 张，货架也只是 listing 样。缺就是缺，我不给你补数。</div>
-        <div class="chips-row">
-          <button type="button" class="artifact-link" data-artifact="map">打开竞品版图</button>
+          <button type="button" class="artifact-link" data-artifact="map">打开自有库</button>
+          <button type="button" class="artifact-link" data-artifact="shortlist">先收一版给老板</button>
+          <button type="button" class="artifact-link" data-artifact="report">直接看报告</button>
         </div>`,
     });
 
     appendEvent({
       agent: "点点",
-      time: "12:01",
-      tag: "L3 分类拆解",
+      time: "现在",
+      tag: "打标",
       tagClass: "consensus",
       dot: "ok",
-      html: `<p>按视觉与风格 / 交互与体验 / 销售与成本三组打标。目前风格桶标到 <strong>${sbN}/${mainN}</strong>，色彩、造型多数还空着，点开一张会看到「未标注」。</p>
-        <div class="event-note">开箱、功能实用、用户反馈、成本这四项本轮没采，检查器里照实写，不用模板话糊过去。</div>
-        <div class="chips-row">
-          <button type="button" class="artifact-link" data-artifact="map">点一张看维度</button>
-        </div>`,
-    });
-
-    appendEvent({
-      agent: "奎燕设计智能体",
-      time: "12:02",
-      tag: "L4 决策筛选",
-      tagClass: "challenge",
-      dot: "warn",
-      html: `<p>${mainN} 张不该全甩给你。我按 Brief 命中 + 风格桶多样性先收 ${SHORTLIST_MIN}–${SHORTLIST_TARGET} 款，每款写清为什么进来。不合意就拿掉，或者写句批注让我重筛。</p>
-        <div class="chips-row">
-          <button type="button" class="artifact-link" data-artifact="shortlist">看短名单</button>
-        </div>`,
+      html: `<p>风格桶标到 <strong>${sbN}/${mainN}</strong>。东方 / 国际 / 简约这些市场话术，我按已有桶映射，不是另爬一套。</p>
+        <div class="event-note">开箱、用户反馈、成本、头部/新锐体量本轮库里大多没标。老板筛选时我会写未标注，不会编。</div>`,
     });
 
     const cardLines = cards
@@ -3053,10 +3215,10 @@
       tag: "L5 结论报告",
       tagClass: "consensus",
       dot: "ok",
-      html: `<p>短名单定了，我再按六段写结论：分析对象 → 样本结构 → 分类覆盖 → 入选参考 → 差异化机会 → 风险与下一步。</p>
-        ${cardLines ? `<p>差异化那段挂三个方向假设（示意 · 非完稿）：</p><ul>${cardLines}</ul>` : ""}
+      html: `<p>你选定参考之后，我出一份可下载的差异化报告。到报告为止，<strong>还不会有设计完稿</strong>。</p>
+        ${cardLines ? `<p>青绿茶这轮挂了三张方向假设（示意 · 非完稿）：</p><ul>${cardLines}</ul>` : ""}
         <div class="chips-row">
-          <button type="button" class="artifact-link" data-artifact="report">看结论报告</button>
+          <button type="button" class="artifact-link" data-artifact="report">打开报告</button>
         </div>`,
     });
   }
@@ -3193,6 +3355,35 @@
       html: `<div class="event-note">${escapeHtml(t)}</div>`,
     });
 
+    if (state.briefAskKey || (currentResearch().custom && missingBriefSlots().length)) {
+      const filled = absorbBriefAnswer(t);
+      if (filled) {
+        const slot = BRIEF_SLOTS.find((s) => s.key === filled);
+        appendEvent({
+          agent: "奎燕设计智能体",
+          time: "现在",
+          tag: "已记下",
+          tagClass: "consensus",
+          dot: "ok",
+          html: `<p>「${escapeHtml(slot ? slot.label : filled)}」记下了：${escapeHtml(t.slice(0, 80))}。</p>`,
+        });
+        if (el.canvasBody && state.tab === "intent") renderCanvas({ preserveScroll: true });
+        if (askNextBriefSlot()) return;
+        appendEvent({
+          agent: "奎燕设计智能体",
+          time: "现在",
+          tag: "可以检索了",
+          tagClass: "consensus",
+          dot: "ok",
+          html: `<p>Brief 这几项够用了。下一步我只检索自有库，不对外网站点新爬。</p>
+            <div class="chips-row"><button type="button" class="artifact-link" data-artifact="map">打开自有库</button></div>`,
+        });
+        setStage(2, { appendEvent: false });
+        switchTab("visual", { fromStage: true });
+        return;
+      }
+    }
+
     const lower = t.toLowerCase();
     const mainN = state.feedCounts.main || 0;
     const pendN = state.feedCounts.pending || 0;
@@ -3217,7 +3408,13 @@
       switchTab("intent", { fromStage: true });
       return;
     }
-    if (/版图|视觉|看墙|地图|穷尽|搜索|跨界|不同类|货架/.test(t)) {
+    if (/下载报告|导出报告/.test(t)) {
+      setStage(5);
+      switchTab("report", { fromStage: true });
+      downloadReportNotes();
+      return;
+    }
+    if (/版图|视觉|看墙|地图|穷尽|搜索|跨界|不同类|货架|自有库|打开库/.test(t)) {
       setStage(3);
       switchTab("visual", { fromStage: true });
       appendEvent({
@@ -3339,6 +3536,9 @@
     state.activeCat = "all";
     state.activeSource = null;
     state.activeStyleFilter = "";
+    state.activeLibLane = "";
+    state.activeMarketStyle = "";
+    state.briefAskKey = "";
     state.pendingItems = [];
     state.includePending = false;
     closeInspector();
@@ -3428,8 +3628,9 @@
           dot: "ok",
           html: r.onlyBriefDefault
             ? `<p>已切回青绿茶礼盒。主墙 <strong>${state.feedCounts.main}</strong> · 待复核 <strong>${state.feedCounts.pending}</strong>，短名单和批注都已清空重来。分路按 Brief 动态算：同类 / 不同类 / 跨界，货架仍是在售切片。</p>`
-            : `<p>已打开「${escapeHtml(r.title)}」落地主墙 <strong>${state.feedCounts.main}</strong> 张。这轮 Brief 还没录入，只有墙：客群、红线、奎燕案例都是未标注，茶礼那轮的三张方向卡不会跟过来。贴 brief 筛选已关掉，避免用茶礼规则误杀。</p>`,
+            : `<p>已打开「${escapeHtml(r.title)}」自有库 <strong>${state.feedCounts.main}</strong> 张。这轮 Brief 还没录入，客群、红线都是未标注。茶礼那轮的方向卡不会跟过来。</p>`,
         });
+        if (!r.onlyBriefDefault) askNextBriefSlot();
       }
     } catch (err) {
       console.warn(err);
@@ -3594,6 +3795,11 @@
       const copyBtn = e.target.closest("[data-report-action='copy']");
       if (copyBtn) {
         copyReportNotes();
+        return;
+      }
+      const dlBtn = e.target.closest("[data-report-action='download']");
+      if (dlBtn) {
+        downloadReportNotes();
         return;
       }
       const slAction = e.target.closest("[data-shortlist-action]");
@@ -3803,6 +4009,67 @@
     }
     if (el.btnSettings) el.btnSettings.addEventListener("click", () => openLlmSettings("orchestrator"));
     if (el.btnCapConfig) el.btnCapConfig.addEventListener("click", () => openLlmSettings("orchestrator"));
+    if (el.btnToggleArtifact) {
+      el.btnToggleArtifact.addEventListener("click", () => setArtifactOpen(!state.artifactOpen));
+    }
+    if (el.libraryLanes) {
+      el.libraryLanes.addEventListener("click", (e) => {
+        const chip = e.target.closest("[data-lib]");
+        if (!chip) return;
+        const lane = chip.dataset.lib || "";
+        state.activeLibLane = state.activeLibLane === lane ? "" : lane;
+        el.libraryLanes.querySelectorAll(".lib-chip").forEach((c) => {
+          const id = c.dataset.lib || "";
+          c.classList.toggle("active", id === state.activeLibLane);
+        });
+        state.wallVisibleLimit = WALL_BATCH_INITIAL;
+        if (state.tab !== "visual") switchTab("visual", { fromStage: true });
+        else renderCanvas();
+      });
+    }
+    if (el.marketStyles) {
+      el.marketStyles.addEventListener("click", (e) => {
+        const chip = e.target.closest("[data-mstyle]");
+        if (!chip) return;
+        const id = chip.dataset.mstyle || "";
+        state.activeMarketStyle = state.activeMarketStyle === id ? "" : id;
+        renderMarketStyles();
+        state.wallVisibleLimit = WALL_BATCH_INITIAL;
+        if (state.tab !== "visual") switchTab("visual", { fromStage: true });
+        else renderCanvas();
+      });
+    }
+    if (el.userChip && el.userMenu) {
+      el.userChip.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const open = el.userMenu.hasAttribute("hidden");
+        if (open) el.userMenu.removeAttribute("hidden");
+        else el.userMenu.setAttribute("hidden", "");
+        el.userChip.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      el.userMenu.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-user-action]");
+        if (!btn) return;
+        const act = btn.dataset.userAction;
+        el.userMenu.setAttribute("hidden", "");
+        if (act === "llm") openLlmSettings("orchestrator");
+        else if (act === "profile") toast("席位资料本机保存，不写进仓库");
+        else if (act === "help") {
+          appendEvent({
+            agent: "奎燕设计智能体",
+            time: "现在",
+            tag: "怎么用",
+            tagClass: "stage",
+            dot: "yellow",
+            html: `<p>左边是任务。中间跟我聊：Brief 粗我就追问。右边是自有库、老板选、报告。</p>
+              <div class="event-note">底层还是问清 → 检索库 → 打标 → 筛选 → 报告。界面不再做成五步向导，避免把思维卡死。</div>`,
+          });
+        }
+      });
+      document.addEventListener("click", (e) => {
+        if (!e.target.closest("#userDock")) el.userMenu.setAttribute("hidden", "");
+      });
+    }
     bindLlmFormEvents();
 
     const attachRow = document.querySelector(".attach-row");
@@ -3835,6 +4102,14 @@
           el.briefToggle.dataset.brief = "0";
         }
         toast("已显示全部参考");
+        state.activeLibLane = "";
+        state.activeMarketStyle = "";
+        if (el.libraryLanes) {
+          el.libraryLanes.querySelectorAll(".lib-chip").forEach((c) => {
+            c.classList.toggle("active", !c.dataset.lib);
+          });
+        }
+        renderMarketStyles();
         renderCanvas();
         updateWallCountBar();
       } else if (act === "open-intent") {
@@ -3870,7 +4145,9 @@
     renderCaps();
     renderResearch();
     renderSources();
+    setArtifactOpen(true);
     bindEvents();
+    loadMarketStyles();
     syncLlmUi();
     probeLlmProxy();
     closeInspector();

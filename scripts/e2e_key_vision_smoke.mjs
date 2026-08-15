@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p6`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p7`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -65,6 +65,12 @@ async function main() {
       const cards = document.querySelectorAll(".wall-card");
       return bar && /452|张/.test(bar.textContent || "") && cards.length > 0;
     });
+
+    note(await page.locator("body.studio").count().then((n) => n === 1), "studio body class");
+    note(await page.locator(".rail").count().then((n) => n === 1), "task sidebar rail");
+    note(await page.locator("#userDock").count().then((n) => n === 1), "user permission dock");
+    note(await page.locator("#libraryLanes").count().then((n) => n === 1), "library lane chips");
+    note(await page.locator("#composerInput").count().then((n) => n === 1), "LLM composer present");
 
     const bar = (await page.locator("#wallCountBar").innerText()).trim();
     note(/452/.test(bar) || /张/.test(bar), `count bar: ${bar}`);
@@ -155,6 +161,13 @@ async function main() {
     note(/本轮跨界样本 0，不编造/.test(crossEmpty), `cross empty: ${crossEmpty.slice(0, 80)}`);
 
     await page.locator('.cat-chip[data-cat="all"]').click();
+    await page.locator('.lib-chip[data-lib="head"]').click();
+    await page.waitForSelector(".empty, .wall-card");
+    const headEmpty = await page.locator(".empty").innerText().catch(() => "");
+    note(/本轮库未标/.test(headEmpty) && /头部/.test(headEmpty), `head volume empty: ${headEmpty.slice(0, 80)}`);
+    await page.locator('.lib-chip[data-lib=""]').click();
+    await page.waitForFunction(() => /452/.test(document.getElementById("wallCountBar")?.textContent || ""));
+
     await page.locator('.tab[data-tab="shortlist"]').click();
     await page.waitForSelector(".l4-panel");
     const sl = await page.locator(".l4-panel").innerText();
@@ -208,6 +221,7 @@ async function main() {
     note(/方向假设/.test(report) || /青绿新中轴/.test(report), "L5 hangs direction cards as 假设");
     note(/淘宝色板/.test(report) && /字体/.test(report), "L5 states color-board and type coverage gaps");
     note(/复制本页要点/.test(report), "L5 has copy-report control");
+    note(/下载报告/.test(report), "L5 has download-report control");
     const l5Links = await page.locator(".rp-shortlist a.rp-link").count();
     note(l5Links >= 8, `L5 origin links ${l5Links}`);
     const l5Href = await page.locator(".rp-shortlist a.rp-link").first().getAttribute("href");
