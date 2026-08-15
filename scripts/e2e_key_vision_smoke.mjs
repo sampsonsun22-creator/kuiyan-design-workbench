@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p13`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p14`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -75,6 +75,9 @@ async function main() {
     note(await page.locator("#railSearch").count().then((n) => n === 1), "rail task search");
     note((await page.locator("#btnNewResearch").innerText()).includes("新建分析"), "new analysis button");
     note(await page.locator("#btnNavResult").innerText().then((t) => t.includes("素材库")), "rail 素材库");
+    note(await page.locator("#btnNavSearch").innerText().then((t) => t.includes("搜索")), "rail 搜索");
+    note(await page.locator(".rail-h").innerText().then((t) => t.includes("研究任务")), "rail 研究任务");
+    note(await page.locator("#btnDockGear").count().then((n) => n === 1), "user dock gear");
     note(await page.locator("#activityStream .brief-table").count().then((n) => n === 1), "Brief table in stream");
     const bootStream = (await page.locator("#activityStream").innerText()).trim();
     note(/检索自有库/.test(bootStream) && /452/.test(bootStream), `boot stream retrieve log: ${bootStream.slice(0, 60)}`);
@@ -163,6 +166,10 @@ async function main() {
     const inspHref =
       (await page.locator("#inspectorBody a.insp-open").getAttribute("href").catch(() => null)) ||
       (await page.locator("#inspectorBody [data-copy-url]").getAttribute("data-copy-url").catch(() => null));
+    note(await page.locator("#inspectorBody .why-quad").count().then((n) => n === 1), "inspector why-quad");
+    const whyTxt = await page.locator("#inspectorBody .why-quad").innerText();
+    note(/贴合/.test(whyTxt) && /路线/.test(whyTxt) && /可落地/.test(whyTxt) && /证据/.test(whyTxt), `why-quad cells ${whyTxt.slice(0, 80)}`);
+    note(!/荐 92/.test(whyTxt), "why-quad does not invent 荐 92");
     note(/^https?:\/\//.test(inspHref || ""), `inspector origin ${inspHref}`);
     note(await page.locator("#inspectorBody [data-copy-url]").count().then((n) => n === 1), "inspector has 复制链接");
     const inspUrlTxt = await page.locator("#inspectorBody .insp-url").innerText().catch(() => "");
@@ -198,6 +205,10 @@ async function main() {
 
     await page.locator('.tab[data-tab="shortlist"]').click();
     await page.waitForSelector(".l4-panel");
+    note(
+      await page.locator("#resultChromeTitle").innerText().then((t) => /候选方向/.test(t)),
+      "shortlist chrome 候选方向"
+    );
     const sl = await page.locator(".l4-panel").innerText();
     const slCount = await page.locator(".l4-panel .sl-item").count();
     note(slCount >= 8 && slCount <= 12, `L4 shortlist cards ${slCount}`);

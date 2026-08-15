@@ -15,7 +15,7 @@
 
 ```bash
 python3 -m http.server 8767 --bind 127.0.0.1
-# http://127.0.0.1:8767/?v=452p13
+# http://127.0.0.1:8767/?v=452p14
 ```
 
 部署：把本目录静态托管到 Vercel（见 `vercel.json`）。公网仓库 `key-vision` 应与本目录同步，且必须包含带 `l4_cards` 的 `product-bundle.json`。方向卡封面优先用墙上 https 参考图，本地 `assets/ref*` 只是离线备援。

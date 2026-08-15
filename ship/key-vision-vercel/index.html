@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KEY 视界 · 奎燕竞品分析</title>
   <link rel="icon" href="assets/brand/logo-key-lockup-on-light.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=452p13" />
+  <link rel="stylesheet" href="styles.css?v=452p14" />
 </head>
 <body class="studio">
   <div class="app studio-app artifact-open" id="app">
@@ -23,6 +23,9 @@
       </button>
 
       <nav class="rail-nav" aria-label="工作区">
+        <button type="button" class="rail-nav-btn" id="btnNavSearch" data-nav="search">
+          <span class="rail-nav-ico" aria-hidden="true">⌕</span>搜索
+        </button>
         <button type="button" class="rail-nav-btn active" id="btnNavChat" data-nav="chat">
           <span class="rail-nav-ico" aria-hidden="true">◎</span>对话
         </button>
@@ -43,7 +46,7 @@
       </label>
 
       <section class="rail-section">
-        <h3 class="rail-h">最近</h3>
+        <h3 class="rail-h">研究任务</h3>
         <ul class="research-list" id="researchList"></ul>
       </section>
 
@@ -68,6 +71,7 @@
           </span>
           <span class="user-caret" aria-hidden="true">▾</span>
         </button>
+        <button type="button" class="dock-gear" id="btnDockGear" aria-label="席位与密钥" title="席位与密钥">⚙</button>
         <div class="user-menu" id="userMenu" hidden>
           <button type="button" data-user-action="llm">模型与权限</button>
           <button type="button" data-user-action="profile">席位资料</button>
@@ -165,11 +169,11 @@
           </div>
           <div class="library-lanes" id="libraryLanes" aria-label="中国在售库切片">
             <span class="source-kicker">库切片</span>
-            <button type="button" class="lib-chip active" data-lib="">全部库</button>
+            <button type="button" class="lib-chip active" data-lib="">全部</button>
+            <button type="button" class="lib-chip" data-lib="head">头部</button>
+            <button type="button" class="lib-chip" data-lib="rising">新锐</button>
             <button type="button" class="lib-chip" data-lib="sold">国内在售</button>
             <button type="button" class="lib-chip" data-lib="concept">概念 / 飞机稿</button>
-            <button type="button" class="lib-chip" data-lib="head">头部体量</button>
-            <button type="button" class="lib-chip" data-lib="rising">新锐增速</button>
           </div>
           <div class="market-styles" id="marketStyles" aria-label="市场风格"></div>
         </div>
@@ -202,7 +206,7 @@
       <aside class="inspector hidden" id="inspector" aria-label="这张和你要的，对得上吗">
         <div class="inspector-inner">
           <div class="inspector-head">
-            <h3>这张和你要的，对得上吗</h3>
+            <h3>为什么推荐</h3>
             <button type="button" class="inspector-close" id="inspectorToggle" title="关闭">×</button>
           </div>
           <div id="inspectorBody" class="inspector-body">
@@ -235,6 +239,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=452p13"></script>
+  <script src="app.js?v=452p14"></script>
 </body>
 </html>

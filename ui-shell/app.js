@@ -221,7 +221,9 @@
     userMenu: $("userMenu"),
     btnToggleArtifact: $("btnToggleArtifact"),
     btnNavChat: $("btnNavChat"),
+    btnNavSearch: $("btnNavSearch"),
     btnNavResult: $("btnNavResult"),
+    btnDockGear: $("btnDockGear"),
     btnCloseResult: $("btnCloseResult"),
     gutterRail: $("gutterRail"),
     gutterResult: $("gutterResult"),
@@ -418,7 +420,7 @@
   const RESULT_TAB_LABEL = {
     intent: "Brief",
     visual: "参考",
-    shortlist: "短名单",
+    shortlist: "候选方向",
     report: "结论",
     strategy: "结论",
   };
@@ -461,10 +463,10 @@
   function bindLayoutPanes() {
     const root = el.appRoot;
     if (!root) return;
-    const STORE = "key-vision-layout-v2";
+    const STORE = "key-vision-layout-v3";
     const defaults = () => ({
       railW: 240,
-      resultW: Math.round(Math.min(520, Math.max(400, window.innerWidth * 0.34))),
+      resultW: Math.round(Math.min(640, Math.max(480, window.innerWidth * 0.46))),
     });
     const read = () => {
       try {
@@ -472,7 +474,7 @@
         const d = defaults();
         return {
           railW: clamp(Number(saved.railW) || d.railW, 200, 360),
-          resultW: clamp(Number(saved.resultW) || d.resultW, 360, Math.max(400, window.innerWidth - 700)),
+          resultW: clamp(Number(saved.resultW) || d.resultW, 400, Math.max(420, window.innerWidth - 640)),
         };
       } catch (_) {
         return defaults();
@@ -506,7 +508,7 @@
           const next =
             key === "railW"
               ? clamp(start + dx, 200, 360)
-              : clamp(start - dx, 360, Math.max(400, window.innerWidth - 700));
+              : clamp(start - dx, 400, Math.max(420, window.innerWidth - 640));
           layout[key] = next;
           if (frame) return;
           frame = requestAnimationFrame(() => {
@@ -538,7 +540,7 @@
         layout[key] =
           key === "railW"
             ? clamp(layout[key] + signed * step, 200, 360)
-            : clamp(layout[key] + signed * step, 360, Math.max(400, window.innerWidth - 700));
+            : clamp(layout[key] + signed * step, 400, Math.max(420, window.innerWidth - 640));
         apply();
         persist();
       });
@@ -1864,6 +1866,12 @@
     el.inspectorBody.innerHTML = `
       <div class="inspector-preview"><img referrerpolicy="no-referrer" src="${escapeAttr(imgFor(item))}" alt="" onerror="this.onerror=null;this.classList.add('img-broken');const f=this.nextElementSibling;if(f)f.hidden=false;" /><div class="thumb-fallback inspector-fallback" hidden>图链失效</div></div>
       <div class="inspector-title">${escapeHtml(humanTitle(item.title || item.id))}</div>
+      <div class="why-quad" id="whyQuad">
+        <div><span>贴合</span><strong>${escapeHtml(briefRelLabel(item))}</strong></div>
+        <div><span>路线</span><strong>${escapeHtml(scopeLabel(item))}</strong></div>
+        <div><span>可落地</span><strong>荐 ${pickScore(item)} · 字段覆盖</strong></div>
+        <div><span>证据</span><strong>${page ? "原页已核" : "原页未标注"}</strong></div>
+      </div>
       <div class="inspector-origin">
         <div class="inspector-src">${escapeHtml(humanSource(item.source) || "来源待核实")}${
           item.author_or_brand ? " · " + escapeHtml(item.author_or_brand) : ""
@@ -4379,6 +4387,17 @@
       el.btnNavChat.addEventListener("click", () => {
         if (el.composerInput) el.composerInput.focus();
       });
+    }
+    if (el.btnNavSearch) {
+      el.btnNavSearch.addEventListener("click", () => {
+        if (el.railSearch) {
+          el.railSearch.focus();
+          el.railSearch.select();
+        }
+      });
+    }
+    if (el.btnDockGear) {
+      el.btnDockGear.addEventListener("click", () => openLlmSettings("orchestrator"));
     }
     if (el.btnCloseResult) {
       el.btnCloseResult.addEventListener("click", () => setArtifactOpen(false));
