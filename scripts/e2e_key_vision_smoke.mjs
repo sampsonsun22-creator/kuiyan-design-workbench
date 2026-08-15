@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p7`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p8`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -71,6 +71,18 @@ async function main() {
     note(await page.locator("#userDock").count().then((n) => n === 1), "user permission dock");
     note(await page.locator("#libraryLanes").count().then((n) => n === 1), "library lane chips");
     note(await page.locator("#composerInput").count().then((n) => n === 1), "LLM composer present");
+    note(await page.locator(".gutter-rail").count().then((n) => n === 1), "resizable task gutter");
+    note(await page.locator(".gutter-result").count().then((n) => n === 1), "resizable result gutter");
+    note(await page.locator("#app.artifact-open").count().then((n) => n === 1), "result pane open by default");
+    note(await page.locator("#artifactPane").isVisible(), "result pane visible");
+    const railBox = await page.locator(".rail").boundingBox();
+    const chatBox = await page.locator(".workspace").boundingBox();
+    const resultBox = await page.locator("#artifactPane").boundingBox();
+    note(Boolean(railBox && chatBox && resultBox && railBox.x < chatBox.x && chatBox.x < resultBox.x), "Codex 3-pane left-chat-result order");
+    await page.locator("#btnToggleArtifact").click();
+    note(await page.locator("#app.artifact-open").count().then((n) => n === 0), "result pane can pop away");
+    await page.locator("#btnToggleArtifact").click();
+    await page.waitForFunction(() => document.getElementById("app")?.classList.contains("artifact-open"));
 
     const bar = (await page.locator("#wallCountBar").innerText()).trim();
     note(/452/.test(bar) || /张/.test(bar), `count bar: ${bar}`);

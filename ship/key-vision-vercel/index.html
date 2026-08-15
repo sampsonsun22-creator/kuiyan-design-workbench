@@ -5,13 +5,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KEY 视界 · 奎燕竞品分析</title>
-  <link rel="stylesheet" href="styles.css?v=452p7" />
+  <link rel="icon" href="assets/brand/logo-key-lockup-on-light.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css?v=452p8" />
 </head>
 <body class="studio">
   <div class="app studio-app artifact-open" id="app">
     <aside class="rail" aria-label="任务栏">
       <div class="rail-brand" aria-label="KEY 视界">
-        <img class="rail-mark" src="assets/brand/logo-key-mark-on-dark.svg" alt="{KEY}" />
+        <img class="rail-mark" src="assets/brand/logo-key-lockup-on-light.svg" alt="{KEY} 奎燕品牌创新社" />
         <div class="rail-name">KEY 视界</div>
         <div class="rail-sub">奎燕竞品分析</div>
       </div>
@@ -20,8 +21,17 @@
         <span class="plus" aria-hidden="true">+</span>新任务
       </button>
 
+      <nav class="rail-nav" aria-label="工作区">
+        <button type="button" class="rail-nav-btn active" id="btnNavChat" data-nav="chat">
+          <span class="rail-nav-ico" aria-hidden="true">◎</span>对话
+        </button>
+        <button type="button" class="rail-nav-btn" id="btnNavResult" data-nav="result" aria-pressed="true">
+          <span class="rail-nav-ico" aria-hidden="true">▣</span>结果
+        </button>
+      </nav>
+
       <section class="rail-section">
-        <h3 class="rail-h">任务</h3>
+        <h3 class="rail-h">最近</h3>
         <ul class="research-list" id="researchList"></ul>
       </section>
 
@@ -54,14 +64,16 @@
       </div>
     </aside>
 
-    <div class="workspace">
+    <div class="gutter gutter-rail" id="gutterRail" role="separator" aria-orientation="vertical" aria-label="调整任务栏宽度" tabindex="0"></div>
+
+    <section class="workspace" aria-label="人机对话">
       <header class="workspace-head">
         <div class="workspace-title-block">
           <h1 id="researchTitle">青绿茶礼盒 · 竞品调研</h1>
           <p class="phase-whisper" id="phaseWhisper">先把卖给谁问清楚，再从自有库里检索。</p>
         </div>
         <div class="workspace-actions">
-          <button type="button" class="ghost-btn" id="btnToggleArtifact" aria-pressed="true">看库</button>
+          <button type="button" class="ghost-btn" id="btnToggleArtifact" aria-pressed="true">收起结果</button>
           <button type="button" class="btn-gear" id="btnLlmSettings" title="配置模型 API" aria-label="配置模型 API">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
               <circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="1.7"/>
@@ -77,89 +89,101 @@
         <span class="q-count" id="qCount">0/200</span>
       </div>
 
-      <div class="workspace-body">
-        <section class="thread" aria-label="人机对话">
-          <div class="stream" id="activityStream" role="log" aria-live="polite"></div>
-          <form class="composer studio-composer" id="composer">
-            <div class="attach-row" hidden aria-hidden="true" aria-label="附件">
-              <button type="button" class="attach" title="图片" data-attach="image">🖼</button>
-              <button type="button" class="attach" title="表格" data-attach="table">▦</button>
-              <button type="button" class="attach" title="证据" data-attach="evidence">📎</button>
-            </div>
-            <textarea id="composerInput" rows="1" placeholder="先说这包卖给谁，或让我从库里按风格收一轮…"></textarea>
-            <button type="submit" class="send-btn" id="sendBtn">发送</button>
-          </form>
-        </section>
+      <div class="thread">
+        <div class="stream" id="activityStream" role="log" aria-live="polite"></div>
+        <form class="composer studio-composer" id="composer">
+          <div class="attach-row" hidden aria-hidden="true" aria-label="附件">
+            <button type="button" class="attach" title="图片" data-attach="image">🖼</button>
+            <button type="button" class="attach" title="表格" data-attach="table">▦</button>
+            <button type="button" class="attach" title="证据" data-attach="evidence">📎</button>
+          </div>
+          <button type="button" class="composer-plus" id="composerPlus" title="附件" data-attach="evidence" aria-label="附件">+</button>
+          <textarea id="composerInput" rows="1" placeholder="随心输入：先说这包卖给谁，或让我从库里按风格收一轮…"></textarea>
+          <span class="composer-chip" title="只检索本机自有库，不对外网站点新爬">本机库</span>
+          <button type="submit" class="send-btn" id="sendBtn">发送</button>
+        </form>
+      </div>
+    </section>
 
-        <aside class="right artifact" id="artifactPane" aria-label="结果画布">
-          <div class="right-main" id="rightMain">
-            <div class="tabs artifact-tabs" role="tablist">
-              <button type="button" class="tab" role="tab" data-tab="intent" aria-selected="false">问清</button>
-              <button type="button" class="tab active" role="tab" data-tab="visual" aria-selected="true">自有库</button>
-              <button type="button" class="tab" role="tab" data-tab="shortlist" aria-selected="false">老板选</button>
-              <button type="button" class="tab" role="tab" data-tab="report" aria-selected="false">报告</button>
-            </div>
+    <div class="gutter gutter-result" id="gutterResult" role="separator" aria-orientation="vertical" aria-label="调整结果栏宽度" tabindex="0"></div>
 
-            <div class="wall-filters" id="wallFilters">
-              <div class="source-cards" id="sourceChips" aria-label="出处筛选"></div>
-              <div class="category-chips" id="categoryChips" aria-label="素材类别">
-                <span class="source-kicker">分类</span>
-                <button type="button" class="cat-chip active" data-cat="all">全部</button>
-                <button type="button" class="cat-chip" data-cat="primary">同类</button>
-                <button type="button" class="cat-chip" data-cat="analogy">不同类</button>
-                <button type="button" class="cat-chip" data-cat="cross">跨界</button>
-                <button type="button" class="cat-chip" data-cat="shelf">货架</button>
-                <button type="button" class="cat-chip pending-toggle" id="pendingToggle" data-pending="0" aria-pressed="false">含待复核</button>
-                <button type="button" class="cat-chip brief-toggle active" id="briefToggle" data-brief="1" aria-pressed="true">只看贴 brief</button>
-              </div>
-              <div class="library-lanes" id="libraryLanes" aria-label="中国在售库切片">
-                <span class="source-kicker">库切片</span>
-                <button type="button" class="lib-chip active" data-lib="">全部库</button>
-                <button type="button" class="lib-chip" data-lib="sold">国内在售</button>
-                <button type="button" class="lib-chip" data-lib="concept">概念 / 飞机稿</button>
-                <button type="button" class="lib-chip" data-lib="head">头部体量</button>
-                <button type="button" class="lib-chip" data-lib="rising">新锐增速</button>
-              </div>
-              <div class="market-styles" id="marketStyles" aria-label="市场风格"></div>
-            </div>
-            <div class="wall-count-bar" id="wallCountBar" aria-live="polite">主墙 — · 待复核 —</div>
+    <aside class="right artifact" id="artifactPane" aria-label="结果画布">
+      <div class="result-chrome">
+        <div class="result-chrome-left">
+          <span class="result-dot" aria-hidden="true"></span>
+          <span class="result-kicker">结果</span>
+          <span class="result-title" id="resultChromeTitle">自有库</span>
+        </div>
+        <div class="result-chrome-actions">
+          <button type="button" class="icon-btn" id="btnCloseResult" aria-label="收起结果" title="收起结果">×</button>
+        </div>
+      </div>
+      <div class="right-main" id="rightMain">
+        <div class="tabs artifact-tabs" role="tablist">
+          <button type="button" class="tab" role="tab" data-tab="intent" aria-selected="false">问清</button>
+          <button type="button" class="tab active" role="tab" data-tab="visual" aria-selected="true">自有库</button>
+          <button type="button" class="tab" role="tab" data-tab="shortlist" aria-selected="false">老板选</button>
+          <button type="button" class="tab" role="tab" data-tab="report" aria-selected="false">报告</button>
+        </div>
 
-            <div class="filters" id="filters">
-              <select aria-label="风格" data-filter="style"><option>风格 · 全部</option><option>中式现代</option><option>国际简约</option><option>工艺材质感</option></select>
-              <select aria-label="来源" data-filter="source" class="filter-source"><option>来源 · 全部</option><option>Behance</option><option>站酷</option><option>Packaging of the World</option></select>
-              <select aria-label="方向" data-filter="direction" class="filter-direction" hidden><option>方向 · 全部</option><option>开箱记忆</option><option>货架识别</option><option>礼赠仪式</option></select>
-              <select aria-label="气质" data-filter="tone" class="filter-tone" hidden><option>气质 · 全部</option><option>中式现代</option><option>国际简约</option><option>地域文旅</option></select>
-              <select aria-label="市场" data-filter="market" hidden><option value="">市场 · 礼赠+电商</option><option>礼赠</option><option>电商</option></select>
-              <select aria-label="年份" data-filter="year" hidden><option value="">年份 · 近 3 年</option><option>2024–2026</option><option>全部</option></select>
-            </div>
+        <div class="wall-filters" id="wallFilters">
+          <div class="source-cards" id="sourceChips" aria-label="出处筛选"></div>
+          <div class="category-chips" id="categoryChips" aria-label="素材类别">
+            <span class="source-kicker">分类</span>
+            <button type="button" class="cat-chip active" data-cat="all">全部</button>
+            <button type="button" class="cat-chip" data-cat="primary">同类</button>
+            <button type="button" class="cat-chip" data-cat="analogy">不同类</button>
+            <button type="button" class="cat-chip" data-cat="cross">跨界</button>
+            <button type="button" class="cat-chip" data-cat="shelf">货架</button>
+            <button type="button" class="cat-chip pending-toggle" id="pendingToggle" data-pending="0" aria-pressed="false">含待复核</button>
+            <button type="button" class="cat-chip brief-toggle active" id="briefToggle" data-brief="1" aria-pressed="true">只看贴 brief</button>
+          </div>
+          <div class="library-lanes" id="libraryLanes" aria-label="中国在售库切片">
+            <span class="source-kicker">库切片</span>
+            <button type="button" class="lib-chip active" data-lib="">全部库</button>
+            <button type="button" class="lib-chip" data-lib="sold">国内在售</button>
+            <button type="button" class="lib-chip" data-lib="concept">概念 / 飞机稿</button>
+            <button type="button" class="lib-chip" data-lib="head">头部体量</button>
+            <button type="button" class="lib-chip" data-lib="rising">新锐增速</button>
+          </div>
+          <div class="market-styles" id="marketStyles" aria-label="市场风格"></div>
+        </div>
+        <div class="wall-count-bar" id="wallCountBar" aria-live="polite">主墙 — · 待复核 —</div>
 
-            <div class="canvas-wrap">
-              <div class="canvas-body" id="canvasBody"></div>
-              <div class="selection-bar hidden" id="selectionBar" aria-live="polite">
-                <span class="sel-count" id="selCount">先看这 0 张</span>
-                <div class="sel-actions">
-                  <button type="button" data-sel-action="compare" hidden>对比一下</button>
-                  <button type="button" data-sel-action="shortlist">收进短名单</button>
-                  <button type="button" class="sel-primary" data-sel-action="open">打开原页</button>
-                </div>
-              </div>
+        <div class="filters" id="filters">
+          <select aria-label="风格" data-filter="style"><option>风格 · 全部</option><option>中式现代</option><option>国际简约</option><option>工艺材质感</option></select>
+          <select aria-label="来源" data-filter="source" class="filter-source"><option>来源 · 全部</option><option>Behance</option><option>站酷</option><option>Packaging of the World</option></select>
+          <select aria-label="方向" data-filter="direction" class="filter-direction" hidden><option>方向 · 全部</option><option>开箱记忆</option><option>货架识别</option><option>礼赠仪式</option></select>
+          <select aria-label="气质" data-filter="tone" class="filter-tone" hidden><option>气质 · 全部</option><option>中式现代</option><option>国际简约</option><option>地域文旅</option></select>
+          <select aria-label="市场" data-filter="market" hidden><option value="">市场 · 礼赠+电商</option><option>礼赠</option><option>电商</option></select>
+          <select aria-label="年份" data-filter="year" hidden><option value="">年份 · 近 3 年</option><option>2024–2026</option><option>全部</option></select>
+        </div>
+
+        <div class="canvas-wrap">
+          <div class="canvas-body" id="canvasBody"></div>
+          <div class="selection-bar hidden" id="selectionBar" aria-live="polite">
+            <span class="sel-count" id="selCount">先看这 0 张</span>
+            <div class="sel-actions">
+              <button type="button" data-sel-action="compare" hidden>对比一下</button>
+              <button type="button" data-sel-action="shortlist">收进短名单</button>
+              <button type="button" class="sel-primary" data-sel-action="open">打开原页</button>
             </div>
           </div>
-
-          <aside class="inspector hidden" id="inspector" aria-label="这张和你要的，对得上吗">
-            <div class="inspector-inner">
-              <div class="inspector-head">
-                <h3>这张和你要的，对得上吗</h3>
-                <button type="button" class="inspector-close" id="inspectorToggle" title="关闭">×</button>
-              </div>
-              <div id="inspectorBody" class="inspector-body">
-                <p class="muted">点一张图，我帮你对照 Brief 说人话。</p>
-              </div>
-            </div>
-          </aside>
-        </aside>
+        </div>
       </div>
-    </div>
+
+      <aside class="inspector hidden" id="inspector" aria-label="这张和你要的，对得上吗">
+        <div class="inspector-inner">
+          <div class="inspector-head">
+            <h3>这张和你要的，对得上吗</h3>
+            <button type="button" class="inspector-close" id="inspectorToggle" title="关闭">×</button>
+          </div>
+          <div id="inspectorBody" class="inspector-body">
+            <p class="muted">点一张图，我帮你对照 Brief 说人话。</p>
+          </div>
+        </div>
+      </aside>
+    </aside>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -184,6 +208,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=452p7"></script>
+  <script src="app.js?v=452p8"></script>
 </body>
 </html>

@@ -217,6 +217,13 @@
     userChip: $("userChip"),
     userMenu: $("userMenu"),
     btnToggleArtifact: $("btnToggleArtifact"),
+    btnNavChat: $("btnNavChat"),
+    btnNavResult: $("btnNavResult"),
+    btnCloseResult: $("btnCloseResult"),
+    gutterRail: $("gutterRail"),
+    gutterResult: $("gutterResult"),
+    resultChromeTitle: $("resultChromeTitle"),
+    composerPlus: $("composerPlus"),
     appRoot: $("app"),
   };
 
@@ -285,8 +292,8 @@
     });
     if (el.composerInput) {
       el.composerInput.placeholder = any
-        ? "问这轮墙和 Brief。看 Brief / 看版图 / 帮我筛选 / 出结论 仍可跳转。"
-        : "先点右上角齿轮，给三个智能体配 API，才能真正对话。";
+        ? "随心输入：问这轮墙和 Brief，或说 看库 / 帮我筛选 / 出结论。"
+        : "随心输入。先点右上角齿轮配 API，才能真正对话。";
     }
   }
 
@@ -379,13 +386,127 @@
     el.phaseWhisper.textContent = PHASE_WHISPER[state.stage] || PHASE_WHISPER[1];
   }
 
+  const RESULT_TAB_LABEL = {
+    intent: "问清",
+    visual: "自有库",
+    shortlist: "老板选",
+    report: "报告",
+    strategy: "报告",
+  };
+
+  function syncResultChrome() {
+    if (el.resultChromeTitle) {
+      el.resultChromeTitle.textContent = RESULT_TAB_LABEL[state.tab] || "结果";
+    }
+    if (el.btnNavChat) el.btnNavChat.classList.toggle("active", !state.artifactOpen);
+    if (el.btnNavResult) {
+      el.btnNavResult.classList.toggle("active", state.artifactOpen);
+      el.btnNavResult.setAttribute("aria-pressed", state.artifactOpen ? "true" : "false");
+    }
+  }
+
   function setArtifactOpen(open) {
     state.artifactOpen = Boolean(open);
     if (el.appRoot) el.appRoot.classList.toggle("artifact-open", state.artifactOpen);
     if (el.btnToggleArtifact) {
       el.btnToggleArtifact.setAttribute("aria-pressed", state.artifactOpen ? "true" : "false");
-      el.btnToggleArtifact.textContent = state.artifactOpen ? "收起库" : "看库";
+      el.btnToggleArtifact.textContent = state.artifactOpen ? "收起结果" : "弹出结果";
     }
+    syncResultChrome();
+  }
+
+  function clamp(n, min, max) {
+    return Math.min(max, Math.max(min, n));
+  }
+
+  function bindLayoutPanes() {
+    const root = el.appRoot;
+    if (!root) return;
+    const STORE = "key-vision-layout-v1";
+    const defaults = () => ({
+      railW: 252,
+      resultW: Math.round(Math.min(820, Math.max(420, window.innerWidth * 0.46))),
+    });
+    const read = () => {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORE) || "{}") || {};
+        const d = defaults();
+        return {
+          railW: clamp(Number(saved.railW) || d.railW, 200, 420),
+          resultW: clamp(Number(saved.resultW) || d.resultW, 360, Math.max(420, window.innerWidth - 520)),
+        };
+      } catch (_) {
+        return defaults();
+      }
+    };
+    let layout = read();
+    const apply = () => {
+      root.style.setProperty("--rail-w", `${layout.railW}px`);
+      root.style.setProperty("--result-w", `${layout.resultW}px`);
+    };
+    const persist = () => {
+      try {
+        localStorage.setItem(STORE, JSON.stringify(layout));
+      } catch (_) {}
+    };
+    apply();
+
+    const startDrag = (gutter, key) => {
+      if (!gutter) return;
+      gutter.addEventListener("pointerdown", (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        gutter.setPointerCapture(e.pointerId);
+        gutter.classList.add("is-dragging");
+        document.body.classList.add("is-resizing");
+        const startX = e.clientX;
+        const start = layout[key];
+        let frame = 0;
+        const onMove = (ev) => {
+          const dx = ev.clientX - startX;
+          const next =
+            key === "railW"
+              ? clamp(start + dx, 200, 420)
+              : clamp(start - dx, 360, Math.max(420, window.innerWidth - 520));
+          layout[key] = next;
+          if (frame) return;
+          frame = requestAnimationFrame(() => {
+            frame = 0;
+            apply();
+          });
+        };
+        const stop = () => {
+          gutter.classList.remove("is-dragging");
+          document.body.classList.remove("is-resizing");
+          gutter.removeEventListener("pointermove", onMove);
+          persist();
+        };
+        gutter.addEventListener("pointermove", onMove);
+        gutter.addEventListener("pointerup", stop, { once: true });
+        gutter.addEventListener("pointercancel", stop, { once: true });
+      });
+      gutter.addEventListener("dblclick", () => {
+        layout[key] = defaults()[key];
+        apply();
+        persist();
+      });
+      gutter.addEventListener("keydown", (e) => {
+        if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+        e.preventDefault();
+        const step = e.shiftKey ? 28 : 10;
+        const dir = e.key === "ArrowRight" ? 1 : -1;
+        const signed = key === "resultW" ? -dir : dir;
+        layout[key] =
+          key === "railW"
+            ? clamp(layout[key] + signed * step, 200, 420)
+            : clamp(layout[key] + signed * step, 360, Math.max(420, window.innerWidth - 520));
+        apply();
+        persist();
+      });
+    };
+
+    startDrag(el.gutterRail, "railW");
+    startDrag(el.gutterResult, "resultW");
   }
 
   function briefInput() {
@@ -969,6 +1090,7 @@
     updateFilterRow();
     renderCanvas();
     setArtifactOpen(true);
+    syncResultChrome();
     syncPhaseWhisper();
     if (!fromStage) {
       const map = { intent: 1, visual: 3, shortlist: 4, report: 5, strategy: 5 };
@@ -4012,6 +4134,22 @@
     if (el.btnToggleArtifact) {
       el.btnToggleArtifact.addEventListener("click", () => setArtifactOpen(!state.artifactOpen));
     }
+    if (el.btnNavResult) {
+      el.btnNavResult.addEventListener("click", () => setArtifactOpen(true));
+    }
+    if (el.btnNavChat) {
+      el.btnNavChat.addEventListener("click", () => {
+        if (el.composerInput) el.composerInput.focus();
+      });
+    }
+    if (el.btnCloseResult) {
+      el.btnCloseResult.addEventListener("click", () => setArtifactOpen(false));
+    }
+    if (el.composerPlus) {
+      el.composerPlus.addEventListener("click", () => toast("本版不支持上传附件"));
+    }
+    bindLayoutPanes();
+    syncResultChrome();
     if (el.libraryLanes) {
       el.libraryLanes.addEventListener("click", (e) => {
         const chip = e.target.closest("[data-lib]");
@@ -4061,7 +4199,7 @@
             tag: "怎么用",
             tagClass: "stage",
             dot: "yellow",
-            html: `<p>左边是任务。中间跟我聊：Brief 粗我就追问。右边是自有库、老板选、报告。</p>
+            html: `<p>左边是任务和席位。中间跟我聊：Brief 粗我就追问。生成的库、短名单、报告在右边弹出，中间的细条可以拖，栏宽会记住。</p>
               <div class="event-note">底层还是问清 → 检索库 → 打标 → 筛选 → 报告。界面不再做成五步向导，避免把思维卡死。</div>`,
           });
         }
