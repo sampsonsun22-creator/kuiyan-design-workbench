@@ -757,7 +757,10 @@
 
   function isFragileImageHost(url) {
     if (!url) return true;
-    return isExpiredHuabanUrl(url);
+    return (
+      isExpiredHuabanUrl(url) ||
+      /xhscdn|sns-webpic|img\.zcool\.cn/i.test(url)
+    );
   }
 
   function expiredHuabanCount(items) {

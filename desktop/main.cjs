@@ -3,14 +3,14 @@
  * Serves the local ui-shell (self-owned library) and proxies LLM calls.
  * Does not crawl third-party sites. Does not rewrite the 452/2680 lock.
  */
-const { app, BrowserWindow, Menu, shell } = require("electron");
+const { app, BrowserWindow, Menu, shell, dialog } = require("electron");
 const http = require("http");
 const https = require("https");
 const fs = require("fs");
 const path = require("path");
 const { URL } = require("url");
 
-const CACHE_V = "452p14";
+const CACHE_V = "452p15";
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -212,6 +212,11 @@ function installMenu() {
 
 async function createWindow() {
   const root = contentDir();
+  if (!fs.existsSync(path.join(root, "index.html"))) {
+    dialog.showErrorBox("KEY 视界", `找不到本机库：${root}\n请重新安装 KEY-Vision-Setup。`);
+    app.quit();
+    return;
+  }
   const server = await startServer(root);
   const { port } = server.address();
   const icon = path.join(__dirname, "build", process.platform === "win32" ? "icon.ico" : "icon.png");

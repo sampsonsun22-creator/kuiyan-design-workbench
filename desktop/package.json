@@ -1,7 +1,7 @@
 {
   "name": "key-vision-desktop",
   "productName": "KEY 视界",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "description": "奎燕竞品分析智能体 · Windows / macOS 客户端",
   "main": "main.cjs",
@@ -10,7 +10,7 @@
     "icon": "python3 scripts/make_icon.py",
     "pack": "electron-builder --dir",
     "dist": "electron-builder --mac --win",
-    "dist:win": "python3 scripts/make_icon.py && electron-builder --win zip portable --publish never"
+    "dist:win": "python3 scripts/make_icon.py && electron-builder --win nsis zip portable --publish never"
   },
   "author": "奎燕 AI 研究室",
   "license": "UNLICENSED",
@@ -48,9 +48,16 @@
       "target": ["dmg", "zip"],
       "icon": "build/icon.png"
     },
+    "extraFiles": [
+      {
+        "from": "使用说明.txt",
+        "to": "使用说明.txt"
+      }
+    ],
     "win": {
       "icon": "build/icon.ico",
       "target": [
+        { "target": "nsis", "arch": ["x64"] },
         { "target": "zip", "arch": ["x64"] },
         { "target": "portable", "arch": ["x64"] }
       ],
@@ -62,7 +69,17 @@
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": false,
       "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "KEY 视界",
+      "uninstallDisplayName": "KEY 视界",
+      "installerLanguages": ["zh_CN"],
+      "language": "2052",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
       "artifactName": "KEY-Vision-Setup-${version}.exe"
     }
   }
