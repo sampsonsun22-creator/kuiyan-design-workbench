@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p16`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p17`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -81,6 +81,9 @@ async function main() {
     note(await page.locator("#cmdOverlay").count().then((n) => n === 1), "command palette overlay");
     note(await page.locator("#slashMenu").count().then((n) => n === 1), "slash command menu");
     note(await page.locator("#btnCommandPalette").count().then((n) => n === 1), "command palette button");
+    note(await page.locator(".rail #btnRailCollapse").count().then((n) => n === 1), "rail collapse lives on the rail");
+    note(await page.locator("#scopeChips").count().then((n) => n === 1), "click-to-scope chip row");
+    note(await page.locator("#activityStream .run[data-jump]").count().then((n) => n >= 2), "run stamps can jump to artifacts");
     note(await page.locator("#app.rail-collapsed").count().then((n) => n === 0), "task rail expanded by default");
     await page.keyboard.press("Control+k");
     note(await page.locator("#cmdOverlay").isVisible(), "Ctrl+K opens command palette");
@@ -188,6 +191,11 @@ async function main() {
 
     await page.locator(".wall-card .thumb").first().click();
     await page.waitForSelector("#inspectorBody a.insp-open, #inspectorBody .insp-url-box");
+    note(await page.locator("#scopeChips").isVisible(), "tile click scopes the composer");
+    note(
+      await page.locator("#scopeChips").innerText().then((t) => t.includes("这张图")),
+      "scope chip labeled 这张图"
+    );
     const inspHref =
       (await page.locator("#inspectorBody a.insp-open").getAttribute("href").catch(() => null)) ||
       (await page.locator("#inspectorBody [data-copy-url]").getAttribute("data-copy-url").catch(() => null));
