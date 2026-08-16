@@ -57,7 +57,7 @@ async function main() {
   try {
     await waitHttp(`http://127.0.0.1:${PORT}/index.html`);
     const browser = await chromium.launch({ headless: true });
-    const page = await browser.newPage();
+    const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
     page.setDefaultTimeout(25000);
     await page.goto(BASE, { waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => {

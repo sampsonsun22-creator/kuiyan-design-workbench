@@ -2615,6 +2615,10 @@ body.studio.is-resizing img {
   flex: none;
 }
 
+.workspace-title-block {
+  min-width: 0;
+  overflow: hidden;
+}
 .workspace-title-block h1 {
   margin: 0;
   font-size: 17px;
