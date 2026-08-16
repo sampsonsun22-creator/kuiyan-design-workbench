@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p15`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p16`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -78,6 +78,31 @@ async function main() {
     note(await page.locator("#btnNavSearch").innerText().then((t) => t.includes("搜索")), "rail 搜索");
     note(await page.locator(".rail-h").innerText().then((t) => t.includes("研究任务")), "rail 研究任务");
     note(await page.locator("#btnDockGear").count().then((n) => n === 1), "user dock gear");
+    note(await page.locator("#cmdOverlay").count().then((n) => n === 1), "command palette overlay");
+    note(await page.locator("#slashMenu").count().then((n) => n === 1), "slash command menu");
+    note(await page.locator("#btnCommandPalette").count().then((n) => n === 1), "command palette button");
+    note(await page.locator("#app.rail-collapsed").count().then((n) => n === 0), "task rail expanded by default");
+    await page.keyboard.press("Control+k");
+    note(await page.locator("#cmdOverlay").isVisible(), "Ctrl+K opens command palette");
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => document.getElementById("cmdOverlay")?.hidden);
+    await page.keyboard.press("Control+b");
+    note(await page.locator("#app.rail-collapsed").count().then((n) => n === 1), "Ctrl+B collapses task rail");
+    await page.keyboard.press("Control+b");
+    note(await page.locator("#app.rail-collapsed").count().then((n) => n === 0), "Ctrl+B expands task rail");
+    await page.locator("#composerInput").fill("/");
+    note(await page.locator("#slashMenu").isVisible(), "typing / opens slash menu");
+    await page.locator("#composerInput").fill("");
+    await page.keyboard.press("Escape");
+    await page.locator("#btnToggleArtifact").click();
+    const threadBox = await page.locator(".thread").boundingBox();
+    const workBox = await page.locator(".workspace").boundingBox();
+    note(
+      Boolean(threadBox && workBox && threadBox.width <= 780 && Math.abs(threadBox.x + threadBox.width / 2 - (workBox.x + workBox.width / 2)) < 40),
+      "chat column centers when result pane is closed"
+    );
+    await page.locator("#btnToggleArtifact").click();
+    await page.waitForFunction(() => document.getElementById("app")?.classList.contains("artifact-open"));
     note(await page.locator("#activityStream .brief-table").count().then((n) => n === 1), "Brief table in stream");
     const bootStream = (await page.locator("#activityStream").innerText()).trim();
     note(/检索自有库/.test(bootStream) && /452/.test(bootStream), `boot stream retrieve log: ${bootStream.slice(0, 60)}`);
