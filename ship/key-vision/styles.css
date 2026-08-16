@@ -2609,7 +2609,7 @@ body.studio.is-resizing img {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 22px 12px;
+  padding: 10px 22px 8px;
   background: transparent;
   border-bottom: 0;
   flex: none;
@@ -2623,16 +2623,19 @@ body.studio.is-resizing img {
 }
 
 .phase-whisper {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   font-size: 12px;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .workspace-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 .meta-chip {
   display: inline-flex;
@@ -3197,16 +3200,16 @@ body.studio.is-resizing img {
 .studio #filters { display: none; }
 
 .studio .wall-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 10px;
 }
 .studio .right.inspector-open .wall-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
 }
 .studio .wall-card .thumb {
   height: auto;
   aspect-ratio: 4 / 3;
-  min-height: 148px;
+  min-height: 110px;
 }
 .studio .wall-card .title {
   font-size: 12.5px;
@@ -3217,7 +3220,7 @@ body.studio.is-resizing img {
 }
 .studio .artifact .inspector {
   width: 100%;
-  max-height: min(42vh, 340px);
+  max-height: min(32vh, 280px);
   border-left: 0;
   border-top: 1px solid rgb(26 26 26 / 0.08);
   background: #fff;
@@ -3474,7 +3477,8 @@ body.studio.is-resizing img {
 
 .studio-app.filters-compact #sourceChips,
 .studio-app.filters-compact #categoryChips,
-.studio-app.filters-compact #marketStyles {
+.studio-app.filters-compact #marketStyles,
+.studio-app.filters-compact #libraryLanes {
   display: none !important;
 }
 
@@ -3628,5 +3632,67 @@ body.studio.is-resizing img {
 .studio .wall-card.selected {
   border-width: 3px;
   box-shadow: 0 0 0 1px #111, 0 12px 28px rgb(255 233 0 / 0.22);
+}
+
+/* 452p19 · archive-first (Cinekive / Shelf / Karakeep) */
+.studio .source-cards,
+.studio .category-chips,
+.studio .library-lanes,
+.studio .market-styles {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+.studio .source-cards { padding: 6px 10px; }
+.studio .category-chips { padding: 6px 10px; }
+.studio .library-lanes { padding: 0 10px 8px; }
+.studio .market-styles { padding: 0 10px 6px; gap: 4px; }
+.studio .wall-filter-bar { padding: 6px 10px 4px; }
+.studio .wall-count-bar { padding: 6px 14px 0; font-weight: 650; }
+.studio .lib-chip { height: 26px; }
+.studio .mstyle-chip {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+.studio .mstyle-chip.is-empty { opacity: 0.45; }
+.studio .lib-chip.active {
+  background: transparent;
+  color: #111;
+  border-bottom-color: #111;
+}
+.studio .mstyle-chip.active {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+.studio .result-dot {
+  background: #c8c4b8;
+  box-shadow: none;
+}
+.studio .wall-card .meta { padding: 6px 8px 0; }
+.studio .wall-card .title {
+  font-size: 12px;
+  -webkit-line-clamp: 1;
+}
+.studio .wall-card .src {
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: transparent;
+  border-top-color: rgb(26 26 26 / 0.06);
+}
+.studio .card-tags { padding: 0 8px; }
+.studio .card-tag { height: 16px; font-size: 9.5px; }
+.studio .wall-card .card-foot { padding: 4px 8px 6px; }
+.studio .wall-card .thumb-fallback {
+  background: #eceae3;
+}
+.studio .why-quad > div {
+  padding: 7px 9px;
+}
+.studio .inspector-inner {
+  padding: 10px 14px 12px;
 }
 

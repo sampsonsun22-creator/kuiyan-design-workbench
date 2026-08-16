@@ -715,6 +715,13 @@
     } catch (_) {}
   }
 
+  function marketStyleCount(styleId) {
+    const pool = state.onlyBriefRelevant
+      ? (state.wallItems || []).filter((it) => scoreBriefRelevance(it) === "match")
+      : state.wallItems || [];
+    return pool.filter((it) => itemMatchesMarketStyle(it, styleId)).length;
+  }
+
   function renderMarketStyles() {
     if (!el.marketStyles) return;
     const styles = state.marketStyles || [];
@@ -725,9 +732,12 @@
     el.marketStyles.innerHTML = `<span class="source-kicker">风格</span>${styles
       .map((s) => {
         const on = state.activeMarketStyle === s.id;
-        return `<button type="button" class="mstyle-chip${on ? " active" : ""}" data-mstyle="${escapeAttr(
-          s.id
-        )}">${escapeHtml(s.name_zh)}</button>`;
+        const n = state.wallItems && state.wallItems.length ? marketStyleCount(s.id) : 0;
+        return `<button type="button" class="mstyle-chip${on ? " active" : ""}${
+          n ? "" : " is-empty"
+        }" data-mstyle="${escapeAttr(s.id)}">${escapeHtml(s.name_zh)}${
+          n ? ` · ${n}` : ""
+        }</button>`;
       })
       .join("")}`;
   }
@@ -989,7 +999,9 @@
     const filtered =
       Boolean(state.activeSource) ||
       (state.activeCat && state.activeCat !== "all") ||
-      Boolean(state.activeStyleFilter);
+      Boolean(state.activeStyleFilter) ||
+      Boolean(state.activeMarketStyle) ||
+      Boolean(state.activeLibLane);
     if (filtered) {
       el.wallCountBar.innerHTML = `这屏 ${shown} · 主墙 ${main}${
         state.includePending ? ` · 待复核 ${pending}` : ""
@@ -1443,6 +1455,7 @@
       state.wallItems = mainRaw.map((row) => normalizeFeedItem(row, "main_wall"));
     }
     state.wallItems = demoteFragileWallOrder(state.wallItems);
+    renderMarketStyles();
     state.pendingItems = [];
     const knownPend =
       r.id === "r-green"
@@ -2228,7 +2241,12 @@
     visOrder.forEach((name) => {
       const totalInBucket = (byBucket[name] || []).length;
       const list = visByBucket[name] || [];
-      html += `<div class="bucket-label">${escapeHtml(name)} · ${totalInBucket}</div>
+      const showBucket = visOrder.length > 1;
+      html += `${
+        showBucket
+          ? `<div class="bucket-label">${escapeHtml(name)} · ${totalInBucket}</div>`
+          : ""
+      }
         <div class="wall-grid">
         ${list.map((it) => wallCardHtml(it)).join("")}
         </div>`;

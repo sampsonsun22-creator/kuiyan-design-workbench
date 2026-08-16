@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p18`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p19`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -152,6 +152,32 @@ async function main() {
 
     const visibleCards = await page.locator(".wall-card").count();
     note(visibleCards >= 8, `visible wall cards ${visibleCards}`);
+    const archiveCols = await page.evaluate(() => {
+      const card = document.querySelector(".wall-grid .wall-card");
+      if (!card) return 0;
+      const top = Math.round(card.getBoundingClientRect().top);
+      return [...document.querySelectorAll(".wall-grid .wall-card")].filter(
+        (el) => Math.round(el.getBoundingClientRect().top) === top
+      ).length;
+    });
+    note(archiveCols >= 3, `archive wall columns ${archiveCols}`);
+    await page.waitForFunction(() => document.querySelectorAll("#marketStyles .mstyle-chip").length > 2);
+    note(
+      await page.locator("#sourceChips").isVisible(),
+      "出处 chips stay visible by default"
+    );
+    note(
+      await page.locator("#categoryChips").isVisible(),
+      "分类 chips stay visible by default"
+    );
+    note(
+      await page.locator("#marketStyles .source-kicker").innerText().then((t) => t.includes("风格")),
+      "风格 row labeled"
+    );
+    note(
+      await page.locator("#marketStyles .mstyle-chip").first().innerText().then((t) => /·\s*\d+/.test(t)),
+      "style chips show honest counts"
+    );
 
     const srcPills = await page.locator("#sourceChips .source-card").count();
     note(srcPills >= 6 && srcPills <= 20, `source pills ${srcPills}`);
