@@ -170,6 +170,7 @@
     railQuery: "",
     railCollapsed: false,
     filtersCompact: false,
+    scopeRef: null,
     _runTimers: [],
     _cmdIndex: 0,
     _slashIndex: 0,
@@ -251,6 +252,7 @@
     cmdList: $("cmdList"),
     slashMenu: $("slashMenu"),
     mentionMenu: $("mentionMenu"),
+    scopeChips: $("scopeChips"),
   };
 
   function toast(msg) {
@@ -526,7 +528,8 @@
     state.filtersCompact = layoutState.filtersCompact;
     if (el.btnRailCollapse) {
       el.btnRailCollapse.setAttribute("aria-pressed", layoutState.railCollapsed ? "true" : "false");
-      el.btnRailCollapse.textContent = layoutState.railCollapsed ? "展开栏" : "收起栏";
+      el.btnRailCollapse.textContent = layoutState.railCollapsed ? "›" : "‹";
+      el.btnRailCollapse.setAttribute("aria-label", layoutState.railCollapsed ? "展开任务栏" : "收起任务栏");
       el.btnRailCollapse.title = layoutState.railCollapsed ? "展开任务栏 · Ctrl+B" : "收起任务栏 · Ctrl+B";
     }
     if (el.btnFilterCompact) {
@@ -1895,8 +1898,40 @@
     return added;
   }
 
+  function setScopeFromItem(item) {
+    if (!item) return;
+    state.scopeRef = {
+      id: item.id,
+      title: humanTitle(item.title || item.id),
+      lane: scopeLabel(item),
+      brief: briefRelLabel(item),
+      page: pageUrlOf(item) || "",
+    };
+    renderScopeChips();
+  }
+
+  function clearScope() {
+    state.scopeRef = null;
+    renderScopeChips();
+  }
+
+  function renderScopeChips() {
+    if (!el.scopeChips) return;
+    const ref = state.scopeRef;
+    if (!ref) {
+      el.scopeChips.hidden = true;
+      el.scopeChips.innerHTML = "";
+      return;
+    }
+    el.scopeChips.hidden = false;
+    el.scopeChips.innerHTML = `<span class="scope-chip" data-scope-id="${escapeAttr(ref.id)}"><b>这张图 · ${escapeHtml(
+      ref.title
+    )}</b><button type="button" data-clear-scope aria-label="去掉对照">×</button></span>`;
+  }
+
   function openInspector(item) {
     state.focusId = item.id;
+    setScopeFromItem(item);
     const isPending = item.pending || item.qc_status === "pending_review";
     const weakBrief = isBriefWeak(item);
     if (!isPending && !weakBrief) state.selectedIds.add(item.id);
@@ -2025,6 +2060,7 @@
   function clearSelection() {
     state.selectedIds.clear();
     state.focusId = null;
+    clearScope();
     closeInspector();
     updateSelectionBar();
     syncWallSelectionClasses();
@@ -3484,6 +3520,16 @@
     el.runStep.textContent = `第 ${stage}/5 步 · ${meta ? meta.label : ""}`;
   }
 
+  function inferJump(kind, title) {
+    if (kind === "user") return "";
+    const t = String(title || "");
+    if (/Brief|听清|追问|记下|意图/.test(t)) return "brief";
+    if (/短名单|筛选|决策|入选|老板/.test(t)) return "shortlist";
+    if (/结论|报告|方向假设/.test(t)) return "report";
+    if (/检索|参考|写入|分类|打标|穷尽|采集|库|墙/.test(t)) return "map";
+    return "";
+  }
+
   function appendRun({
     kind = "run",
     actor = "奎燕设计智能体",
@@ -3496,11 +3542,14 @@
     thumbs = [],
     html = "",
     actions = [],
+    jump = "",
   } = {}) {
     const node = document.createElement("article");
     const statusClass =
       status === "working" ? "is-working" : status === "warn" ? "is-warn" : status === "fail" ? "is-fail" : "is-done";
     node.className = `event run run-${kind} ${statusClass}`;
+    const jumpTo = jump || inferJump(kind, title);
+    if (jumpTo) node.dataset.jump = jumpTo;
     const actionHtml = (actions || []).length
       ? `<div class="chips-row">${actions
           .map(
@@ -3652,6 +3701,7 @@
     clearRunTimers();
     el.stream.innerHTML = "";
     state.chatTurns = [];
+    clearScope();
     const r = currentResearch();
     if (r.emptyWall || r.custom) {
       syncRunStep(0);
@@ -3982,10 +4032,18 @@
     return t;
   }
 
+  function scopeContextLine(ref) {
+    if (!ref) return "";
+    const bits = [ref.title, ref.lane, ref.brief, ref.page || "原页未标注"].filter(Boolean);
+    return bits.join(" · ");
+  }
+
   function handleSend(text) {
-    const raw = text.trim();
+    const scoped = state.scopeRef;
+    let raw = text.trim();
+    if (!raw && scoped) raw = `对照这张：${scoped.title}`;
     if (!raw) return;
-    appendRun({ kind: "user", detail: raw });
+    appendRun({ kind: "user", detail: scoped && !text.trim() ? `对照这张 · ${scoped.title}` : raw });
 
     if (raw === "/新建" || raw === "新建分析") {
       createNewResearch();
@@ -4025,6 +4083,17 @@
 
     const t = normalizeComposerText(raw);
     const lower = t.toLowerCase();
+    if (scoped && (/^对照这张/.test(t) || /^这张图/.test(t))) {
+      appendRun({
+        title: "对照这张",
+        detail: scoped.title,
+        jump: "map",
+        html: `<p class="run-quiet">${escapeHtml(scopeContextLine(scoped))}。字段没有的仍写未标注，不编评语。</p>`,
+        actions: [{ artifact: "map", label: "回到参考墙" }],
+      });
+      clearScope();
+      return;
+    }
     const mainN = state.feedCounts.main || 0;
     const pendN = state.feedCounts.pending || 0;
     const lanes = scopeCounts();
@@ -4128,9 +4197,10 @@
       detail: "在想…",
       status: "working",
     });
-    askAgent(useId, t)
+    askAgent(useId, scoped ? `${t}\n\n[对照这张参考：${scopeContextLine(scoped)}]` : t)
       .then((reply) => {
         finishRun(pending, { status: "done", detail: "回复", html: mdLite(reply) });
+        clearScope();
       })
       .catch((err) => {
         finishRun(pending, {
@@ -4576,6 +4646,11 @@
       if (btn) {
         setDecision(btn.dataset.cardId, btn.dataset.cardAction);
         switchTab("report", { fromStage: true });
+        return;
+      }
+      const jumpRun = e.target.closest(".run[data-jump]");
+      if (jumpRun && !e.target.closest("button, a, input, textarea")) {
+        handleArtifact(jumpRun.dataset.jump);
       }
     });
 
@@ -4736,6 +4811,14 @@
       el.composerLibChip.addEventListener("click", () => {
         revealAndSwitch("visual", { fromStage: true });
         playLibraryRun({ animate: true });
+      });
+    }
+    if (el.scopeChips) {
+      el.scopeChips.addEventListener("click", (e) => {
+        if (e.target.closest("[data-clear-scope]")) {
+          e.preventDefault();
+          clearScope();
+        }
       });
     }
     if (el.composerSlash) {

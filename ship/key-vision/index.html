@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KEY 视界 · 奎燕竞品分析</title>
   <link rel="icon" href="assets/brand/logo-key-lockup-on-light.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=452p16" />
+  <link rel="stylesheet" href="styles.css?v=452p17" />
 </head>
 <body class="studio">
   <div class="app studio-app artifact-open" id="app">
@@ -16,6 +16,7 @@
         <div class="rail-key">{ KEY }</div>
         <div class="rail-name">奎燕品牌创新社</div>
         <div class="rail-sub">KEY BRAND DESIGN</div>
+        <button type="button" class="rail-collapse" id="btnRailCollapse" aria-pressed="false" title="收起任务栏 · Ctrl+B" aria-label="收起任务栏">‹</button>
       </div>
 
       <button type="button" class="btn-new" id="btnNewResearch" title="新建研究，墙先空着" aria-label="新建研究">
@@ -97,7 +98,6 @@
           <button type="button" class="ghost-btn kbd-btn" id="btnCommandPalette" title="命令面板 · Ctrl+K" aria-label="打开命令面板">
             <span>命令</span><kbd>Ctrl K</kbd>
           </button>
-          <button type="button" class="ghost-btn" id="btnRailCollapse" aria-pressed="false" title="收起任务栏 · Ctrl+B">收起栏</button>
           <button type="button" class="ghost-btn" id="btnToggleArtifact" aria-pressed="true">收起结果</button>
           <button type="button" class="btn-gear" id="btnLlmSettings" title="配置模型 API" aria-label="配置模型 API">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -125,6 +125,7 @@
           </div>
           <div class="slash-menu" id="slashMenu" hidden></div>
           <div class="mention-menu" id="mentionMenu" hidden></div>
+          <div class="scope-chips" id="scopeChips" hidden></div>
           <textarea id="composerInput" rows="2" placeholder="输入你的问题，或用 / 分析指令、@ 调用素材库…"></textarea>
           <div class="composer-tools">
             <button type="button" class="composer-chip" id="composerPlus" title="附件" data-attach="evidence" aria-label="附件">附件</button>
@@ -145,7 +146,7 @@
     <aside class="right artifact" id="artifactPane" aria-label="结果画布">
       <div class="result-chrome">
         <div class="result-chrome-left">
-          <span class="result-traffic" aria-hidden="true"><i></i><i></i><i class="on"></i></span>
+          <span class="result-dot" aria-hidden="true"></span>
           <span class="result-kicker">结果</span>
           <span class="result-title" id="resultChromeTitle">参考</span>
         </div>
@@ -260,6 +261,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=452p16"></script>
+  <script src="app.js?v=452p17"></script>
 </body>
 </html>
