@@ -168,7 +168,12 @@
     holdResults: false,
     briefAskKey: "",
     railQuery: "",
+    railCollapsed: false,
+    filtersCompact: false,
     _runTimers: [],
+    _cmdIndex: 0,
+    _slashIndex: 0,
+    _mentionIndex: 0,
   };
 
   const SHORTLIST_TARGET = 12;
@@ -238,6 +243,14 @@
     btnNavReport: $("btnNavReport"),
     metaModel: $("metaModel"),
     appRoot: $("app"),
+    btnRailCollapse: $("btnRailCollapse"),
+    btnFilterCompact: $("btnFilterCompact"),
+    btnCommandPalette: $("btnCommandPalette"),
+    cmdOverlay: $("cmdOverlay"),
+    cmdInput: $("cmdInput"),
+    cmdList: $("cmdList"),
+    slashMenu: $("slashMenu"),
+    mentionMenu: $("mentionMenu"),
   };
 
   function toast(msg) {
@@ -305,8 +318,8 @@
     });
     if (el.composerInput) {
       el.composerInput.placeholder = any
-        ? "随心输入：问这轮墙和 Brief，或说 看库 / 帮我筛选 / 出结论。"
-        : "随心输入。先点右上角齿轮配 API，才能真正对话。";
+        ? "输入你的问题，或用 / 分析指令、@ 调用素材库…"
+        : "输入问题，或用 / 看库、筛选、出结论。先点齿轮配 API 才能真正对话。";
     }
     if (el.composerModel) {
       const cfg = llmConfigFor("orchestrator");
@@ -460,48 +473,103 @@
     return Math.min(max, Math.max(min, n));
   }
 
+  const LAYOUT_STORE = "key-vision-layout-v4";
+  const LAYOUT_LEGACY = "key-vision-layout-v3";
+  const RAIL_COLLAPSED_W = 72;
+  const layoutState = {
+    railW: 240,
+    resultW: 560,
+    railCollapsed: false,
+    filtersCompact: false,
+  };
+
+  function defaultLayout() {
+    return {
+      railW: 240,
+      resultW: Math.round(Math.min(640, Math.max(480, window.innerWidth * 0.46))),
+      railCollapsed: false,
+      filtersCompact: false,
+    };
+  }
+
+  function readLayout() {
+    try {
+      const raw = localStorage.getItem(LAYOUT_STORE) || localStorage.getItem(LAYOUT_LEGACY) || "{}";
+      const saved = JSON.parse(raw) || {};
+      const d = defaultLayout();
+      return {
+        railW: clamp(Number(saved.railW) || d.railW, 200, 360),
+        resultW: clamp(Number(saved.resultW) || d.resultW, 400, Math.max(420, window.innerWidth - 640)),
+        railCollapsed: Boolean(saved.railCollapsed),
+        filtersCompact: Boolean(saved.filtersCompact),
+      };
+    } catch (_) {
+      return defaultLayout();
+    }
+  }
+
+  function persistStudioLayout() {
+    try {
+      localStorage.setItem(LAYOUT_STORE, JSON.stringify(layoutState));
+    } catch (_) {}
+  }
+
+  function applyStudioLayout() {
+    const root = el.appRoot;
+    if (!root) return;
+    const railW = layoutState.railCollapsed ? RAIL_COLLAPSED_W : layoutState.railW;
+    root.style.setProperty("--rail-w", `${railW}px`);
+    root.style.setProperty("--result-w", `${layoutState.resultW}px`);
+    root.classList.toggle("rail-collapsed", layoutState.railCollapsed);
+    root.classList.toggle("filters-compact", layoutState.filtersCompact);
+    state.railCollapsed = layoutState.railCollapsed;
+    state.filtersCompact = layoutState.filtersCompact;
+    if (el.btnRailCollapse) {
+      el.btnRailCollapse.setAttribute("aria-pressed", layoutState.railCollapsed ? "true" : "false");
+      el.btnRailCollapse.textContent = layoutState.railCollapsed ? "展开栏" : "收起栏";
+      el.btnRailCollapse.title = layoutState.railCollapsed ? "展开任务栏 · Ctrl+B" : "收起任务栏 · Ctrl+B";
+    }
+    if (el.btnFilterCompact) {
+      el.btnFilterCompact.setAttribute("aria-pressed", layoutState.filtersCompact ? "true" : "false");
+      el.btnFilterCompact.textContent = layoutState.filtersCompact ? "展开筛选" : "收起筛选";
+    }
+    if (el.gutterRail) {
+      el.gutterRail.setAttribute("aria-hidden", layoutState.railCollapsed ? "true" : "false");
+    }
+  }
+
+  function setRailCollapsed(collapsed) {
+    layoutState.railCollapsed = Boolean(collapsed);
+    applyStudioLayout();
+    persistStudioLayout();
+  }
+
+  function setFiltersCompact(compact) {
+    layoutState.filtersCompact = Boolean(compact);
+    applyStudioLayout();
+    persistStudioLayout();
+  }
+
   function bindLayoutPanes() {
     const root = el.appRoot;
     if (!root) return;
-    const STORE = "key-vision-layout-v3";
-    const defaults = () => ({
-      railW: 240,
-      resultW: Math.round(Math.min(640, Math.max(480, window.innerWidth * 0.46))),
-    });
-    const read = () => {
-      try {
-        const saved = JSON.parse(localStorage.getItem(STORE) || "{}") || {};
-        const d = defaults();
-        return {
-          railW: clamp(Number(saved.railW) || d.railW, 200, 360),
-          resultW: clamp(Number(saved.resultW) || d.resultW, 400, Math.max(420, window.innerWidth - 640)),
-        };
-      } catch (_) {
-        return defaults();
-      }
-    };
-    let layout = read();
-    const apply = () => {
-      root.style.setProperty("--rail-w", `${layout.railW}px`);
-      root.style.setProperty("--result-w", `${layout.resultW}px`);
-    };
-    const persist = () => {
-      try {
-        localStorage.setItem(STORE, JSON.stringify(layout));
-      } catch (_) {}
-    };
-    apply();
+    Object.assign(layoutState, readLayout());
+    applyStudioLayout();
 
     const startDrag = (gutter, key) => {
       if (!gutter) return;
       gutter.addEventListener("pointerdown", (e) => {
         if (e.button !== 0) return;
+        if (key === "railW" && layoutState.railCollapsed) {
+          setRailCollapsed(false);
+          return;
+        }
         e.preventDefault();
         gutter.setPointerCapture(e.pointerId);
         gutter.classList.add("is-dragging");
         document.body.classList.add("is-resizing");
         const startX = e.clientX;
-        const start = layout[key];
+        const start = layoutState[key];
         let frame = 0;
         const onMove = (ev) => {
           const dx = ev.clientX - startX;
@@ -509,40 +577,43 @@
             key === "railW"
               ? clamp(start + dx, 200, 360)
               : clamp(start - dx, 400, Math.max(420, window.innerWidth - 640));
-          layout[key] = next;
+          layoutState[key] = next;
           if (frame) return;
           frame = requestAnimationFrame(() => {
             frame = 0;
-            apply();
+            applyStudioLayout();
           });
         };
         const stop = () => {
           gutter.classList.remove("is-dragging");
           document.body.classList.remove("is-resizing");
           gutter.removeEventListener("pointermove", onMove);
-          persist();
+          persistStudioLayout();
         };
         gutter.addEventListener("pointermove", onMove);
         gutter.addEventListener("pointerup", stop, { once: true });
         gutter.addEventListener("pointercancel", stop, { once: true });
       });
       gutter.addEventListener("dblclick", () => {
-        layout[key] = defaults()[key];
-        apply();
-        persist();
+        const d = defaultLayout();
+        layoutState[key] = d[key];
+        if (key === "railW") layoutState.railCollapsed = false;
+        applyStudioLayout();
+        persistStudioLayout();
       });
       gutter.addEventListener("keydown", (e) => {
         if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
         e.preventDefault();
+        if (key === "railW" && layoutState.railCollapsed) setRailCollapsed(false);
         const step = e.shiftKey ? 28 : 10;
         const dir = e.key === "ArrowRight" ? 1 : -1;
         const signed = key === "resultW" ? -dir : dir;
-        layout[key] =
+        layoutState[key] =
           key === "railW"
-            ? clamp(layout[key] + signed * step, 200, 360)
-            : clamp(layout[key] + signed * step, 400, Math.max(420, window.innerWidth - 640));
-        apply();
-        persist();
+            ? clamp(layoutState[key] + signed * step, 200, 360)
+            : clamp(layoutState[key] + signed * step, 400, Math.max(420, window.innerWidth - 640));
+        applyStudioLayout();
+        persistStudioLayout();
       });
     };
 
@@ -3608,6 +3679,19 @@
         ],
       });
     }
+    appendRun({
+      kind: "follow",
+      title: "接下来",
+      detail: "栏可收起，结果可弹出",
+      html: `<p class="run-quiet">Ctrl+K 命令面板 · Ctrl+B 收起任务栏。结果栏像 Canvas / Artifact 一样随时弹出。</p>`,
+      actions: [
+        { artifact: "map", label: "打开参考墙" },
+        { artifact: "shortlist", label: "先收一版短名单" },
+        { artifact: "report", label: "打开结论" },
+      ],
+    });
+    const last = el.stream && el.stream.lastElementChild;
+    if (last) last.classList.add("follow-row");
     syncRunStep(3);
   }
 
@@ -3717,20 +3801,214 @@
     }
   }
 
+  const STUDIO_COMMANDS = [
+    { id: "new", title: "新建分析", hint: "空白任务，先开口", keys: "新建 分析 任务", run: () => createNewResearch() },
+    { id: "toggle", title: "弹出 / 收起结果", hint: "ChatGPT Canvas 式", keys: "弹出 收起 结果 canvas", run: () => setArtifactOpen(!state.artifactOpen) },
+    { id: "brief", title: "打开 Brief", hint: "听清的项", keys: "brief 意图 听清", run: () => handleArtifact("brief") },
+    { id: "library", title: "打开素材库", hint: "参考墙 · 自有库", keys: "素材库 参考 看库 墙", run: () => handleArtifact("map") },
+    { id: "shortlist", title: "打开短名单", hint: "候选方向", keys: "短名单 筛选 候选", run: () => handleArtifact("shortlist") },
+    { id: "report", title: "打开结论", hint: "六段报告", keys: "结论 报告", run: () => handleArtifact("report") },
+    { id: "search", title: "搜索任务", hint: "聚焦任务栏", keys: "搜索 任务", run: () => { setRailCollapsed(false); if (el.railSearch) { el.railSearch.focus(); el.railSearch.select(); } } },
+    { id: "rail", title: "收起 / 展开任务栏", hint: "Ctrl+B", keys: "任务栏 收起栏 sidebar", run: () => setRailCollapsed(!layoutState.railCollapsed) },
+    { id: "filters", title: "收起 / 展开筛选", hint: "出处与分类", keys: "筛选 出处", run: () => setFiltersCompact(!layoutState.filtersCompact) },
+    { id: "llm", title: "模型与权限", hint: "三个智能体", keys: "模型 权限 api", run: () => openLlmSettings("orchestrator") },
+    { id: "chat", title: "回到对话", hint: "聚焦输入", keys: "对话 输入", run: () => { if (el.composerInput) el.composerInput.focus(); } },
+  ];
+
+  const SLASH_COMMANDS = [
+    { id: "lib", token: "/看库", title: "/看库", hint: "打开参考墙", send: "看库" },
+    { id: "filter", token: "/筛选", title: "/筛选", hint: "先收一版短名单", send: "帮我筛选" },
+    { id: "report", token: "/结论", title: "/结论", hint: "打开六段报告", send: "出结论" },
+    { id: "brief", token: "/brief", title: "/brief", hint: "看 Brief", send: "看 Brief" },
+    { id: "new", token: "/新建", title: "/新建", hint: "空白分析", send: "/新建" },
+    { id: "toggle", token: "/弹出", title: "/弹出", hint: "弹出或收起结果", send: "/弹出" },
+  ];
+
+  const MENTION_ITEMS = [
+    { id: "lib", token: "@素材库", title: "@素材库", hint: "只检索本机自有库", send: "看库" },
+    { id: "shortlist", token: "@短名单", title: "@短名单", hint: "候选方向", send: "帮我筛选" },
+    { id: "report", token: "@结论", title: "@结论", hint: "差异化报告", send: "出结论" },
+    { id: "brief", token: "@Brief", title: "@Brief", hint: "听清的项", send: "看 Brief" },
+  ];
+
+  function isCmdOpen() {
+    return Boolean(el.cmdOverlay && !el.cmdOverlay.hidden);
+  }
+
+  function closeCommandPalette() {
+    if (!el.cmdOverlay) return;
+    el.cmdOverlay.hidden = true;
+    state._cmdIndex = 0;
+  }
+
+  function filteredCommands(q) {
+    const needle = String(q || "").trim().toLowerCase();
+    if (!needle) return STUDIO_COMMANDS.slice();
+    return STUDIO_COMMANDS.filter((c) => `${c.title} ${c.hint} ${c.keys}`.toLowerCase().includes(needle));
+  }
+
+  function renderCommandList(q) {
+    if (!el.cmdList) return;
+    const items = filteredCommands(q);
+    if (!items.length) {
+      el.cmdList.innerHTML = `<li class="cmd-empty">没有匹配的指令</li>`;
+      return;
+    }
+    state._cmdIndex = clamp(state._cmdIndex, 0, items.length - 1);
+    el.cmdList.innerHTML = items
+      .map(
+        (c, i) =>
+          `<li><button type="button" class="cmd-item${i === state._cmdIndex ? " active" : ""}" data-cmd="${escapeAttr(
+            c.id
+          )}" role="option" aria-selected="${i === state._cmdIndex ? "true" : "false"}"><strong>${escapeHtml(
+            c.title
+          )}</strong><span>${escapeHtml(c.hint)}</span></button></li>`
+      )
+      .join("");
+  }
+
+  function openCommandPalette() {
+    if (!el.cmdOverlay) return;
+    el.cmdOverlay.hidden = false;
+    state._cmdIndex = 0;
+    if (el.cmdInput) el.cmdInput.value = "";
+    renderCommandList("");
+    if (el.cmdInput) el.cmdInput.focus();
+  }
+
+  function runStudioCommand(id) {
+    const cmd = STUDIO_COMMANDS.find((c) => c.id === id);
+    closeCommandPalette();
+    if (cmd) cmd.run();
+  }
+
+  function closeSlashMenu() {
+    if (!el.slashMenu) return;
+    el.slashMenu.hidden = true;
+    el.slashMenu.innerHTML = "";
+    state._slashIndex = 0;
+  }
+
+  function closeMentionMenu() {
+    if (!el.mentionMenu) return;
+    el.mentionMenu.hidden = true;
+    el.mentionMenu.innerHTML = "";
+    state._mentionIndex = 0;
+  }
+
+  function filteredSlash(q) {
+    const needle = String(q || "").replace(/^\//, "").toLowerCase();
+    return SLASH_COMMANDS.filter((c) => !needle || `${c.title} ${c.hint}`.toLowerCase().includes(needle));
+  }
+
+  function renderSlashMenu(q) {
+    if (!el.slashMenu) return;
+    const items = filteredSlash(q);
+    if (!items.length) {
+      closeSlashMenu();
+      return;
+    }
+    state._slashIndex = clamp(state._slashIndex, 0, items.length - 1);
+    el.slashMenu.hidden = false;
+    el.slashMenu.innerHTML = items
+      .map(
+        (c, i) =>
+          `<button type="button" class="slash-item${i === state._slashIndex ? " active" : ""}" data-slash="${escapeAttr(
+            c.id
+          )}"><strong>${escapeHtml(c.title)}</strong><span>${escapeHtml(c.hint)}</span></button>`
+      )
+      .join("");
+  }
+
+  function renderMentionMenu(q) {
+    if (!el.mentionMenu) return;
+    const needle = String(q || "").replace(/^@/, "").toLowerCase();
+    const items = MENTION_ITEMS.filter((c) => !needle || `${c.title} ${c.hint}`.toLowerCase().includes(needle));
+    if (!items.length) {
+      closeMentionMenu();
+      return;
+    }
+    state._mentionIndex = clamp(state._mentionIndex, 0, items.length - 1);
+    el.mentionMenu.hidden = false;
+    el.mentionMenu.innerHTML = items
+      .map(
+        (c, i) =>
+          `<button type="button" class="mention-item${i === state._mentionIndex ? " active" : ""}" data-mention="${escapeAttr(
+            c.id
+          )}"><strong>${escapeHtml(c.title)}</strong><span>${escapeHtml(c.hint)}</span></button>`
+      )
+      .join("");
+  }
+
+  function pickSlash(id) {
+    const item = SLASH_COMMANDS.find((c) => c.id === id);
+    closeSlashMenu();
+    if (!item || !el.composerInput) return;
+    el.composerInput.value = item.send;
+    el.composerInput.focus();
+    el.composer.requestSubmit();
+  }
+
+  function pickMention(id) {
+    const item = MENTION_ITEMS.find((c) => c.id === id);
+    closeMentionMenu();
+    if (!item || !el.composerInput) return;
+    el.composerInput.value = item.send;
+    el.composerInput.focus();
+    el.composer.requestSubmit();
+  }
+
+  function syncComposerMenus() {
+    const v = el.composerInput ? el.composerInput.value : "";
+    if (/^\/[^\s]*$/.test(v)) {
+      closeMentionMenu();
+      renderSlashMenu(v);
+      return;
+    }
+    const mention = v.match(/(?:^|\s)(@[^\s]*)$/);
+    if (mention) {
+      closeSlashMenu();
+      renderMentionMenu(mention[1]);
+      return;
+    }
+    closeSlashMenu();
+    closeMentionMenu();
+  }
+
+  function normalizeComposerText(raw) {
+    let t = String(raw || "").trim();
+    if (t.startsWith("/")) t = t.replace(/^\//, "").trim();
+    if (t.startsWith("@")) t = t.replace(/^@/, "").trim();
+    return t;
+  }
+
   function handleSend(text) {
-    const t = text.trim();
-    if (!t) return;
-    appendRun({ kind: "user", detail: t });
+    const raw = text.trim();
+    if (!raw) return;
+    appendRun({ kind: "user", detail: raw });
+
+    if (raw === "/新建" || raw === "新建分析") {
+      createNewResearch();
+      return;
+    }
+    if (raw === "/弹出" || raw === "/收起") {
+      setArtifactOpen(!state.artifactOpen);
+      appendRun({
+        title: state.artifactOpen ? "已弹出结果" : "已收起结果",
+        detail: "栏宽和收起状态会记住",
+      });
+      return;
+    }
 
     if (state.briefAskKey || (currentResearch().custom && missingBriefSlots().length)) {
-      const filled = absorbBriefAnswer(t);
-      if (filled) {
-        const slot = BRIEF_SLOTS.find((s) => s.key === filled);
-        appendRun({
-          title: "记下",
-          detail: `${slot ? slot.label : filled} · ${t.slice(0, 40)}`,
-          html: `<p>「${escapeHtml(slot ? slot.label : filled)}」记下了：${escapeHtml(t.slice(0, 80))}。</p>`,
-        });
+        const filled = absorbBriefAnswer(raw);
+        if (filled) {
+          const slot = BRIEF_SLOTS.find((s) => s.key === filled);
+          appendRun({
+            title: "记下",
+            detail: `${slot ? slot.label : filled} · ${raw.slice(0, 40)}`,
+            html: `<p>「${escapeHtml(slot ? slot.label : filled)}」记下了：${escapeHtml(raw.slice(0, 80))}。</p>`,
+          });
         if (el.canvasBody && state.tab === "intent") renderCanvas({ preserveScroll: true });
         if (askNextBriefSlot()) return;
         appendRun({
@@ -3745,6 +4023,7 @@
       }
     }
 
+    const t = normalizeComposerText(raw);
     const lower = t.toLowerCase();
     const mainN = state.feedCounts.main || 0;
     const pendN = state.feedCounts.pending || 0;
@@ -3775,7 +4054,7 @@
       downloadReportNotes();
       return;
     }
-    if (/版图|视觉|看墙|地图|穷尽|搜索|跨界|不同类|货架|自有库|打开库|参考墙|看参考/.test(t)) {
+    if (/版图|视觉|看墙|看库|素材库|本机库|地图|穷尽|搜索|跨界|不同类|货架|自有库|打开库|参考墙|看参考/.test(t)) {
       setStage(3, { appendEvent: false });
       revealAndSwitch("visual", { fromStage: true });
       playLibraryRun({ animate: true });
@@ -4302,12 +4581,48 @@
 
     el.composer.addEventListener("submit", (e) => {
       e.preventDefault();
+      closeSlashMenu();
+      closeMentionMenu();
       const v = el.composerInput.value;
       el.composerInput.value = "";
       handleSend(v);
     });
 
+    el.composerInput.addEventListener("input", () => syncComposerMenus());
     el.composerInput.addEventListener("keydown", (e) => {
+      const slashOpen = el.slashMenu && !el.slashMenu.hidden;
+      const mentionOpen = el.mentionMenu && !el.mentionMenu.hidden;
+      if ((slashOpen || mentionOpen) && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+        e.preventDefault();
+        const items = slashOpen ? filteredSlash(el.composerInput.value) : MENTION_ITEMS;
+        const key = slashOpen ? "_slashIndex" : "_mentionIndex";
+        const next = state[key] + (e.key === "ArrowDown" ? 1 : -1);
+        state[key] = (next + items.length) % items.length;
+        if (slashOpen) renderSlashMenu(el.composerInput.value);
+        else renderMentionMenu((el.composerInput.value.match(/@[^\s]*$/) || ["@"])[0]);
+        return;
+      }
+      if ((slashOpen || mentionOpen) && e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (slashOpen) {
+          const items = filteredSlash(el.composerInput.value);
+          if (items[state._slashIndex]) pickSlash(items[state._slashIndex].id);
+        } else {
+          const needle = (el.composerInput.value.match(/@[^\s]*$/) || ["@"])[0];
+          const items = MENTION_ITEMS.filter((c) => {
+            const n = needle.replace(/^@/, "").toLowerCase();
+            return !n || `${c.title} ${c.hint}`.toLowerCase().includes(n);
+          });
+          if (items[state._mentionIndex]) pickMention(items[state._mentionIndex].id);
+        }
+        return;
+      }
+      if ((slashOpen || mentionOpen) && e.key === "Escape") {
+        e.preventDefault();
+        closeSlashMenu();
+        closeMentionMenu();
+        return;
+      }
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         el.composer.requestSubmit();
@@ -4372,6 +4687,15 @@
     if (el.btnToggleArtifact) {
       el.btnToggleArtifact.addEventListener("click", () => setArtifactOpen(!state.artifactOpen));
     }
+    if (el.btnRailCollapse) {
+      el.btnRailCollapse.addEventListener("click", () => setRailCollapsed(!layoutState.railCollapsed));
+    }
+    if (el.btnFilterCompact) {
+      el.btnFilterCompact.addEventListener("click", () => setFiltersCompact(!layoutState.filtersCompact));
+    }
+    if (el.btnCommandPalette) {
+      el.btnCommandPalette.addEventListener("click", () => openCommandPalette());
+    }
     if (el.btnNavResult) {
       el.btnNavResult.addEventListener("click", () => revealAndSwitch("visual", { fromStage: true }));
     }
@@ -4416,10 +4740,85 @@
     }
     if (el.composerSlash) {
       el.composerSlash.addEventListener("click", () => {
-        toast("可以说：看库 / 帮我筛选 / 出结论 / 看 Brief");
-        if (el.composerInput) el.composerInput.focus();
+        if (el.composerInput) {
+          el.composerInput.value = "/";
+          el.composerInput.focus();
+        }
+        renderSlashMenu("/");
       });
     }
+    if (el.slashMenu) {
+      el.slashMenu.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-slash]");
+        if (btn) pickSlash(btn.dataset.slash);
+      });
+    }
+    if (el.mentionMenu) {
+      el.mentionMenu.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-mention]");
+        if (btn) pickMention(btn.dataset.mention);
+      });
+    }
+    if (el.cmdOverlay) {
+      el.cmdOverlay.addEventListener("click", (e) => {
+        if (e.target === el.cmdOverlay) closeCommandPalette();
+      });
+    }
+    if (el.cmdList) {
+      el.cmdList.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-cmd]");
+        if (btn) runStudioCommand(btn.dataset.cmd);
+      });
+    }
+    if (el.cmdInput) {
+      el.cmdInput.addEventListener("input", () => {
+        state._cmdIndex = 0;
+        renderCommandList(el.cmdInput.value);
+      });
+      el.cmdInput.addEventListener("keydown", (e) => {
+        const items = filteredCommands(el.cmdInput.value);
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault();
+          if (!items.length) return;
+          const next = state._cmdIndex + (e.key === "ArrowDown" ? 1 : -1);
+          state._cmdIndex = (next + items.length) % items.length;
+          renderCommandList(el.cmdInput.value);
+          return;
+        }
+        if (e.key === "Enter") {
+          e.preventDefault();
+          if (items[state._cmdIndex]) runStudioCommand(items[state._cmdIndex].id);
+          return;
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          closeCommandPalette();
+        }
+      });
+    }
+    document.addEventListener("keydown", (e) => {
+      const meta = e.metaKey || e.ctrlKey;
+      if (meta && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        if (isCmdOpen()) closeCommandPalette();
+        else openCommandPalette();
+        return;
+      }
+      if (meta && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        setRailCollapsed(!layoutState.railCollapsed);
+        return;
+      }
+      if (e.key === "Escape") {
+        if (isCmdOpen()) {
+          e.preventDefault();
+          closeCommandPalette();
+          return;
+        }
+        closeSlashMenu();
+        closeMentionMenu();
+      }
+    });
     if (el.composerModel) {
       el.composerModel.addEventListener("click", () => openLlmSettings("orchestrator"));
     }
@@ -4476,7 +4875,7 @@
         else if (act === "help") {
           appendRun({
             title: "怎么用",
-            html: `<p>左边是任务和席位。中间是我的运行日志：检索、打标、写入墙都会一条条跳出来。Brief 粗我就追问。库、短名单、报告在右边弹出，细条可以拖，栏宽会记住。</p>
+            html: `<p>左边是任务和席位，Ctrl+B 可收成图标栏。中间是对话。右边像 ChatGPT Canvas / Claude Artifact，随时弹出。Ctrl+K 打开命令面板，输入框用 / 指令、@ 调素材库。</p>
               <p class="run-quiet">底层还是问清 → 检索库 → 打标 → 筛选 → 报告。界面不再做成五步向导。</p>`,
           });
         }
