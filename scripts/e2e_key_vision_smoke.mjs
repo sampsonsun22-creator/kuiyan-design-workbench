@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p17`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p18`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -285,12 +285,31 @@ async function main() {
       !/新任务已建|这是新建的一轮|L1 意图识别|已打开「未命名/.test(newStream),
       `new task stream stays blank: ${newStream.slice(0, 40)}`
     );
+    await page.locator("#composerInput").fill("/");
+    await page.locator('#slashMenu [data-slash="lib"]').click();
+    note(
+      await page.locator("#app.artifact-open").count().then((n) => n === 0),
+      "slash 看库 on draft keeps artifact closed"
+    );
+    note(
+      !(await page.locator("#researchTitle").innerText()).includes("看库"),
+      "slash 看库 is not absorbed as product"
+    );
+    await page.locator("#btnNavResult").click();
+    note(
+      await page.locator("#app.artifact-open").count().then((n) => n === 0),
+      "素材库 on draft does not pop"
+    );
     await page.fill("#composerInput", "青绿茶礼盒");
     await page.locator("#sendBtn").click();
     await page.waitForFunction(() => /记下|卖给谁|人群/.test(document.getElementById("activityStream")?.textContent || ""));
     note(
       await page.locator("#app.artifact-open").count().then((n) => n === 0),
       "first chat turn still keeps results closed"
+    );
+    note(
+      await page.locator("#activityStream .run[data-jump]").count().then((n) => n === 0),
+      "draft run rows do not jump the held pane"
     );
     await page.locator('.research-card[data-id="r-green"]').click();
     await page.locator('.tab[data-tab="visual"]').click();

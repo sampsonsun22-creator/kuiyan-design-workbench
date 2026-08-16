@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KEY 视界 · 奎燕竞品分析</title>
   <link rel="icon" href="assets/brand/logo-key-lockup-on-light.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=452p17" />
+  <link rel="stylesheet" href="styles.css?v=452p18" />
 </head>
 <body class="studio">
   <div class="app studio-app artifact-open" id="app">
@@ -24,19 +24,19 @@
       </button>
 
       <nav class="rail-nav" aria-label="工作区">
-        <button type="button" class="rail-nav-btn" id="btnNavSearch" data-nav="search">
+        <button type="button" class="rail-nav-btn" id="btnNavSearch" data-nav="search" title="搜索任务">
           <span class="rail-nav-ico" aria-hidden="true">⌕</span><span class="rail-nav-label">搜索</span>
         </button>
-        <button type="button" class="rail-nav-btn active" id="btnNavChat" data-nav="chat">
+        <button type="button" class="rail-nav-btn active" id="btnNavChat" data-nav="chat" title="对话">
           <span class="rail-nav-ico" aria-hidden="true">◎</span><span class="rail-nav-label">对话</span>
         </button>
-        <button type="button" class="rail-nav-btn" id="btnNavResult" data-nav="library" aria-pressed="true">
+        <button type="button" class="rail-nav-btn" id="btnNavResult" data-nav="library" aria-pressed="true" title="素材库">
           <span class="rail-nav-ico" aria-hidden="true">▣</span><span class="rail-nav-label">素材库</span>
         </button>
-        <button type="button" class="rail-nav-btn" id="btnNavTags" data-nav="tags">
+        <button type="button" class="rail-nav-btn" id="btnNavTags" data-nav="tags" title="标签体系">
           <span class="rail-nav-ico" aria-hidden="true">#</span><span class="rail-nav-label">标签体系</span>
         </button>
-        <button type="button" class="rail-nav-btn" id="btnNavReport" data-nav="report">
+        <button type="button" class="rail-nav-btn" id="btnNavReport" data-nav="report" title="报告">
           <span class="rail-nav-ico" aria-hidden="true">≡</span><span class="rail-nav-label">报告</span>
         </button>
       </nav>
@@ -164,6 +164,8 @@
 
         <div class="wall-filters" id="wallFilters">
           <div class="wall-filter-bar">
+            <button type="button" class="cat-chip pending-toggle" id="pendingToggle" data-pending="0" aria-pressed="false">含待复核</button>
+            <button type="button" class="cat-chip brief-toggle active" id="briefToggle" data-brief="1" aria-pressed="true">只看贴 brief</button>
             <button type="button" class="ghost-btn filter-compact-btn" id="btnFilterCompact" aria-pressed="false">收起筛选</button>
           </div>
           <div class="source-cards" id="sourceChips" aria-label="出处筛选"></div>
@@ -174,8 +176,6 @@
             <button type="button" class="cat-chip" data-cat="analogy">不同类</button>
             <button type="button" class="cat-chip" data-cat="cross">跨界</button>
             <button type="button" class="cat-chip" data-cat="shelf">货架</button>
-            <button type="button" class="cat-chip pending-toggle" id="pendingToggle" data-pending="0" aria-pressed="false">含待复核</button>
-            <button type="button" class="cat-chip brief-toggle active" id="briefToggle" data-brief="1" aria-pressed="true">只看贴 brief</button>
           </div>
           <div class="library-lanes" id="libraryLanes" aria-label="中国在售库切片">
             <span class="source-kicker">库切片</span>
@@ -261,6 +261,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=452p17"></script>
+  <script src="app.js?v=452p18"></script>
 </body>
 </html>
