@@ -503,7 +503,7 @@
         railW: clamp(Number(saved.railW) || d.railW, 200, 360),
         resultW: clamp(Number(saved.resultW) || d.resultW, 400, Math.max(420, window.innerWidth - 640)),
         railCollapsed: Boolean(saved.railCollapsed),
-        filtersCompact: Boolean(saved.filtersCompact),
+        filtersCompact: false,
       };
     } catch (_) {
       return defaultLayout();
@@ -512,7 +512,14 @@
 
   function persistStudioLayout() {
     try {
-      localStorage.setItem(LAYOUT_STORE, JSON.stringify(layoutState));
+      localStorage.setItem(
+        LAYOUT_STORE,
+        JSON.stringify({
+          railW: layoutState.railW,
+          resultW: layoutState.resultW,
+          railCollapsed: layoutState.railCollapsed,
+        })
+      );
     } catch (_) {}
   }
 
@@ -894,7 +901,7 @@
       ? list
           .map(
             (r) => `
-      <li class="research-card ${r.active ? "active" : ""}" data-id="${r.id}">
+      <li class="research-card ${r.active ? "active" : ""}" data-id="${r.id}" title="${escapeAttr(r.title)}">
         <span class="task-dot ${r.status === "running" ? "running" : "done"}" aria-hidden="true"></span>
         <div>
           <div class="rtitle">${escapeHtml(r.title)}</div>
@@ -1228,9 +1235,19 @@
     }
   }
 
+  function refuseDraftReveal(why) {
+    if (!isDraftInterview()) return false;
+    toast(why || "先开口问清 Brief，右边先不弹出。");
+    askNextBriefSlot();
+    if (el.composerInput) el.composerInput.focus();
+    return true;
+  }
+
   function revealAndSwitch(tab, opts = {}) {
+    if (!opts.force && refuseDraftReveal()) return false;
     state.holdResults = false;
     switchTab(tab, { ...opts, reveal: true });
+    return true;
   }
 
   function collectWallItems() {
@@ -3549,7 +3566,7 @@
       status === "working" ? "is-working" : status === "warn" ? "is-warn" : status === "fail" ? "is-fail" : "is-done";
     node.className = `event run run-${kind} ${statusClass}`;
     const jumpTo = jump || inferJump(kind, title);
-    if (jumpTo) node.dataset.jump = jumpTo;
+    if (jumpTo && !state.holdResults && !isDraftInterview()) node.dataset.jump = jumpTo;
     const actionHtml = (actions || []).length
       ? `<div class="chips-row">${actions
           .map(
@@ -3650,6 +3667,8 @@
   }
 
   function playLibraryRun({ animate = false } = {}) {
+    const r = currentResearch();
+    if (isDraftInterview() || (r && r.emptyWall && !(state.wallItems || []).length)) return;
     const { lanes, mainN, pendN, sbN } = libraryStats();
     const thumbs = wallThumbs(8);
     const paintDone = () => {
@@ -3990,22 +4009,40 @@
       .join("");
   }
 
+  function runStudioShortcut(id) {
+    if (id === "lib") {
+      if (refuseDraftReveal("先问清分析对象，这轮墙还是空的。")) return;
+      handleArtifact("map");
+      playLibraryRun({ animate: true });
+      return;
+    }
+    if (id === "filter" || id === "shortlist") handleArtifact("shortlist");
+    else if (id === "report") handleArtifact("report");
+    else if (id === "brief") handleArtifact("brief");
+    else if (id === "new") createNewResearch();
+    else if (id === "toggle") setArtifactOpen(!state.artifactOpen);
+  }
+
   function pickSlash(id) {
     const item = SLASH_COMMANDS.find((c) => c.id === id);
     closeSlashMenu();
-    if (!item || !el.composerInput) return;
-    el.composerInput.value = item.send;
-    el.composerInput.focus();
-    el.composer.requestSubmit();
+    if (!item) return;
+    if (el.composerInput) {
+      el.composerInput.value = el.composerInput.value.replace(/^\/[^\s]*/, "").trimStart();
+      el.composerInput.focus();
+    }
+    runStudioShortcut(item.id);
   }
 
   function pickMention(id) {
     const item = MENTION_ITEMS.find((c) => c.id === id);
     closeMentionMenu();
-    if (!item || !el.composerInput) return;
-    el.composerInput.value = item.send;
-    el.composerInput.focus();
-    el.composer.requestSubmit();
+    if (!item) return;
+    if (el.composerInput) {
+      el.composerInput.value = el.composerInput.value.replace(/@[^\s]*$/, "").replace(/\s+$/, " ");
+      el.composerInput.focus();
+    }
+    runStudioShortcut(item.id);
   }
 
   function syncComposerMenus() {
@@ -4015,7 +4052,7 @@
       renderSlashMenu(v);
       return;
     }
-    const mention = v.match(/(?:^|\s)(@[^\s]*)$/);
+    const mention = v.match(/(@[^\s]*)$/);
     if (mention) {
       closeSlashMenu();
       renderMentionMenu(mention[1]);
@@ -4023,6 +4060,11 @@
     }
     closeSlashMenu();
     closeMentionMenu();
+  }
+
+  function isStudioCommandText(raw) {
+    const n = normalizeComposerText(raw);
+    return /^(看库|帮我筛选|出结论|看\s*brief|brief|弹出|收起|新建分析|素材库|本机库)$/i.test(n);
   }
 
   function normalizeComposerText(raw) {
@@ -4058,7 +4100,10 @@
       return;
     }
 
-    if (state.briefAskKey || (currentResearch().custom && missingBriefSlots().length)) {
+    if (
+      !isStudioCommandText(raw) &&
+      (state.briefAskKey || (currentResearch().custom && missingBriefSlots().length))
+    ) {
         const filled = absorbBriefAnswer(raw);
         if (filled) {
           const slot = BRIEF_SLOTS.find((s) => s.key === filled);
@@ -4067,7 +4112,9 @@
             detail: `${slot ? slot.label : filled} · ${raw.slice(0, 40)}`,
             html: `<p>「${escapeHtml(slot ? slot.label : filled)}」记下了：${escapeHtml(raw.slice(0, 80))}。</p>`,
           });
-        if (el.canvasBody && state.tab === "intent") renderCanvas({ preserveScroll: true });
+        if (el.canvasBody && state.tab === "intent" && !state.holdResults) {
+          renderCanvas({ preserveScroll: true });
+        }
         if (askNextBriefSlot()) return;
         appendRun({
           title: "可以检索了",
@@ -4123,7 +4170,7 @@
       downloadReportNotes();
       return;
     }
-    if (/版图|视觉|看墙|看库|素材库|本机库|地图|穷尽|搜索|跨界|不同类|货架|自有库|打开库|参考墙|看参考/.test(t)) {
+    if (/版图|视觉|看墙|看库|素材库|本机库|穷尽搜索|跨界样本|不同类|货架|自有库|打开库|参考墙|看参考/.test(t)) {
       setStage(3, { appendEvent: false });
       revealAndSwitch("visual", { fromStage: true });
       playLibraryRun({ animate: true });
@@ -4138,7 +4185,7 @@
       }
       return;
     }
-    if (/筛选|短名单|选参考|收几张|挑|入选/.test(t)) {
+    if (/筛选|短名单|选参考|收几张|入选/.test(t)) {
       setStage(4);
       revealAndSwitch("shortlist", { fromStage: true });
       return;
@@ -4148,7 +4195,7 @@
       revealAndSwitch("report", { fromStage: true });
       return;
     }
-    if (/方向|策略|三张|卡/.test(t)) {
+    if (/方向假设|策略卡|三张方向|三张卡/.test(t)) {
       setStage(5);
       revealAndSwitch("report", { fromStage: true });
       appendRun({
@@ -4210,6 +4257,7 @@
           html: `<p>${escapeHtml(err.message || String(err))}</p>
             <p class="run-quiet">检查 API Key、模型名，以及是不是用 key_vision_server.py 打开的本页。</p>`,
         });
+        clearScope();
       })
       .finally(() => {
         state.llmBusy = false;
@@ -4240,6 +4288,7 @@
     state.pendingItems = [];
     state.includePending = false;
     closeInspector();
+    clearScope();
     renderResearch();
     if (el.researchTitle) el.researchTitle.textContent = r.title;
     if (el.researchQuestion) {
@@ -4335,6 +4384,7 @@
       }
     } catch (err) {
       console.warn(err);
+      state.holdResults = false;
       toast("这轮研究的墙还没挂上");
     }
   }
@@ -4556,6 +4606,7 @@
               if (it) openInspector(it);
               else {
                 closeInspector();
+                clearScope();
                 updateSelectionBar();
                 syncWallSelectionClasses();
               }
@@ -4623,6 +4674,8 @@
           state.shortlistRemoved.add(id);
           state.shortlistVisual = state.shortlistVisual.filter((x) => x.id !== id);
         });
+        closeInspector();
+        clearScope();
         updateSelectionBar();
         syncWallSelectionClasses();
         toast(n ? `已从本轮选择里排除 ${n} 张，墙还留着` : "先勾几张");
@@ -4656,6 +4709,7 @@
 
     el.composer.addEventListener("submit", (e) => {
       e.preventDefault();
+      if (state.llmBusy) return;
       closeSlashMenu();
       closeMentionMenu();
       const v = el.composerInput.value;
@@ -4665,16 +4719,24 @@
 
     el.composerInput.addEventListener("input", () => syncComposerMenus());
     el.composerInput.addEventListener("keydown", (e) => {
+      if (e.isComposing || e.keyCode === 229) return;
       const slashOpen = el.slashMenu && !el.slashMenu.hidden;
       const mentionOpen = el.mentionMenu && !el.mentionMenu.hidden;
       if ((slashOpen || mentionOpen) && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
         e.preventDefault();
-        const items = slashOpen ? filteredSlash(el.composerInput.value) : MENTION_ITEMS;
+        const mentionTok = (el.composerInput.value.match(/@[^\s]*$/) || ["@"])[0];
+        const items = slashOpen
+          ? filteredSlash(el.composerInput.value)
+          : MENTION_ITEMS.filter((c) => {
+              const n = mentionTok.replace(/^@/, "").toLowerCase();
+              return !n || `${c.title} ${c.hint}`.toLowerCase().includes(n);
+            });
+        if (!items.length) return;
         const key = slashOpen ? "_slashIndex" : "_mentionIndex";
         const next = state[key] + (e.key === "ArrowDown" ? 1 : -1);
         state[key] = (next + items.length) % items.length;
         if (slashOpen) renderSlashMenu(el.composerInput.value);
-        else renderMentionMenu((el.composerInput.value.match(/@[^\s]*$/) || ["@"])[0]);
+        else renderMentionMenu(mentionTok);
         return;
       }
       if ((slashOpen || mentionOpen) && e.key === "Enter" && !e.shiftKey) {
@@ -4792,6 +4854,7 @@
     }
     if (el.btnNavSearch) {
       el.btnNavSearch.addEventListener("click", () => {
+        setRailCollapsed(false);
         if (el.railSearch) {
           el.railSearch.focus();
           el.railSearch.select();
@@ -4809,6 +4872,7 @@
     }
     if (el.composerLibChip) {
       el.composerLibChip.addEventListener("click", () => {
+        if (refuseDraftReveal("先问清分析对象，这轮墙还是空的。")) return;
         revealAndSwitch("visual", { fromStage: true });
         playLibraryRun({ animate: true });
       });
@@ -4859,6 +4923,7 @@
         renderCommandList(el.cmdInput.value);
       });
       el.cmdInput.addEventListener("keydown", (e) => {
+        if (e.isComposing || e.keyCode === 229) return;
         const items = filteredCommands(el.cmdInput.value);
         if (e.key === "ArrowDown" || e.key === "ArrowUp") {
           e.preventDefault();
@@ -4898,9 +4963,19 @@
           closeCommandPalette();
           return;
         }
+        if (el.llmOverlay && !el.llmOverlay.hidden) {
+          e.preventDefault();
+          closeLlmSettings();
+          return;
+        }
         closeSlashMenu();
         closeMentionMenu();
       }
+    });
+    document.addEventListener("pointerdown", (e) => {
+      if (e.target.closest("#composer")) return;
+      closeSlashMenu();
+      closeMentionMenu();
     });
     if (el.composerModel) {
       el.composerModel.addEventListener("click", () => openLlmSettings("orchestrator"));
