@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p19`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p20`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -72,6 +72,8 @@ async function main() {
     note(await page.locator("#libraryLanes").count().then((n) => n === 1), "library lane chips");
     note(await page.locator("#composerInput").count().then((n) => n === 1), "LLM composer present");
     note(await page.locator("#composerModel").count().then((n) => n === 1), "composer model chip");
+    const modelBg = await page.locator("#composerModel").evaluate((node) => getComputedStyle(node).backgroundColor);
+    note(!/rgb\(\s*17\s*,\s*17\s*,\s*17\s*\)/.test(modelBg), `composer model keeps KEY light chip (${modelBg})`);
     note(await page.locator("#railSearch").count().then((n) => n === 1), "rail task search");
     note((await page.locator("#btnNewResearch").innerText()).includes("新建分析"), "new analysis button");
     note(await page.locator("#btnNavResult").innerText().then((t) => t.includes("素材库")), "rail 素材库");
@@ -293,7 +295,11 @@ async function main() {
     await page.locator("#btnLlmSettings").click();
     await page.waitForSelector("#llmOverlay:not([hidden])");
     const llmTxt = await page.locator("#llmDialog").innerText();
-    note(/奎燕设计智能体/.test(llmTxt) && /采集/.test(llmTxt) && /点点/.test(llmTxt), "settings lists three agents");
+    note(/奎燕设计智能体/.test(llmTxt) && /API Key/.test(llmTxt), "settings has one LLM");
+    note(
+      (await page.locator("#llmDialog .llm-agent").count()) === 1 && !/跟编排器用同一套 API/.test(llmTxt),
+      "settings has no 采集/点点 API cards"
+    );
     await page.locator("#llmClose").click();
 
     await page.locator("#btnNewResearch").click();

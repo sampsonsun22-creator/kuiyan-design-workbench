@@ -99,7 +99,7 @@
   const LLM_PROVIDERS = {
     openai: { label: "OpenAI", baseUrl: "https://api.openai.com/v1", model: "gpt-4o-mini" },
     anthropic: { label: "Anthropic", baseUrl: "https://api.anthropic.com", model: "claude-sonnet-4-20250514" },
-    deepseek: { label: "DeepSeek", baseUrl: "https://api.deepseek.com", model: "deepseek-chat" },
+    deepseek: { label: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", model: "deepseek-chat" },
     moonshot: { label: "Moonshot 月之暗面", baseUrl: "https://api.moonshot.cn/v1", model: "moonshot-v1-auto" },
     qwen: { label: "通义千问", baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-plus" },
     zhipu: { label: "智谱 GLM", baseUrl: "https://open.bigmodel.cn/api/paas/v4", model: "glm-4-flash" },
@@ -110,17 +110,7 @@
     {
       id: "orchestrator",
       name: "奎燕设计智能体",
-      job: "听 Brief、和你对话、决策筛选、结论报告，并调度采集 / 点点。",
-    },
-    {
-      id: "crawler",
-      name: "采集",
-      job: "只检索已入库的自有库，按 Brief 分成同类 / 不同类 / 跨界。货架是在售切片。本版不对外网站点新爬。",
-    },
-    {
-      id: "dotdot",
-      name: "点点",
-      job: "视觉 / 体验 / 商业三组打标；批注按已有字段重筛。缺值写未标注，不编造开箱、评论、成本。",
+      job: "对话、看参考墙、短名单和结论都走这一套模型。",
     },
   ];
 
@@ -214,6 +204,7 @@
     llmProxyHint: $("llmProxyHint"),
     llmClose: $("llmClose"),
     llmTest: $("llmTest"),
+    llmError: $("llmError"),
     sendBtn: $("sendBtn"),
     qHint: document.querySelector(".q-hint"),
     right: document.querySelector(".right"),
@@ -266,13 +257,24 @@
 
   function defaultAgentLlm(id) {
     return {
-      id,
+      id: id || "orchestrator",
       provider: "deepseek",
       baseUrl: LLM_PROVIDERS.deepseek.baseUrl,
       model: LLM_PROVIDERS.deepseek.model,
       apiKey: "",
-      inherit: id !== "orchestrator",
     };
+  }
+
+  function cleanApiKey(raw) {
+    return String(raw || "").trim().replace(/^["']+|["']+$/g, "");
+  }
+
+  function normalizeLlmBase(provider, base) {
+    let b = String(base || "").trim().replace(/\/+$/, "");
+    if ((provider || "deepseek") === "deepseek") {
+      if (!b || b === "https://api.deepseek.com") b = "https://api.deepseek.com/v1";
+    }
+    return b;
   }
 
   function loadLlmAgents() {
@@ -282,41 +284,47 @@
     } catch (_) {
       saved = {};
     }
-    const out = {};
-    AGENT_LLM_META.forEach((m) => {
-      out[m.id] = { ...defaultAgentLlm(m.id), ...(saved[m.id] || {}) };
-    });
-    state.llmAgents = out;
-    return out;
+    const old = saved.orchestrator || saved.llm || {};
+    const cfg = {
+      ...defaultAgentLlm("orchestrator"),
+      provider: old.provider || saved.provider || "deepseek",
+      baseUrl: old.baseUrl || saved.baseUrl || LLM_PROVIDERS.deepseek.baseUrl,
+      model: old.model || saved.model || LLM_PROVIDERS.deepseek.model,
+      apiKey: cleanApiKey(old.apiKey || saved.apiKey || ""),
+    };
+    cfg.baseUrl = normalizeLlmBase(cfg.provider, cfg.baseUrl);
+    state.llm = cfg;
+    state.llmAgents = { orchestrator: cfg };
+    return state.llmAgents;
   }
 
   function persistLlmAgents() {
+    const cfg = currentLlm();
     try {
-      localStorage.setItem(LLM_STORE, JSON.stringify(state.llmAgents || {}));
+      localStorage.setItem(LLM_STORE, JSON.stringify({ orchestrator: cfg }));
     } catch (_) {}
     syncLlmUi();
   }
 
-  function llmReady(id) {
-    const cfg = llmConfigFor(id);
+  function currentLlm() {
+    if (!state.llm) loadLlmAgents();
+    return state.llm || defaultAgentLlm("orchestrator");
+  }
+
+  function llmReady() {
+    const cfg = currentLlm();
     return Boolean(cfg && cfg.apiKey && cfg.model && cfg.baseUrl);
   }
 
-  function llmConfigFor(id) {
-    const all = state.llmAgents || loadLlmAgents();
-    const own = all[id] || defaultAgentLlm(id);
-    if (id !== "orchestrator" && own.inherit) {
-      const parent = all.orchestrator || defaultAgentLlm("orchestrator");
-      return { ...parent, id, inherit: true };
-    }
-    return own;
+  function llmConfigFor() {
+    return currentLlm();
   }
 
   function syncLlmUi() {
-    const any = AGENT_LLM_META.some((m) => llmReady(m.id));
+    const any = llmReady();
     if (el.btnSettings) el.btnSettings.classList.toggle("ready", any);
     document.querySelectorAll(".cap-gear").forEach((btn) => {
-      btn.classList.toggle("ready", llmReady(btn.dataset.llmAgent));
+      btn.classList.toggle("ready", any);
     });
     if (el.composerInput) {
       el.composerInput.placeholder = any
@@ -324,14 +332,15 @@
         : "输入问题，或用 / 看库、筛选、出结论。先点齿轮配 API 才能真正对话。";
     }
     if (el.composerModel) {
-      const cfg = llmConfigFor("orchestrator");
+      const cfg = currentLlm();
       const short = String((cfg && cfg.model) || "奎燕").split("/").pop();
-      el.composerModel.textContent = llmReady("orchestrator") ? short : "奎燕";
+      el.composerModel.textContent = any ? `模型 · ${short}` : "模型 · 奎燕";
+      el.composerModel.classList.toggle("ready", any);
     }
     if (el.metaModel) {
-      const cfg = llmConfigFor("orchestrator");
+      const cfg = currentLlm();
       const short = String((cfg && cfg.model) || "奎燕").split("/").pop();
-      el.metaModel.textContent = llmReady("orchestrator") ? `模型 · ${short}` : "模型 · 奎燕";
+      el.metaModel.textContent = any ? `模型 · ${short}` : "模型 · 奎燕";
     }
   }
 
@@ -2412,6 +2421,30 @@
     return state.proxyOk;
   }
 
+  function humanizeLlmError(raw) {
+    const text = String(raw || "");
+    const low = text.toLowerCase();
+    if (/no_llm/.test(low)) return "还没填 API Key。";
+    if (/401|authentication|invalid.*api key|unauthorized/.test(low)) {
+      return "DeepSeek 说这把 Key 无效。请完整复制 sk- 开头的密钥，不要带空格或引号。";
+    }
+    if (/402|insufficient|balance|quota|arrearage/.test(low)) {
+      return "DeepSeek 余额不足，请先到 platform.deepseek.com 充值。";
+    }
+    if (/429|rate limit/.test(low)) return "DeepSeek 限流，稍等再试。";
+    if (/failed to fetch|network|timeout|timed out|name or service/.test(low)) {
+      return "连不上模型接口。确认本页转发已接通。";
+    }
+    return text.replace(/\s+/g, " ").slice(0, 180);
+  }
+
+  function showLlmError(msg) {
+    if (!el.llmError) return;
+    const text = String(msg || "").trim();
+    el.llmError.hidden = !text;
+    el.llmError.textContent = text;
+  }
+
   async function callLlm(agentId, messages, { json: wantJson } = {}) {
     const cfg = llmConfigFor(agentId);
     if (!cfg || !cfg.apiKey || !cfg.model) {
@@ -2440,7 +2473,7 @@
       data = {};
     }
     if (!res.ok || !data.ok) {
-      throw new Error(data.detail || data.error || `HTTP ${res.status}`);
+      throw new Error(humanizeLlmError(data.detail || data.error || `HTTP ${res.status}`));
     }
     const text = String(data.text || "").trim();
     if (wantJson) {
@@ -2451,62 +2484,58 @@
     return text;
   }
 
-  function renderLlmForm(focusId) {
+  function renderLlmForm() {
     loadLlmAgents();
-    state.llmFocus = focusId || state.llmFocus || "orchestrator";
+    const cfg = currentLlm();
     const providerOpts = Object.entries(LLM_PROVIDERS)
       .map(([id, p]) => `<option value="${id}">${escapeHtml(p.label)}</option>`)
       .join("");
-    el.llmAgentFields.innerHTML = AGENT_LLM_META.map((m) => {
-      const cfg = state.llmAgents[m.id] || defaultAgentLlm(m.id);
-      const inherit = m.id !== "orchestrator";
-      return `<section class="llm-agent${m.id === state.llmFocus ? " active-edit" : ""}" data-agent="${m.id}">
-        <h3>${escapeHtml(m.name)}</h3>
-        <p class="llm-job">${escapeHtml(m.job)}</p>
-        ${
-          inherit
-            ? `<label class="llm-inherit"><input type="checkbox" data-llm-field="inherit" ${
-                cfg.inherit ? "checked" : ""
-              }/> 跟编排器用同一套 API</label>`
-            : ""
-        }
-        <div class="llm-grid" ${inherit && cfg.inherit ? "hidden" : ""}>
+    const keyHint = cfg.apiKey
+      ? `已填入 ${escapeHtml(cfg.apiKey.slice(0, 3))}…${escapeHtml(cfg.apiKey.slice(-4))}，留空保存则不改`
+      : "sk- 开头，只存在这台浏览器";
+    el.llmAgentFields.innerHTML = `<section class="llm-agent active-edit" data-agent="orchestrator">
+        <h3>奎燕设计智能体</h3>
+        <p class="llm-job">整台视界只接这一套。对话、看墙、短名单和结论都走它。</p>
+        <div class="llm-grid">
           <label>提供商</label>
           <select data-llm-field="provider">${providerOpts.replace(
             `value="${cfg.provider}"`,
             `value="${cfg.provider}" selected`
           )}</select>
           <label>接口地址</label>
-          <input data-llm-field="baseUrl" value="${escapeAttr(cfg.baseUrl || "")}" placeholder="https://api.example.com/v1" />
+          <input data-llm-field="baseUrl" value="${escapeAttr(cfg.baseUrl || "")}" placeholder="https://api.deepseek.com/v1" />
           <label>模型</label>
-          <input data-llm-field="model" value="${escapeAttr(cfg.model || "")}" placeholder="model id" />
+          <input data-llm-field="model" value="${escapeAttr(cfg.model || "")}" placeholder="deepseek-chat" />
           <label>API Key</label>
-          <input data-llm-field="apiKey" type="password" autocomplete="off" value="${escapeAttr(cfg.apiKey || "")}" placeholder="只存在这台浏览器" />
+          <input data-llm-field="apiKey" type="password" autocomplete="off" placeholder="${keyHint}" />
         </div>
+        <p class="llm-key-state">${cfg.apiKey ? "密钥已保存在这台浏览器" : "还没填密钥"}</p>
       </section>`;
-    }).join("");
+    const keyInput = el.llmAgentFields.querySelector('[data-llm-field="apiKey"]');
+    if (keyInput && cfg.apiKey) keyInput.value = cfg.apiKey;
+    showLlmError("");
     probeLlmProxy();
   }
 
   function readLlmForm() {
-    el.llmAgentFields.querySelectorAll(".llm-agent").forEach((sec) => {
-      const id = sec.dataset.agent;
-      const prev = state.llmAgents[id] || defaultAgentLlm(id);
-      const get = (name) => {
-        const node = sec.querySelector(`[data-llm-field="${name}"]`);
-        if (!node) return prev[name];
-        if (node.type === "checkbox") return node.checked;
-        return node.value;
-      };
-      state.llmAgents[id] = {
-        ...prev,
-        provider: get("provider"),
-        baseUrl: get("baseUrl"),
-        model: get("model"),
-        apiKey: get("apiKey"),
-        inherit: id === "orchestrator" ? false : Boolean(get("inherit")),
-      };
-    });
+    const prev = currentLlm();
+    const root = el.llmAgentFields;
+    const get = (name) => {
+      const node = root.querySelector(`[data-llm-field="${name}"]`);
+      if (!node) return prev[name];
+      return String(node.value || "").trim();
+    };
+    const provider = get("provider") || prev.provider;
+    const cfg = {
+      ...prev,
+      id: "orchestrator",
+      provider,
+      baseUrl: normalizeLlmBase(provider, get("baseUrl") || prev.baseUrl),
+      model: get("model") || prev.model,
+      apiKey: cleanApiKey(get("apiKey")) || prev.apiKey || "",
+    };
+    state.llm = cfg;
+    state.llmAgents = { orchestrator: cfg };
   }
 
   function openLlmSettings(agentId) {
@@ -2527,49 +2556,47 @@
       const field = e.target.closest("[data-llm-field]");
       if (!field) return;
       readLlmForm();
-      if (field.dataset.llmField === "provider") {
-        const sec = field.closest(".llm-agent");
-        const id = sec && sec.dataset.agent;
-        const p = LLM_PROVIDERS[field.value];
-        if (p && id) {
-          if (p.baseUrl) state.llmAgents[id].baseUrl = p.baseUrl;
-          if (p.model) state.llmAgents[id].model = p.model;
-        }
+      if (field.dataset.llmField !== "provider") return;
+      const p = LLM_PROVIDERS[field.value];
+      if (p) {
+        if (p.baseUrl) state.llm.baseUrl = p.baseUrl;
+        if (p.model) state.llm.model = p.model;
       }
-      renderLlmForm(state.llmFocus);
+      renderLlmForm();
     });
     el.llmForm.addEventListener("submit", (e) => {
       e.preventDefault();
       readLlmForm();
       persistLlmAgents();
       closeLlmSettings();
-      toast("三个智能体的 API 已保存在这台浏览器");
+      toast(llmReady() ? "模型已保存在这台浏览器" : "还没填 API Key，先贴 sk- 再保存");
       appendEvent({
         agent: "系统",
         time: "现在",
-        tag: "模型已接上",
-        tagClass: "consensus",
-        dot: "ok",
-        html: `<p>编排 ${llmReady("orchestrator") ? "已接" : "未接"} · 采集 ${
-          llmReady("crawler") ? "已接" : "未接"
-        } · 点点 ${llmReady("dotdot") ? "已接" : "未接"}。中间栏可以开始对话，决策筛选的批注可以交给点点重筛。</p>`,
+        tag: llmReady() ? "模型已接上" : "模型未接",
+        tagClass: llmReady() ? "consensus" : "challenge",
+        dot: llmReady() ? "ok" : "warn",
+        html: `<p>${llmReady() ? "这一套模型可以开始对话。" : "齿轮里把 API Key 贴完整再测一次。"}</p>`,
       });
     });
     if (el.llmTest) {
       el.llmTest.addEventListener("click", async () => {
         readLlmForm();
         persistLlmAgents();
-        const id = state.llmFocus || "orchestrator";
+        showLlmError("");
         el.llmTest.disabled = true;
         try {
-          const text = await callLlm(id, [
-            { role: "system", content: agentSystemPrompt(id) },
+          const text = await callLlm("orchestrator", [
+            { role: "system", content: agentSystemPrompt("orchestrator") },
             { role: "user", content: "只回四个字：已接通。" },
           ]);
-          toast(`${AGENT_LLM_META.find((m) => m.id === id).name}：${String(text).slice(0, 24)}`);
+          toast(`已接通：${String(text).slice(0, 24)}`);
+          showLlmError("");
         } catch (err) {
-          if (err.code === "NO_LLM") openLlmSettings(id);
-          toast(`测试失败：${err.message || err}`);
+          const msg = humanizeLlmError(err.message || err);
+          showLlmError(msg);
+          toast(`测试失败：${msg}`);
+          if (err.code === "NO_LLM") openLlmSettings();
         } finally {
           el.llmTest.disabled = false;
         }
@@ -3021,7 +3048,7 @@
       if (box) box.focus();
       return;
     }
-    const agentId = llmReady("dotdot") ? "dotdot" : llmReady("orchestrator") ? "orchestrator" : "";
+    const agentId = llmReady() ? "orchestrator" : "";
     if (agentId) {
       try {
         await rescreenWithLlm(comment, agentId);
@@ -3109,7 +3136,7 @@
       </div>
       ${
         custom
-          ? `<p class="rp-warn">这是新建的一轮。墙是空的，不会抄青绿茶 452 张。先把 Brief 钉住；三个智能体配好 API 才能对话和打标。</p>
+          ? `<p class="rp-warn">这是新建的一轮。墙是空的，不会抄青绿茶 452 张。先把 Brief 钉住；齿轮里配好一套模型就能对话。</p>
       <div class="panel-block" data-sop="audience">
         <h4>卖给谁 · 在哪卖 · 什么价</h4>
         ${field("audience", "客群", input.audience, "例如 28–45 新中产")}
@@ -3898,7 +3925,7 @@
     { id: "search", title: "搜索任务", hint: "聚焦任务栏", keys: "搜索 任务", run: () => { setRailCollapsed(false); if (el.railSearch) { el.railSearch.focus(); el.railSearch.select(); } } },
     { id: "rail", title: "收起 / 展开任务栏", hint: "Ctrl+B", keys: "任务栏 收起栏 sidebar", run: () => setRailCollapsed(!layoutState.railCollapsed) },
     { id: "filters", title: "收起 / 展开筛选", hint: "出处与分类", keys: "筛选 出处", run: () => setFiltersCompact(!layoutState.filtersCompact) },
-    { id: "llm", title: "模型与权限", hint: "三个智能体", keys: "模型 权限 api", run: () => openLlmSettings("orchestrator") },
+    { id: "llm", title: "模型与权限", hint: "一套 DeepSeek / 兼容接口", keys: "模型 权限 api", run: () => openLlmSettings() },
     { id: "chat", title: "回到对话", hint: "聚焦输入", keys: "对话 输入", run: () => { if (el.composerInput) el.composerInput.focus(); } },
   ];
 
@@ -4243,16 +4270,16 @@
       : /采集|穷尽|货架通道/.test(t)
         ? "crawler"
         : "orchestrator";
-    if (!llmReady(agentId) && !llmReady("orchestrator")) {
+    if (!llmReady()) {
       appendRun({
         title: "还没接模型",
         status: "warn",
-        html: `<p class="run-quiet">点右上角齿轮，给编排 / 采集 / 点点配 API。也可以直接说「看 Brief」「看版图」「帮我筛选」「出结论」。</p>`,
+        html: `<p class="run-quiet">点右下角「模型」或齿轮，贴一套 API。也可以直接说「看 Brief」「看版图」「帮我筛选」「出结论」。</p>`,
       });
-      openLlmSettings(agentId);
+      openLlmSettings();
       return;
     }
-    const useId = llmReady(agentId) ? agentId : "orchestrator";
+    const useId = "orchestrator";
     const meta = AGENT_LLM_META.find((m) => m.id === useId);
     state.llmBusy = true;
     if (el.sendBtn) el.sendBtn.disabled = true;

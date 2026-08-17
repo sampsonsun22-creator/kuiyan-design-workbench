@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KEY 视界 · 奎燕竞品分析</title>
   <link rel="icon" href="assets/brand/logo-key-lockup-on-light.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=452p19" />
+  <link rel="stylesheet" href="styles.css?v=452p20" />
 </head>
 <body class="studio">
   <div class="app studio-app artifact-open" id="app">
@@ -53,7 +53,7 @@
 
       <div class="sr-only" hidden>
         <ul class="cap-list" id="capList"></ul>
-        <button type="button" id="btnCapConfig">配置三个智能体</button>
+        <button type="button" id="btnCapConfig">配置模型</button>
         <nav class="stages" id="stages" aria-hidden="true">
           <button type="button" class="stage done" data-stage="1"><span class="n">✓</span>听清 Brief</button>
           <button type="button" class="stage done" data-stage="2"><span class="n">✓</span>穷尽搜索</button>
@@ -126,13 +126,13 @@
           <div class="slash-menu" id="slashMenu" hidden></div>
           <div class="mention-menu" id="mentionMenu" hidden></div>
           <div class="scope-chips" id="scopeChips" hidden></div>
-          <textarea id="composerInput" rows="2" placeholder="输入你的问题，或用 / 分析指令、@ 调用素材库…"></textarea>
+          <textarea id="composerInput" rows="2" placeholder="输入问题，或用 / 看库、筛选、出结论…"></textarea>
           <div class="composer-tools">
-            <button type="button" class="composer-chip" id="composerPlus" title="附件" data-attach="evidence" aria-label="附件">附件</button>
+            <button type="button" class="composer-plus" id="composerPlus" title="附件" data-attach="evidence" aria-label="附件">+</button>
             <button type="button" class="composer-chip" id="composerLibChip" title="只检索本机自有库，不对外网站点新爬">素材库</button>
             <button type="button" class="composer-chip" id="composerSlash" title="可用指令">/ 分析指令</button>
             <span class="composer-spacer"></span>
-            <button type="button" class="composer-chip composer-model" id="composerModel" title="模型与权限">奎燕</button>
+            <button type="button" class="composer-chip composer-model" id="composerModel" title="模型与权限">模型 · 奎燕</button>
             <button type="submit" class="send-btn" id="sendBtn" aria-label="发送" title="发送">
               <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4.5 19.5 21 12 4.5 4.5 7.6 12Z" fill="currentColor"/><path d="M7.6 12H21" fill="none" stroke="#111" stroke-width="1.4"/></svg>
             </button>
@@ -233,9 +233,9 @@
     <div class="cmd-modal" role="dialog" aria-modal="true" aria-labelledby="cmdTitle" id="cmdDialog">
       <div class="cmd-head">
         <h2 id="cmdTitle">命令</h2>
-        <p class="cmd-lead">像 Cursor / ChatGPT 一样跳转，不走五步向导。</p>
+        <p class="cmd-lead">搜索指令、跳转页签，或打开模型。</p>
       </div>
-      <input type="search" id="cmdInput" placeholder="搜索指令… 新建、弹出结果、素材库、短名单" autocomplete="off" />
+      <input type="search" id="cmdInput" placeholder="搜索指令、上下文、模型…" autocomplete="off" />
       <ul class="cmd-list" id="cmdList" role="listbox"></ul>
       <p class="cmd-hint"><kbd>Ctrl</kbd><kbd>K</kbd> 命令 · <kbd>Ctrl</kbd><kbd>B</kbd> 任务栏 · <kbd>Esc</kbd> 关闭</p>
     </div>
@@ -246,7 +246,7 @@
       <div class="llm-modal-head">
         <div>
           <h2 id="llmTitle">模型与权限</h2>
-          <p class="llm-lead">编排、检索、打标可以接不同模型。Key 只存在这台机器，不会写进仓库，也不会去外网站点新爬。</p>
+          <p class="llm-lead">整台视界只接一套模型。Key 只存在这台浏览器，不会写进仓库，也不会拿去外网站点新爬。</p>
         </div>
         <button type="button" class="llm-close" id="llmClose" aria-label="关闭">×</button>
       </div>
@@ -254,13 +254,14 @@
       <form class="llm-form" id="llmForm">
         <div class="llm-agents" id="llmAgentFields"></div>
         <div class="llm-actions">
-          <button type="button" class="llm-test" id="llmTest">测试当前智能体</button>
+          <p class="llm-error" id="llmError" hidden></p>
+          <button type="button" class="llm-test" id="llmTest">测试连接</button>
           <button type="submit" class="llm-save">保存</button>
         </div>
       </form>
     </div>
   </div>
 
-  <script src="app.js?v=452p19"></script>
+  <script src="app.js?v=452p20"></script>
 </body>
 </html>

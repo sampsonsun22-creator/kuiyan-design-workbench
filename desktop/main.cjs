@@ -10,7 +10,7 @@ const fs = require("fs");
 const path = require("path");
 const { URL } = require("url");
 
-const CACHE_V = "452p19";
+const CACHE_V = "452p20";
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -66,7 +66,15 @@ function proxyChat(payload) {
     const base = String(
       payload.base_url || payload.baseUrl || (isAnthropic ? "https://api.anthropic.com" : "https://api.openai.com/v1")
     );
-    const target = new URL(isAnthropic ? "/v1/messages" : "/chat/completions", base.endsWith("/") ? base : `${base}/`);
+    const trimmed = base.replace(/\/+$/, "");
+    const href = isAnthropic
+      ? /\/v1\/messages$/i.test(trimmed)
+        ? trimmed
+        : `${trimmed.replace(/\/v1$/i, "")}/v1/messages`
+      : /\/chat\/completions$/i.test(trimmed)
+        ? trimmed
+        : `${trimmed}/chat/completions`;
+    const target = new URL(href);
     const bodyObj = isAnthropic
       ? {
           model,

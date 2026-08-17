@@ -133,11 +133,11 @@ def main() -> int:
         if "新建研究" not in html:
             err.append("index.html missing 新建研究 label")
     if 'id="btnLlmSettings"' not in html or 'id="llmOverlay"' not in html:
-        err.append("missing three-agent LLM settings UI")
+        err.append("missing LLM settings UI")
     if "function createNewResearch" not in app:
         err.append("app.js missing createNewResearch")
     if "function openLlmSettings" not in app or "AGENT_LLM_META" not in app:
-        err.append("app.js missing per-agent LLM config")
+        err.append("app.js missing LLM config")
     if "async function rescreenByComment" not in app:
         err.append("app.js missing async 按批注重筛")
     if "briefLaneLex" not in app:

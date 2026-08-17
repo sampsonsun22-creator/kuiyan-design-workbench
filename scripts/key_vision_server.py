@@ -126,9 +126,11 @@ class Handler(SimpleHTTPRequestHandler):
         except json.JSONDecodeError:
             self._json(400, {"ok": False, "error": "invalid json"})
             return
-        api_key = str(payload.get("api_key") or payload.get("apiKey") or "").strip()
+        api_key = str(payload.get("api_key") or payload.get("apiKey") or "").strip().strip("\"'")
         model = str(payload.get("model") or "").strip()
-        base = str(payload.get("base_url") or payload.get("baseUrl") or "").strip()
+        base = str(payload.get("base_url") or payload.get("baseUrl") or "").strip().rstrip("/")
+        if base in {"https://api.deepseek.com", "http://api.deepseek.com"}:
+            base = "https://api.deepseek.com/v1"
         provider = str(payload.get("provider") or "openai").strip().lower()
         messages = payload.get("messages") or []
         if not api_key or not model or not isinstance(messages, list):
@@ -142,7 +144,16 @@ class Handler(SimpleHTTPRequestHandler):
                 text = openai_chat(base, api_key, model, messages, timeout=60)
         except urllib.error.HTTPError as err:
             detail = err.read().decode("utf-8", "ignore")[:400]
-            self._json(err.code, {"ok": False, "error": f"upstream {err.code}", "detail": detail})
+            low = detail.lower()
+            if err.code == 401 or "authentication" in low:
+                msg = "DeepSeek 说这把 Key 无效。请完整复制 sk- 开头的密钥。"
+            elif err.code == 402 or "insufficient" in low or "balance" in low:
+                msg = "DeepSeek 余额不足，请先到 platform.deepseek.com 充值。"
+            elif err.code == 429:
+                msg = "DeepSeek 限流，稍等再试。"
+            else:
+                msg = f"upstream {err.code}"
+            self._json(err.code, {"ok": False, "error": msg, "detail": detail})
             return
         except Exception as err:  # noqa: BLE001 — surface provider errors to the lab UI
             self._json(502, {"ok": False, "error": str(err)[:240]})
