@@ -4001,6 +4001,7 @@
     el.slashMenu.hidden = true;
     el.slashMenu.innerHTML = "";
     state._slashIndex = 0;
+    if (el.composerPlus) el.composerPlus.setAttribute("aria-expanded", "false");
   }
 
   function closeMentionMenu() {
@@ -4024,6 +4025,7 @@
     }
     state._slashIndex = clamp(state._slashIndex, 0, items.length - 1);
     el.slashMenu.hidden = false;
+    if (el.composerPlus) el.composerPlus.setAttribute("aria-expanded", "true");
     el.slashMenu.innerHTML = items
       .map(
         (c, i) =>
@@ -4913,7 +4915,25 @@
       el.btnCloseResult.addEventListener("click", () => setArtifactOpen(false));
     }
     if (el.composerPlus) {
-      el.composerPlus.addEventListener("click", () => toast("本版不支持上传附件"));
+      el.composerPlus.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (el.slashMenu && !el.slashMenu.hidden) {
+          closeSlashMenu();
+          return;
+        }
+        if (el.composerInput) {
+          if (!el.composerInput.value.startsWith("/")) el.composerInput.value = "/";
+          el.composerInput.focus();
+        }
+        renderSlashMenu(el.composerInput ? el.composerInput.value : "/");
+      });
+    }
+    if (el.composer) {
+      el.composer.addEventListener("click", (e) => {
+        if (e.target.closest("button, a, input, select, textarea, .slash-menu, .mention-menu, .scope-chips")) return;
+        if (el.composerInput) el.composerInput.focus();
+      });
     }
     if (el.composerLibChip) {
       el.composerLibChip.addEventListener("click", () => {

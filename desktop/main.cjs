@@ -10,7 +10,7 @@ const fs = require("fs");
 const path = require("path");
 const { URL } = require("url");
 
-const CACHE_V = "452p20";
+const CACHE_V = "452p21";
 
 const MIME = {
   ".html": "text/html; charset=utf-8",

@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p20`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p21`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -74,6 +74,59 @@ async function main() {
     note(await page.locator("#composerModel").count().then((n) => n === 1), "composer model chip");
     const modelBg = await page.locator("#composerModel").evaluate((node) => getComputedStyle(node).backgroundColor);
     note(!/rgb\(\s*17\s*,\s*17\s*,\s*17\s*\)/.test(modelBg), `composer model keeps KEY light chip (${modelBg})`);
+    const composerGeom = await page.evaluate(() => {
+      const form = document.getElementById("composer");
+      const input = document.getElementById("composerInput");
+      const tools = document.querySelector(".composer-tools");
+      const fr = form.getBoundingClientRect();
+      const ir = input.getBoundingClientRect();
+      const tr = tools.getBoundingClientRect();
+      const hit = (id) => {
+        const node = document.getElementById(id);
+        const r = node.getBoundingClientRect();
+        const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+        return Boolean(top && (top === node || node.contains(top)));
+      };
+      return {
+        align: getComputedStyle(form).alignItems,
+        formW: fr.width,
+        inputW: ir.width,
+        inputX: ir.x - fr.x,
+        toolsW: tr.width,
+        hitPlus: hit("composerPlus"),
+        hitSlash: hit("composerSlash"),
+        hitModel: hit("composerModel"),
+        hitSend: hit("sendBtn"),
+        hitLib: hit("composerLibChip"),
+      };
+    });
+    note(
+      composerGeom.align === "stretch" && composerGeom.inputW >= composerGeom.formW * 0.82 && composerGeom.inputX < 24,
+      `composer input fills the box (${Math.round(composerGeom.inputW)}/${Math.round(composerGeom.formW)} x=${Math.round(composerGeom.inputX)} align=${composerGeom.align})`
+    );
+    note(
+      composerGeom.toolsW >= composerGeom.formW * 0.82,
+      `composer tools span the box (${Math.round(composerGeom.toolsW)}/${Math.round(composerGeom.formW)})`
+    );
+    note(await page.locator("#composerLibChip").isVisible(), "素材库 chip stays visible");
+    note(await page.locator("#composerSlash").isVisible(), "/ 分析指令 chip stays visible");
+    note(
+      composerGeom.hitPlus && composerGeom.hitSlash && composerGeom.hitModel && composerGeom.hitSend && composerGeom.hitLib,
+      "composer controls are not covered"
+    );
+    await page.locator("#composerSlash").click();
+    note(await page.locator("#slashMenu").isVisible(), "slash chip opens the menu");
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => document.getElementById("slashMenu")?.hidden);
+    await page.locator("#composerPlus").click();
+    note(await page.locator("#slashMenu").isVisible(), "plus opens the slash menu");
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => document.getElementById("slashMenu")?.hidden);
+    await page.locator("#composerModel").click();
+    note(await page.locator("#llmOverlay:not([hidden])").count().then((n) => n === 1), "model chip opens settings");
+    await page.locator("#llmClose").click();
+    await page.waitForFunction(() => document.getElementById("llmOverlay")?.hidden);
+    await page.locator("#composerInput").fill("");
     note(await page.locator("#railSearch").count().then((n) => n === 1), "rail task search");
     note((await page.locator("#btnNewResearch").innerText()).includes("新建分析"), "new analysis button");
     note(await page.locator("#btnNavResult").innerText().then((t) => t.includes("素材库")), "rail 素材库");

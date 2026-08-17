@@ -2738,6 +2738,10 @@ body.studio.is-resizing img {
 .studio-composer {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  grid-template-columns: none;
+  grid-template-rows: none;
   gap: 4px;
   margin: 8px 22px 20px;
   padding: 8px 10px 8px;
@@ -2745,8 +2749,9 @@ body.studio.is-resizing img {
   border-radius: 16px;
   background: #fff;
   box-shadow: 0 10px 28px rgb(26 26 26 / 0.06);
-  container-type: inline-size;
-  container-name: kv-composer;
+  min-width: 0;
+  width: auto;
+  cursor: text;
 }
 
 .composer-tools {
@@ -2754,17 +2759,29 @@ body.studio.is-resizing img {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+  width: 100%;
+  min-width: 0;
+  cursor: default;
 }
 
 .composer-spacer { flex: 1; }
 
 .studio-composer textarea,
 .studio-composer #composerInput {
-  min-height: 44px;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 68px;
+  max-height: 160px;
   border: 0;
   background: transparent;
-  padding: 10px 4px;
+  padding: 8px 6px 4px;
   border-radius: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  resize: none;
+  text-align: start;
 }
 
 .studio-composer:focus-within {
@@ -2823,6 +2840,12 @@ body.studio.is-resizing img {
   background: rgb(26 26 26 / 0.035);
 }
 
+.composer-plus,
+.composer-chip,
+.studio-composer .send-btn {
+  pointer-events: auto;
+}
+
 .composer-plus {
   width: 32px;
   height: 32px;
@@ -2833,6 +2856,7 @@ body.studio.is-resizing img {
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
+  flex: none;
 }
 
 .composer-plus:hover,
@@ -2888,13 +2912,6 @@ body.studio.is-resizing img {
 
 .composer-model:hover { background: #fff8c4; }
 .composer-model.ready:hover { background: var(--key-yellow-press); }
-
-@container kv-composer (max-width: 380px) {
-  #composerLibChip,
-  #composerSlash {
-    display: none;
-  }
-}
 
 .artifact {
   min-width: 0;
@@ -3541,23 +3558,25 @@ body.studio.is-resizing img {
 .slash-menu,
 .mention-menu {
   position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: calc(100% - 4px);
+  left: 8px;
+  right: 8px;
+  bottom: calc(100% + 6px);
   z-index: 24;
   background: #fff;
   border: 1px solid rgb(26 26 26 / 0.1);
-  border-radius: 14px;
+  border-radius: 12px;
   box-shadow: 0 18px 48px rgb(26 26 26 / 0.12);
   padding: 6px;
   max-height: 240px;
   overflow: auto;
+  pointer-events: auto;
 }
 
 .slash-menu[hidden],
 .mention-menu[hidden],
 .cmd-overlay[hidden] {
   display: none !important;
+  pointer-events: none !important;
 }
 
 .slash-item,
