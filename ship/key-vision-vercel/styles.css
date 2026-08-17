@@ -2772,11 +2772,11 @@ body.studio.is-resizing img {
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  min-height: 68px;
+  min-height: 44px;
   max-height: 160px;
   border: 0;
   background: transparent;
-  padding: 8px 6px 4px;
+  padding: 6px 6px 0;
   border-radius: 0;
   overflow-x: hidden;
   overflow-y: auto;
