@@ -425,12 +425,12 @@
   }
 
   const BRIEF_SLOTS = [
-    { key: "product", label: "分析对象", ask: "这轮要分析的具体产品是什么？例如青绿茶礼盒、白酒礼盒。" },
     { key: "audience", label: "人群", ask: "卖给谁？年龄、身份，送礼还是自用。" },
     { key: "price_band", label: "价格带", ask: "价格带大概在哪一档？大众、中端、中高端还是高端。" },
+    { key: "channel", label: "渠道市场", ask: "线上、线下，还是都有？电商、商超、专柜？" },
+    { key: "product", label: "分析对象", ask: "这轮要分析的具体产品是什么？例如青绿茶礼盒、白酒礼盒。" },
     { key: "culture_tone", label: "品牌定位", ask: "品牌气质怎么说？东方、国际简约、专业、时尚，还是别的。" },
     { key: "occasion", label: "使用场景", ask: "主要用在什么场合？节日礼赠、商务、还是日常自用？" },
-    { key: "channel", label: "渠道市场", ask: "线上、线下，还是都有？电商、商超、专柜？" },
     { key: "job_type", label: "课题类型", ask: "这是 0-1 新包装，还是现有包装升级？" },
   ];
 
@@ -3528,12 +3528,12 @@
 
   function briefTableHtml(input = {}) {
     const rows = [
-      ["分析对象", input.product],
       ["卖给谁", input.audience],
       ["价格带", input.price_band],
+      ["渠道市场", input.channel],
+      ["分析对象", input.product],
       ["品牌定位", input.culture_tone],
       ["使用场景", input.occasion],
-      ["渠道市场", input.channel],
       ["课题类型", input.job_type],
     ];
     return `<table class="brief-table"><tbody>${rows
