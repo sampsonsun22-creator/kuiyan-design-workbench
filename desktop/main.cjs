@@ -10,7 +10,7 @@ const fs = require("fs");
 const path = require("path");
 const { URL } = require("url");
 
-const CACHE_V = "452p21";
+const CACHE_V = "452p22";
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -144,7 +144,9 @@ function startServer(root) {
             const payload = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
             proxyChat(payload)
               .then((text) => sendJson(res, 200, { ok: true, text, model: payload.model, agent: payload.agent }))
-              .catch((err) => sendJson(res, 502, { ok: false, error: String(err.message || err) }));
+              .catch((err) =>
+                sendJson(res, 502, { ok: false, error: String(err.message || err).replace(/sk-[A-Za-z0-9_-]{6,}/g, "sk-***").slice(0, 240) })
+              );
           } catch (err) {
             sendJson(res, 400, { ok: false, error: "bad json" });
           }

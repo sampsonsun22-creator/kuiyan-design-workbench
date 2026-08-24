@@ -300,8 +300,22 @@
 
   function persistLlmAgents() {
     const cfg = currentLlm();
+    const blob = {
+      orchestrator: {
+        id: "orchestrator",
+        provider: cfg.provider || "deepseek",
+        baseUrl: cfg.baseUrl || "",
+        model: cfg.model || "",
+        apiKey: cleanApiKey(cfg.apiKey),
+      },
+    };
     try {
-      localStorage.setItem(LLM_STORE, JSON.stringify({ orchestrator: cfg }));
+      localStorage.setItem(LLM_STORE, JSON.stringify(blob));
+      const check = JSON.parse(localStorage.getItem(LLM_STORE) || "{}");
+      const kept = cleanApiKey((check.orchestrator || {}).apiKey);
+      if (blob.orchestrator.apiKey && kept !== blob.orchestrator.apiKey) {
+        toast("这台浏览器没能记住密钥");
+      }
     } catch (_) {}
     syncLlmUi();
   }
@@ -469,7 +483,11 @@
     if (el.btnNavReport) el.btnNavReport.classList.toggle("active", state.artifactOpen && state.tab === "report");
   }
 
-  function setArtifactOpen(open) {
+  function setArtifactOpen(open, opts = {}) {
+    if (open && !opts.force && isDraftInterview()) {
+      refuseDraftReveal(opts.why || "先开口问清 Brief，右边先不弹出。");
+      return;
+    }
     state.artifactOpen = Boolean(open);
     if (state.artifactOpen) state.holdResults = false;
     if (el.appRoot) el.appRoot.classList.toggle("artifact-open", state.artifactOpen);
@@ -2491,7 +2509,7 @@
       .map(([id, p]) => `<option value="${id}">${escapeHtml(p.label)}</option>`)
       .join("");
     const keyHint = cfg.apiKey
-      ? `已填入 ${escapeHtml(cfg.apiKey.slice(0, 3))}…${escapeHtml(cfg.apiKey.slice(-4))}，留空保存则不改`
+      ? `已保存 ${escapeHtml(cfg.apiKey.slice(0, 3))}…${escapeHtml(cfg.apiKey.slice(-4))}，留空保存则不改`
       : "sk- 开头，只存在这台浏览器";
     el.llmAgentFields.innerHTML = `<section class="llm-agent active-edit" data-agent="orchestrator">
         <h3>奎燕设计智能体</h3>
@@ -2507,12 +2525,10 @@
           <label>模型</label>
           <input data-llm-field="model" value="${escapeAttr(cfg.model || "")}" placeholder="deepseek-chat" />
           <label>API Key</label>
-          <input data-llm-field="apiKey" type="password" autocomplete="off" placeholder="${keyHint}" />
+          <input data-llm-field="apiKey" type="password" autocomplete="off" placeholder="${keyHint}" value="" />
         </div>
-        <p class="llm-key-state">${cfg.apiKey ? "密钥已保存在这台浏览器" : "还没填密钥"}</p>
+        <p class="llm-key-state">${cfg.apiKey ? "密钥已保存在这台浏览器 · 刷新后仍在" : "还没填密钥"}</p>
       </section>`;
-    const keyInput = el.llmAgentFields.querySelector('[data-llm-field="apiKey"]');
-    if (keyInput && cfg.apiKey) keyInput.value = cfg.apiKey;
     showLlmError("");
     probeLlmProxy();
   }
@@ -4038,8 +4054,7 @@
 
   function renderMentionMenu(q) {
     if (!el.mentionMenu) return;
-    const needle = String(q || "").replace(/^@/, "").toLowerCase();
-    const items = MENTION_ITEMS.filter((c) => !needle || `${c.title} ${c.hint}`.toLowerCase().includes(needle));
+    const items = filteredMention(q);
     if (!items.length) {
       closeMentionMenu();
       return;
@@ -4109,9 +4124,39 @@
     closeMentionMenu();
   }
 
+  function filteredMention(q) {
+    const needle = String(q || "").replace(/^@/, "").toLowerCase();
+    return MENTION_ITEMS.filter((c) => !needle || `${c.title} ${c.hint}`.toLowerCase().includes(needle));
+  }
+
   function isStudioCommandText(raw) {
-    const n = normalizeComposerText(raw);
-    return /^(看库|帮我筛选|出结论|看\s*brief|brief|弹出|收起|新建分析|素材库|本机库)$/i.test(n);
+    const t = String(raw || "").trim();
+    if (!t) return false;
+    if (t.startsWith("/") || t.startsWith("@")) return true;
+    const n = normalizeComposerText(t).toLowerCase();
+    const known = new Set();
+    SLASH_COMMANDS.concat(MENTION_ITEMS).forEach((c) => {
+      known.add(normalizeComposerText(c.token).toLowerCase());
+      known.add(normalizeComposerText(c.send).toLowerCase());
+      known.add(normalizeComposerText(c.title).toLowerCase());
+    });
+    return known.has(n) || /^(看库|帮我筛选|出结论|看\s*brief|brief|弹出|收起|新建分析|新建|筛选|结论|短名单|素材库|本机库)$/i.test(n);
+  }
+
+  function resolveComposerAction(raw) {
+    const t = String(raw || "").trim();
+    if (t === "/" || t === "@") return { kind: "menu-only" };
+    if (t.startsWith("/")) {
+      const exact = SLASH_COMMANDS.find((c) => c.token.toLowerCase() === t.toLowerCase());
+      const hit = exact || filteredSlash(t)[0];
+      return hit ? { kind: "slash", id: hit.id } : { kind: "menu-only" };
+    }
+    if (t.startsWith("@")) {
+      const exact = MENTION_ITEMS.find((c) => c.token.toLowerCase() === t.toLowerCase());
+      const hit = exact || filteredMention(t)[0];
+      return hit ? { kind: "mention", id: hit.id } : { kind: "menu-only" };
+    }
+    return null;
   }
 
   function normalizeComposerText(raw) {
@@ -4134,6 +4179,12 @@
     if (!raw) return;
     appendRun({ kind: "user", detail: scoped && !text.trim() ? `对照这张 · ${scoped.title}` : raw });
 
+    const action = resolveComposerAction(raw);
+    if (action) {
+      if (action.kind === "slash") pickSlash(action.id);
+      else if (action.kind === "mention") pickMention(action.id);
+      return;
+    }
     if (raw === "/新建" || raw === "新建分析") {
       createNewResearch();
       return;
@@ -4757,6 +4808,21 @@
     el.composer.addEventListener("submit", (e) => {
       e.preventDefault();
       if (state.llmBusy) return;
+      if (el.slashMenu && !el.slashMenu.hidden) {
+        const items = filteredSlash(el.composerInput.value);
+        if (items[state._slashIndex]) {
+          pickSlash(items[state._slashIndex].id);
+          return;
+        }
+      }
+      if (el.mentionMenu && !el.mentionMenu.hidden) {
+        const needle = (el.composerInput.value.match(/@[^\s]*$/) || ["@"])[0];
+        const items = filteredMention(needle);
+        if (items[state._mentionIndex]) {
+          pickMention(items[state._mentionIndex].id);
+          return;
+        }
+      }
       closeSlashMenu();
       closeMentionMenu();
       const v = el.composerInput.value;

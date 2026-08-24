@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p21`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p22`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -150,6 +150,8 @@ async function main() {
     note(await page.locator("#app.rail-collapsed").count().then((n) => n === 0), "Ctrl+B expands task rail");
     await page.locator("#composerInput").fill("/");
     note(await page.locator("#slashMenu").isVisible(), "typing / opens slash menu");
+    await page.locator("#composerInput").fill("@");
+    note(await page.locator("#mentionMenu").isVisible(), "typing @ opens mention menu");
     await page.locator("#composerInput").fill("");
     await page.keyboard.press("Escape");
     await page.locator("#btnToggleArtifact").click();
@@ -353,6 +355,37 @@ async function main() {
       (await page.locator("#llmDialog .llm-agent").count()) === 1 && !/跟编排器用同一套 API/.test(llmTxt),
       "settings has no 采集/点点 API cards"
     );
+    await page.locator('[data-llm-field="apiKey"]').fill("sk-test-persist-key-452p22");
+    await page.locator("#llmForm .llm-save").click();
+    await page.waitForFunction(() => document.getElementById("llmOverlay")?.hidden);
+    const storedKey = await page.evaluate(() => {
+      try {
+        const raw = JSON.parse(localStorage.getItem("key-vision-llm-agents") || "{}");
+        return (raw.orchestrator || {}).apiKey || raw.apiKey || "";
+      } catch (_) {
+        return "";
+      }
+    });
+    note(storedKey === "sk-test-persist-key-452p22", "settings save writes one DeepSeek-compatible key");
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => {
+      const bar = document.getElementById("wallCountBar");
+      return bar && /452|张/.test(bar.textContent || "");
+    });
+    const keptKey = await page.evaluate(() => {
+      try {
+        const raw = JSON.parse(localStorage.getItem("key-vision-llm-agents") || "{}");
+        return (raw.orchestrator || {}).apiKey || "";
+      } catch (_) {
+        return "";
+      }
+    });
+    note(keptKey === "sk-test-persist-key-452p22", "key survives reload");
+    await page.locator("#btnLlmSettings").click();
+    await page.waitForSelector("#llmOverlay:not([hidden])");
+    const keptTxt = await page.locator("#llmDialog").innerText();
+    note(/密钥已保存/.test(keptTxt), "settings says the key is still there after reload");
+    note((await page.locator('[data-llm-field="apiKey"]').inputValue()) === "", "saved key is not echoed into the password field");
     await page.locator("#llmClose").click();
 
     await page.locator("#btnNewResearch").click();
@@ -379,6 +412,29 @@ async function main() {
     note(
       !(await page.locator("#researchTitle").innerText()).includes("看库"),
       "slash 看库 is not absorbed as product"
+    );
+    await page.locator("#composerInput").fill("@");
+    note(await page.locator("#mentionMenu").isVisible(), "draft typing @ opens mention menu");
+    await page.locator("#composerInput").fill("@素材库");
+    await page.locator("#sendBtn").click();
+    note(
+      !(await page.locator("#researchTitle").innerText()).includes("素材库"),
+      "@素材库 is not absorbed as product"
+    );
+    note(
+      await page.locator("#app.artifact-open").count().then((n) => n === 0),
+      "@素材库 on draft keeps artifact closed"
+    );
+    await page.locator("#composerInput").fill("/筛选");
+    await page.locator("#sendBtn").click();
+    note(
+      !(await page.locator("#researchTitle").innerText()).includes("筛选"),
+      "/筛选 is not absorbed as product"
+    );
+    await page.locator("#btnToggleArtifact").click();
+    note(
+      await page.locator("#app.artifact-open").count().then((n) => n === 0),
+      "draft 弹出结果 does not open the library"
     );
     await page.locator("#btnNavResult").click();
     note(

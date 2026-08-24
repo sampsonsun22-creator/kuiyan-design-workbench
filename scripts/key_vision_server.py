@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -17,6 +18,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DIR = ROOT / "ship" / "key-vision"
 PORT = int(os.environ.get("KEY_VISION_PORT", "8767"))
+
+
+def redact_secret(text: str) -> str:
+    t = str(text or "")
+    t = re.sub(r"sk-[A-Za-z0-9_-]{6,}", "sk-***", t)
+    t = re.sub(r"(?i)(api[_-]?key|authorization)\s*[:=]\s*['\"]?[^\\s,'\"]+", r"\1=***", t)
+    return t
 
 
 def join_url(base: str, suffix: str) -> str:
@@ -95,7 +103,8 @@ class Handler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def log_message(self, fmt: str, *args) -> None:
-        sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
+        path = (self.path or "").split("?", 1)[0]
+        sys.stderr.write("%s - %s %s\n" % (self.address_string(), self.command, path))
 
     def do_OPTIONS(self) -> None:
         if self.path.startswith("/api/llm"):
@@ -143,7 +152,7 @@ class Handler(SimpleHTTPRequestHandler):
             else:
                 text = openai_chat(base, api_key, model, messages, timeout=60)
         except urllib.error.HTTPError as err:
-            detail = err.read().decode("utf-8", "ignore")[:400]
+            detail = redact_secret(err.read().decode("utf-8", "ignore")[:400])
             low = detail.lower()
             if err.code == 401 or "authentication" in low:
                 msg = "DeepSeek 说这把 Key 无效。请完整复制 sk- 开头的密钥。"
@@ -153,10 +162,10 @@ class Handler(SimpleHTTPRequestHandler):
                 msg = "DeepSeek 限流，稍等再试。"
             else:
                 msg = f"upstream {err.code}"
-            self._json(err.code, {"ok": False, "error": msg, "detail": detail})
+            self._json(err.code, {"ok": False, "error": msg})
             return
         except Exception as err:  # noqa: BLE001 — surface provider errors to the lab UI
-            self._json(502, {"ok": False, "error": str(err)[:240]})
+            self._json(502, {"ok": False, "error": redact_secret(str(err))[:240]})
             return
         self._json(200, {"ok": True, "text": text, "model": model, "agent": payload.get("agent")})
 
