@@ -170,6 +170,21 @@
   const SHORTLIST_TARGET = 12;
   const SHORTLIST_MIN = 8;
 
+  /**
+   * 093316 宠物粮包装锁：仓库里没有这三家的 jsonl 行（茶墙 / pet_food 概念墙都对不上）。
+   * 短名单只出这三家，不凑 8–12，不绑 452 茶墙。空名单=拒收。
+   */
+  const PET_FOOD_PACK_LOCK = {
+    id: "093316",
+    houses: [
+      { id: "lock-093316-orijen", title: "Orijen", brand: "Orijen" },
+      { id: "lock-093316-rc-cat", title: "皇家猫", brand: "皇家猫" },
+      { id: "lock-093316-rc-dog", title: "皇家犬", brand: "皇家犬" },
+    ],
+  };
+  const PET_FOOD_PACK_RE = /宠物粮|猫粮|狗粮|pet\s*food/i;
+  const DIR_CARD_STAMP = "假设 · 非完稿";
+
   /** analogy_plan 里明显跨行业的目标；只用于把计划标成「跨界」，不代表已采到样本。 */
   const CROSS_TARGET_RE = /美妆|护肤|香氛|香水|潮玩|家居|服饰|数码|球鞋|艺术衍生/i;
 
@@ -391,9 +406,57 @@
     } catch (_) {}
   }
 
+  function researchBriefBlob(r) {
+    const input = (r && r.brief) || {};
+    const live =
+      r && r.id === state.activeResearchId && state.bundle && state.bundle.l1
+        ? state.bundle.l1.input || {}
+        : {};
+    return [r && r.title, r && r.question, input.product, live.product].filter(Boolean).join(" ");
+  }
+
+  function isPetFoodPackBrief(r = currentResearch()) {
+    return Boolean(r && PET_FOOD_PACK_RE.test(researchBriefBlob(r)));
+  }
+
+  function petFoodLockItems() {
+    return PET_FOOD_PACK_LOCK.houses.map((h) => ({
+      id: h.id,
+      title: h.title,
+      author_or_brand: h.brand,
+      source: "093316",
+      source_type: "shelf",
+      query_used: "093316 宠物粮包装锁",
+      extra: { lock: "093316", brief_id: "pet_food_pack", brief_relevance_v1: "keep_core" },
+      wall_status: "lock",
+    }));
+  }
+
+  function petFoodLockCards() {
+    return PET_FOOD_PACK_LOCK.houses.map((h) => ({
+      card_id: `hyp-${h.id}`,
+      title: h.title,
+      one_liner: DIR_CARD_STAMP,
+      advantage: "只锁这家在售包装参照，不是完稿。",
+      differentiation: "",
+      recommended_style_buckets_zh: [],
+      reference_montage: [],
+      hou_decision: "pending",
+    }));
+  }
+
+  function attachPetFoodLockCards(bundle) {
+    if (!bundle) return bundle;
+    bundle.l4_cards = petFoodLockCards();
+    bundle.l4_cards.forEach((c) => {
+      if (!state.decisions[c.card_id]) state.decisions[c.card_id] = c.hou_decision || "pending";
+    });
+    return bundle;
+  }
+
   function emptyBundleFor(r) {
     const input = r.brief || {};
-    return {
+    const bundle = {
       bucket_id_to_zh: (state.bundle && state.bundle.bucket_id_to_zh) || {},
       l1: {
         brief_id: r.id,
@@ -414,6 +477,8 @@
       l3: { counts: {}, ai_recommended_buckets: [], l1_summary: {} },
       l4_cards: [],
     };
+    if (isPetFoodPackBrief(r)) attachPetFoodLockCards(bundle);
+    return bundle;
   }
 
   function syncQuestionMode() {
@@ -686,6 +751,7 @@
     const l1 = state.bundle && state.bundle.l1 ? state.bundle.l1 : { input: {}, intent: {} };
     l1.input = { ...(l1.input || {}), [key]: value };
     if (state.bundle) state.bundle.l1 = l1;
+    if (isPetFoodPackBrief(r) && state.bundle) attachPetFoodLockCards(state.bundle);
     if (el.researchTitle && r.title) el.researchTitle.textContent = r.title;
     state.briefAskKey = "";
     return key;
@@ -816,6 +882,7 @@
     if (/taobao|淘宝/.test(key)) return "淘宝";
     if (/dribbble/.test(key)) return "Dribbble";
     if (SOURCE_META[key]?.label) return SOURCE_META[key].label;
+    if (/093316/.test(key)) return "093316";
     if (/^[a-z0-9_-]+$/i.test(raw)) {
       return raw.replace(/[-_]/g, " ").replace(/\b([a-z])/g, (m, ch) => ch.toUpperCase());
     }
@@ -1442,6 +1509,19 @@
 
   async function loadLiveFeeds(research) {
     const r = research || RESEARCHES.find((x) => x.id === state.activeResearchId) || RESEARCHES[0];
+    if (isPetFoodPackBrief(r)) {
+      state.wallItems = [];
+      state.pendingItems = [];
+      state.feedCounts = { main: 0, pending: 0 };
+      state.preferredBuckets = [];
+      state.wallVisibleLimit = WALL_BATCH_INITIAL;
+      rebuildSourcesFromWall();
+      updateWallCountBar();
+      setCap("crawler", "idle", "宠物粮包装不绑茶墙，也不读概念墙凑数");
+      setCap("dotdot", "idle", "短名单只锁 093316 三家");
+      if (!userArmedPending) forceProductWallDefaults("after-empty-feeds");
+      return;
+    }
     const emptyWall = Boolean(r.emptyWall) || (r.feeds && Array.isArray(r.feeds.main) && r.feeds.main.length === 0);
     if (emptyWall) {
       state.wallItems = [];
@@ -2331,7 +2411,7 @@
   function renderStrategy() {
     const cards = state.bundle?.l4_cards || [];
     if (!cards.length) {
-      return `<p class="muted">这轮还没有方向假设卡。青绿茶礼盒那轮有三张（方向假设 · 非完稿）。</p>`;
+      return `<p class="muted">这轮还没有方向假设卡。青绿茶礼盒那轮有三张（${DIR_CARD_STAMP}）。</p>`;
     }
     return `<div class="strategy-list">${cards
       .map((c) => {
@@ -2364,7 +2444,7 @@
                     .join("")}</ul>`
                 : ""
             }
-            <p class="sc-disclaimer">${escapeHtml("方向假设 · 非完稿")}</p>
+            <p class="sc-disclaimer">${escapeHtml(DIR_CARD_STAMP)}</p>
           </div>
           <div class="sc-actions">
             <button type="button" class="keep-btn ${d === "keep" ? "active-keep" : ""}" data-decide="keep" data-card-id="${c.card_id}">留下</button>
@@ -2848,8 +2928,24 @@
     });
   }
 
+  function applyPetFoodShortlist() {
+    const houses = PET_FOOD_PACK_LOCK.houses;
+    if (!houses.length) {
+      setShortlist([]);
+      state.shortlistAuto = true;
+      return;
+    }
+    const items = petFoodLockItems().filter((it) => !state.shortlistRemoved.has(it.id));
+    setShortlist(items);
+    state.shortlistAuto = true;
+  }
+
   function ensureShortlist() {
     if (state.shortlistVisual.length || state.shortlistTouched) return;
+    if (isPetFoodPackBrief()) {
+      applyPetFoodShortlist();
+      return;
+    }
     const cands = shortlistCandidates();
     if (!cands.length) return;
     setShortlist(pickDiverse(cands, SHORTLIST_TARGET));
@@ -2947,6 +3043,22 @@
   }
 
   function applyLocalRescreen(comment) {
+    if (isPetFoodPackBrief()) {
+      applyPetFoodShortlist();
+      state.shortlistTouched = true;
+      renderCanvas();
+      toast("宠物粮短名单只锁 093316 三家，不按批注凑墙");
+      appendEvent({
+        agent: "点点",
+        time: "现在",
+        tag: "按批注重筛",
+        tagClass: "challenge",
+        dot: "warn",
+        html: `<p>「${escapeHtml(comment.slice(0, 40))}」没有扩成 8–12。宠物粮包装只出 093316 的 Orijen / 皇家猫 / 皇家犬；空名单拒收，不绑茶墙。</p>
+          <div class="event-note">不加采，不读 pet_food 概念墙，不写 jsonl。</div>`,
+      });
+      return;
+    }
     const cands = shortlistCandidates();
     const corpus = cands.map(itemBlob).join(" ");
     const parsed = parseComment(comment, corpus);
@@ -2997,6 +3109,10 @@
   }
 
   async function rescreenWithLlm(comment, agentId) {
+    if (isPetFoodPackBrief()) {
+      applyLocalRescreen(comment);
+      return;
+    }
     const cands = shortlistCandidates().slice(0, 40);
     if (!cands.length) {
       toast("墙上没有能进短名单的样本");
@@ -3259,16 +3375,23 @@
       </div>`;
 
     if (!list.length) {
-      const cands = shortlistCandidates().length;
+      const petLock = isPetFoodPackBrief();
+      const cands = petLock ? 0 : shortlistCandidates().length;
       return `<section class="panel l4-panel">
         <div class="panel-head">
           <h3>L4 决策筛选 · 短名单</h3>
-          <p class="panel-sub">从主墙里收 ${SHORTLIST_MIN}–${SHORTLIST_TARGET} 款给你拍板，不是 452 张全甩过来。</p>
+          <p class="panel-sub">${
+            petLock
+              ? "宠物粮包装只出 093316 的 Orijen / 皇家猫 / 皇家犬。空名单=拒收，不凑 8–12，不绑茶墙。"
+              : `从主墙里收 ${SHORTLIST_MIN}–${SHORTLIST_TARGET} 款给你拍板，不是 452 张全甩过来。`
+          }</p>
         </div>
         ${commentBox}
         <div class="empty"><div class="slogan">短名单现在是空的</div>
         <p class="hint">${
-          cands
+          petLock
+            ? "空名单=拒收。不会从青绿 452 或 pet_food 概念墙凑数。"
+            : cands
             ? `墙上还有 ${cands} 张能进短名单。要我按 Brief 命中 + 风格桶多样性再收一轮吗？`
             : currentResearch().onlyBriefDefault !== false
               ? "「只看贴 brief」把能进短名单的都筛掉了，或者这轮墙还没有可用图。可以关掉贴 brief 筛选，或换一轮已落地的研究。"
@@ -3324,7 +3447,9 @@
       <div class="panel-head">
         <h3>L4 决策筛选 · 短名单 ${list.length} 款</h3>
         <p class="panel-sub">${
-          state.shortlistAuto
+          isPetFoodPackBrief()
+            ? "093316 锁三家：Orijen / 皇家猫 / 皇家犬。不凑 8–12，不用茶墙。"
+            : state.shortlistAuto
             ? "先按 Brief 命中 + 风格桶多样性替你收了一轮，留哪个、拿掉哪个你说了算。"
             : "这是你自己从墙上勾进来的。"
         }</p>
@@ -3438,7 +3563,11 @@
         </section>`
       : `<section class="rp-sec">
           <h4><span class="rp-n">4</span>入选参考</h4>
-          <p class="rp-warn">短名单是空的，这一段没有入选款。先去 L4 收 8–12 款，或点「重新收一轮」。在那之前，不要把这份报告当成已经选完。</p>
+          <p class="rp-warn">${
+            isPetFoodPackBrief()
+              ? "空名单=拒收。宠物粮包装不会从青绿 452 或概念墙凑 8–12。"
+              : "短名单是空的，这一段没有入选款。先去 L4 收 8–12 款，或点「重新收一轮」。在那之前，不要把这份报告当成已经选完。"
+          }</p>
           <button type="button" class="empty-cta" data-empty-action="open-shortlist">去 L4 收短名单</button>
         </section>`;
 
@@ -3450,7 +3579,7 @@
         <ul class="rp-risk">${contrastGaps.map((g) => `<li>${escapeHtml(g)}</li>`).join("")}</ul>
         ${
           cards.length
-            ? `<p class="rp-note">下面三张是<strong>方向假设 · 非完稿</strong>，挂在结论层，不是 L4 短名单，也不是货架/跨界对照。</p><div class="rp-cards">${renderStrategy()}</div>`
+            ? `<p class="rp-note">下面三张是<strong>${DIR_CARD_STAMP}</strong>方向卡，挂在结论层，不是 L4 短名单，也不是货架/跨界对照。</p><div class="rp-cards">${renderStrategy()}</div>`
             : `<p class="muted">本轮没有方向假设卡。能交付的是 L4 短名单和上面的覆盖缺口；不会在这里编一套「还没生成」的完稿。</p>`
         }
       </section>`;
@@ -3936,7 +4065,8 @@
       );
       return false;
     }
-    if (currentResearch().emptyWall && !(state.wallItems || []).length) {
+    const petLock = isPetFoodPackBrief();
+    if (!petLock && currentResearch().emptyWall && !(state.wallItems || []).length) {
       toast(tab === "shortlist" ? "墙还是空的，短名单没有样本可收。" : "墙还是空的，结论没有样本可写。");
       return false;
     }
@@ -3950,7 +4080,9 @@
         appendRun({
           title: "L4 决策筛选",
           detail: n ? `短名单 ${n} 款` : "短名单是空的",
-          html: `<p class="run-quiet">只从已落地 ${state.feedCounts.main || 0} 张主墙收 8–12 款。跨界 ${lanes.cross}，不加采。</p>`,
+          html: petLock
+            ? `<p class="run-quiet">${n ? "093316 锁 Orijen / 皇家猫 / 皇家犬，不凑 8–12，不绑茶墙。" : "空名单=拒收。不会从青绿 452 凑数。"}不加采。</p>`
+            : `<p class="run-quiet">只从已落地 ${state.feedCounts.main || 0} 张主墙收 8–12 款。跨界 ${lanes.cross}，不加采。</p>`,
           actions: [{ artifact: "shortlist", label: "打开短名单" }],
         });
       }
@@ -4496,6 +4628,7 @@
       }
       await loadLiveFeeds(r);
       if (r.id === "r-green") ensureShortlist();
+      else if (isPetFoodPackBrief(r) && !isDraftInterview(r)) ensureShortlist();
       setCap("orchestrator", "online", `正在看「${r.title}」`);
       seedStream();
       if (r.custom) {
@@ -4706,7 +4839,11 @@
           state.shortlistReasons = {};
           ensureShortlist();
           renderCanvas();
-          toast(`又收了 ${state.shortlistVisual.length} 款 · 还是那 452 张墙`);
+          toast(
+            isPetFoodPackBrief()
+              ? `短名单 ${state.shortlistVisual.length} 款 · 093316 三家，不凑茶墙`
+              : `又收了 ${state.shortlistVisual.length} 款 · 还是那 452 张墙`
+          );
         }
         return;
       }
@@ -4784,6 +4921,10 @@
         return;
       }
       if (act === "shortlist") {
+        if (isPetFoodPackBrief()) {
+          toast("宠物粮短名单只锁 093316 三家，不从墙上凑");
+          return;
+        }
         ensureShortlist();
         const seen = new Set(state.shortlistVisual.map((x) => x.id));
         let added = 0;

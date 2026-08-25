@@ -483,7 +483,7 @@ async function main() {
     );
     note(!/满版热闹/.test(report), "L5 has no invented differentiation prose");
     note(/方向假设/.test(report) || /青绿新中轴/.test(report), "L5 hangs direction cards as 假设");
-    note(/方向假设 · 非完稿/.test(report), "L5 disclaimer 方向假设 · 非完稿");
+    note(/假设 · 非完稿/.test(report), "L5 disclaimer 假设 · 非完稿");
     note(/跨界对照：样本 0，不做/.test(report), "L5 does not invent 跨界对照");
     note(/没有淘宝色板/.test(report), "L5 does not invent 货架对照");
     note(/淘宝色板/.test(report) && /字体/.test(report), "L5 states color-board and type coverage gaps");
@@ -493,6 +493,50 @@ async function main() {
     note(l5Links >= 8, `L5 origin links ${l5Links}`);
     const l5Href = await page.locator(".rp-shortlist a.rp-link").first().getAttribute("href");
     note(/^https?:\/\//.test(l5Href || ""), `L5 first origin ${l5Href}`);
+
+    await page.locator("#btnNewResearch").click();
+    await page.waitForFunction(() => /未命名/.test(document.getElementById("researchTitle")?.textContent || ""));
+    const petAnswers = ["养宠家庭", "中高端", "电商", "宠物粮包装", "专业", "日常自用", "0-1 新包装"];
+    for (const text of petAnswers) {
+      const before = await page.locator("#activityStream .run").count();
+      await page.fill("#composerInput", text);
+      await page.locator("#sendBtn").click();
+      await page.waitForFunction((n) => document.querySelectorAll("#activityStream .run").length > n, before);
+    }
+    note(
+      (await page.locator("#researchTitle").innerText()).includes("宠物粮包装"),
+      "pet brief title is 宠物粮包装"
+    );
+    await page.fill("#composerInput", "/筛选");
+    await page.locator("#sendBtn").click();
+    await page.waitForSelector(".l4-panel");
+    const petSl = await page.locator(".l4-panel").innerText();
+    const petTitles = await page.locator(".l4-panel .sl-title").allInnerTexts();
+    const petCount = await page.locator(".l4-panel .sl-item").count();
+    note(petCount === 3, `pet-food shortlist count ${petCount}`);
+    note(
+      petTitles.some((t) => /Orijen/.test(t)) &&
+        petTitles.some((t) => /皇家猫/.test(t)) &&
+        petTitles.some((t) => /皇家犬/.test(t)),
+      `pet-food houses ${petTitles.join(" | ")}`
+    );
+    note(
+      !/青绿|小罐茶|静奢留白|茶礼/.test(petSl + petTitles.join(" ")),
+      "pet-food shortlist does not use the tea wall"
+    );
+    note(!/Petbarn|Waggo|Meowly/.test(petSl), "pet-food shortlist does not use concept-wall padding");
+    await page.locator('.tab[data-tab="report"]').click();
+    await page.waitForSelector(".report-panel");
+    const petReport = await page.locator("#canvasBody").innerText();
+    note(/假设 · 非完稿/.test(petReport), "pet direction cards stamp 假设 · 非完稿");
+    note(/Orijen/.test(petReport) && /皇家猫/.test(petReport) && /皇家犬/.test(petReport), "pet report keeps the three houses");
+    note(!/青绿新中轴/.test(petReport), "pet report does not reuse tea direction cards");
+
+    await page.locator('.research-card[data-id="r-green"]').click();
+    await page.locator('.tab[data-tab="shortlist"]').click();
+    await page.waitForSelector(".l4-panel .sl-item");
+    const greenAgain = await page.locator(".l4-panel .sl-item").count();
+    note(greenAgain >= 8 && greenAgain <= 12, `green-tea shortlist still ${greenAgain} after pet lock`);
 
     await browser.close();
   } catch (err) {

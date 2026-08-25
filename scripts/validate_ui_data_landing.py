@@ -184,6 +184,18 @@ def main() -> int:
         if not (ROOT / "ui-shell" / rel).exists():
             err.append(f"missing {rel}")
 
+    if "PET_FOOD_PACK_LOCK" not in app:
+        err.append("app.js missing 093316 pet-food shortlist lock")
+    for house in ("Orijen", "皇家猫", "皇家犬"):
+        if house not in app:
+            err.append(f"app.js missing pet-food lock house {house}")
+    if "假设 · 非完稿" not in app:
+        err.append("direction cards must stamp 假设 · 非完稿")
+    if "briefs/pet_food_main_wall.jsonl" in app:
+        err.append("app.js must not bind pet_food concept wall")
+    if "093316" not in app:
+        err.append("app.js missing 093316 lock id")
+
     tonic = ROOT / "ui-shell" / "data" / "briefs" / "tonic_gift_main_wall.jsonl"
     baijiu = ROOT / "ui-shell" / "data" / "briefs" / "baijiu_gift_main_wall.jsonl"
     if not tonic.exists() or nlines(tonic) < 50:
