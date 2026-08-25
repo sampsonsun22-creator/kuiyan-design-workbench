@@ -485,7 +485,7 @@ async function main() {
     note(/方向假设/.test(report) || /青绿新中轴/.test(report), "L5 hangs direction cards as 假设");
     note(/方向假设 · 非完稿/.test(report), "L5 disclaimer 方向假设 · 非完稿");
     note(/跨界对照：样本 0，不做/.test(report), "L5 does not invent 跨界对照");
-    note(/不做色板或口碑对照/.test(report) || /货架对照：没有 listing/.test(report), "L5 does not invent 货架对照");
+    note(/没有淘宝色板/.test(report), "L5 does not invent 货架对照");
     note(/淘宝色板/.test(report) && /字体/.test(report), "L5 states color-board and type coverage gaps");
     note(/复制本页要点/.test(report), "L5 has copy-report control");
     note(/下载报告/.test(report), "L5 has download-report control");

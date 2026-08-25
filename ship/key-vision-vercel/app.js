@@ -3919,8 +3919,8 @@
         ? `跨界对照：主墙有 ${counts.cross} 张，按已落地样本写，不补假的。`
         : "跨界对照：样本 0，不做。",
       counts.shelf
-        ? `货架对照：只有 ${counts.shelf} 条 listing 样，没有主色/评价，不做色板或口碑对照。`
-        : "货架对照：没有 listing 样，不做。",
+        ? `货架对照：只有 ${counts.shelf} 条 listing 样，没有主色/评价，没有淘宝色板，也不做口碑对照。`
+        : "货架对照：没有 listing 样，没有淘宝色板，不做。",
       counts.adjacent
         ? `不同类对照：只有 ${counts.adjacent} 张，薄到不够谈行业趋势。`
         : "不同类对照：样本 0，不做。",
