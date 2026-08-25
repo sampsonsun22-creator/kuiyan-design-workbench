@@ -334,6 +334,9 @@ async function main() {
     note(/检索词：/.test(sl), "L4 reasons include 检索词");
     note(/奎燕先验/.test(sl), "L4 reasons include 奎燕先验");
     note(!/色块与留白节奏可借鉴/.test(sl), "L4 has no invented craft prose");
+    note(!/keep_core|brief_relevance_v1/.test(sl), "L4 reasons hide qc raw codes");
+    note(!/点点 API/.test(sl), "L4 rescreen does not mention 点点 API");
+    note(/本轮无跨界样本，不编造/.test(sl) || /跨界 0/.test(sl), "L4 states 跨界 0 honestly");
 
     await page.fill("#houCommentBox", "不要金红，多留白");
     await page.locator('[data-shortlist-action="rescreen"]').click();
@@ -344,6 +347,17 @@ async function main() {
       /重筛|重排|留白|金红/.test(slAfter + toastTxt),
       `L4 comment rescreen reacts: ${(slAfter + toastTxt).slice(0, 80)}`
     );
+
+    await page.locator("#composerInput").fill("/结论");
+    await page.locator("#sendBtn").click();
+    await page.waitForSelector(".report-panel");
+    note(await page.locator(".report-panel .rp-sec").count().then((n) => n >= 6), "/结论 opens six-section report");
+    await page.locator("#btnNavReport").click();
+    note(await page.locator(".report-panel").count().then((n) => n === 1), "rail 报告 opens 结论");
+    await page.locator("#composerInput").fill("/筛选");
+    await page.locator("#sendBtn").click();
+    await page.waitForSelector(".l4-panel");
+    note(await page.locator(".l4-panel .sl-item").count().then((n) => n >= 8), "/筛选 opens shortlist from 452 wall");
 
     note(await page.locator("#btnNewResearch").isEnabled(), "新建研究 enabled");
     note(await page.locator("#btnLlmSettings").count().then((n) => n === 1), "gear settings button present");
@@ -469,6 +483,9 @@ async function main() {
     );
     note(!/满版热闹/.test(report), "L5 has no invented differentiation prose");
     note(/方向假设/.test(report) || /青绿新中轴/.test(report), "L5 hangs direction cards as 假设");
+    note(/方向假设 · 非完稿/.test(report), "L5 disclaimer 方向假设 · 非完稿");
+    note(/跨界对照：样本 0，不做/.test(report), "L5 does not invent 跨界对照");
+    note(/不做色板或口碑对照/.test(report) || /货架对照：没有 listing/.test(report), "L5 does not invent 货架对照");
     note(/淘宝色板/.test(report) && /字体/.test(report), "L5 states color-board and type coverage gaps");
     note(/复制本页要点/.test(report), "L5 has copy-report control");
     note(/下载报告/.test(report), "L5 has download-report control");

@@ -2331,7 +2331,7 @@
   function renderStrategy() {
     const cards = state.bundle?.l4_cards || [];
     if (!cards.length) {
-      return `<p class="muted">这轮还没有方向假设卡。青绿茶礼盒那轮有三张（示意 · 非完稿）。</p>`;
+      return `<p class="muted">这轮还没有方向假设卡。青绿茶礼盒那轮有三张（方向假设 · 非完稿）。</p>`;
     }
     return `<div class="strategy-list">${cards
       .map((c) => {
@@ -2364,9 +2364,7 @@
                     .join("")}</ul>`
                 : ""
             }
-            <p class="sc-disclaimer">${escapeHtml(
-              c.demo_disclaimer || "方向示意 · 非完稿"
-            )}</p>
+            <p class="sc-disclaimer">${escapeHtml("方向假设 · 非完稿")}</p>
           </div>
           <div class="sc-actions">
             <button type="button" class="keep-btn ${d === "keep" ? "active-keep" : ""}" data-decide="keep" data-card-id="${c.card_id}">留下</button>
@@ -2829,9 +2827,7 @@
     const query = it.query_used ? String(it.query_used).slice(0, 40) : "";
     const lines = [
       `路线：${scopeLabel(it)}${searchScope(it) === "shelf" ? "（在售 listing 样）" : ""}`,
-      `贴 brief：${briefRelLabel(it)}${
-        it.extra && it.extra.brief_relevance_v1 ? `（${it.extra.brief_relevance_v1}）` : ""
-      }`,
+      `贴 brief：${briefRelLabel(it)}`,
       `风格桶：${bucketZh || "未标注"}`,
       `来源：${humanSource(it.source) || "未标注"} · ${it.source_type || "未标注"}`,
       `检索词：${query || "未标注"}`,
@@ -3257,7 +3253,7 @@
           comment
         )}</textarea>
         <div class="l4-comment-foot">
-          <span class="muted">写完点重筛。有点点 API 就按这句话重排；没有就用墙上已有字段。不发起新采集。</span>
+          <span class="muted">写完点重筛。只认标题 / 检索词 / 已标风格桶，认不出的词会直说。不发起新采集。</span>
           <button type="button" class="l4-rescreen" data-shortlist-action="rescreen">按批注重筛</button>
         </div>
       </div>`;
@@ -3335,7 +3331,7 @@
       </div>
       <div class="sl-lanes">同类 ${laneN.same} · 不同类 ${laneN.adjacent} · 货架 ${laneN.shelf} · 跨界 ${
       laneN.cross
-    }（本轮无跨界样本，不编造）</div>
+    }${laneN.cross ? "" : "（本轮无跨界样本，不编造）"}</div>
       ${commentBox}
       <div class="sl-list">${cards}</div>
       <p class="honest-note">推荐理由只引用已采到的字段。奎燕案例只对齐场合/气质，没有案例图可对视觉。色彩、排版没标就写未标注；开箱、用户反馈没采到不编。</p>
@@ -3446,13 +3442,15 @@
           <button type="button" class="empty-cta" data-empty-action="open-shortlist">去 L4 收短名单</button>
         </section>`;
 
+    const contrastGaps = honestContrastGaps(counts);
     const sec5 = `
       <section class="rp-sec">
         <h4><span class="rp-n">5</span>差异化机会</h4>
-        <p class="rp-note">这一段只写能从样本结构数出来的空白。本轮：跨界 ${counts.cross}、不同类 ${counts.adjacent}、货架 ${counts.shelf}（listing 样）。货架色彩校准需要 listing 主色，本轮货架只有 ${counts.shelf} 条、色彩多数未标注，所以没有淘宝色板。</p>
+        <p class="rp-note">这一段只写能从样本结构数出来的空白。没有样本就不假装有对照。</p>
+        <ul class="rp-risk">${contrastGaps.map((g) => `<li>${escapeHtml(g)}</li>`).join("")}</ul>
         ${
           cards.length
-            ? `<p class="rp-note">下面三张是<strong>方向假设</strong>，挂在结论层，不是 L4 短名单，也不是完稿。</p><div class="rp-cards">${renderStrategy()}</div>`
+            ? `<p class="rp-note">下面三张是<strong>方向假设 · 非完稿</strong>，挂在结论层，不是 L4 短名单，也不是货架/跨界对照。</p><div class="rp-cards">${renderStrategy()}</div>`
             : `<p class="muted">本轮没有方向假设卡。能交付的是 L4 短名单和上面的覆盖缺口；不会在这里编一套「还没生成」的完稿。</p>`
         }
       </section>`;
@@ -3915,6 +3913,62 @@
     }
   }
 
+  function honestContrastGaps(counts) {
+    return [
+      counts.cross
+        ? `跨界对照：主墙有 ${counts.cross} 张，按已落地样本写，不补假的。`
+        : "跨界对照：样本 0，不做。",
+      counts.shelf
+        ? `货架对照：只有 ${counts.shelf} 条 listing 样，没有主色/评价，不做色板或口碑对照。`
+        : "货架对照：没有 listing 样，不做。",
+      counts.adjacent
+        ? `不同类对照：只有 ${counts.adjacent} 张，薄到不够谈行业趋势。`
+        : "不同类对照：样本 0，不做。",
+      "用户反馈 / 开箱 / 成本：本轮未采，不做对照。",
+    ];
+  }
+
+  function openDecisionLayer(tab, { stamp = true } = {}) {
+    if (tab !== "shortlist" && tab !== "report") return false;
+    if (isDraftInterview()) {
+      refuseDraftReveal(
+        tab === "shortlist" ? "墙还是空的，短名单没有样本可收。" : "墙还是空的，结论没有样本可写。"
+      );
+      return false;
+    }
+    if (currentResearch().emptyWall && !(state.wallItems || []).length) {
+      toast(tab === "shortlist" ? "墙还是空的，短名单没有样本可收。" : "墙还是空的，结论没有样本可写。");
+      return false;
+    }
+    ensureShortlist();
+    const n = state.shortlistVisual.length;
+    const lanes = scopeCounts();
+    if (tab === "shortlist") {
+      setStage(4, { appendEvent: false });
+      revealAndSwitch("shortlist", { fromStage: true });
+      if (stamp) {
+        appendRun({
+          title: "L4 决策筛选",
+          detail: n ? `短名单 ${n} 款` : "短名单是空的",
+          html: `<p class="run-quiet">只从已落地 ${state.feedCounts.main || 0} 张主墙收 8–12 款。跨界 ${lanes.cross}，不加采。</p>`,
+          actions: [{ artifact: "shortlist", label: "打开短名单" }],
+        });
+      }
+      return true;
+    }
+    setStage(5, { appendEvent: false });
+    revealAndSwitch("report", { fromStage: true });
+    if (stamp) {
+      appendRun({
+        title: "L5 结论报告",
+        detail: n ? `入选 ${n} 款` : "覆盖缺口",
+        html: `<p class="run-quiet">六段结论。跨界 ${lanes.cross} 不编。没有样本的对照不做。</p>`,
+        actions: [{ artifact: "report", label: "打开结论" }],
+      });
+    }
+    return true;
+  }
+
   function handleArtifact(kind) {
     if (kind === "brief" || kind === "intent") {
       setStage(1, { appendEvent: false });
@@ -3923,11 +3977,9 @@
       setStage(3, { appendEvent: false });
       revealAndSwitch("visual", { fromStage: true });
     } else if (kind === "shortlist") {
-      setStage(4, { appendEvent: false });
-      revealAndSwitch("shortlist", { fromStage: true });
+      openDecisionLayer("shortlist");
     } else if (kind === "report" || kind === "strategy") {
-      setStage(5, { appendEvent: false });
-      revealAndSwitch("report", { fromStage: true });
+      openDecisionLayer("report");
     }
   }
 
@@ -4284,13 +4336,11 @@
       return;
     }
     if (/筛选|短名单|选参考|收几张|入选/.test(t)) {
-      setStage(4);
-      revealAndSwitch("shortlist", { fromStage: true });
+      openDecisionLayer("shortlist");
       return;
     }
     if (/报告|结论|差异化|机会|下一步|纪要/.test(t)) {
-      setStage(5);
-      revealAndSwitch("report", { fromStage: true });
+      openDecisionLayer("report");
       return;
     }
     if (/方向假设|策略卡|三张方向|三张卡/.test(t)) {
@@ -4445,6 +4495,7 @@
         };
       }
       await loadLiveFeeds(r);
+      if (r.id === "r-green") ensureShortlist();
       setCap("orchestrator", "online", `正在看「${r.title}」`);
       seedStream();
       if (r.custom) {
@@ -4958,7 +5009,7 @@
       });
     }
     if (el.btnNavReport) {
-      el.btnNavReport.addEventListener("click", () => revealAndSwitch("report", { fromStage: true }));
+      el.btnNavReport.addEventListener("click", () => openDecisionLayer("report"));
     }
     if (el.btnNavChat) {
       el.btnNavChat.addEventListener("click", () => {
