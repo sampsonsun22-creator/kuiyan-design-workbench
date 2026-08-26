@@ -213,6 +213,12 @@
     btnNew: $("btnNewResearch"),
     btnSettings: $("btnLlmSettings"),
     btnCapConfig: $("btnCapConfig"),
+    briefOverlay: $("briefOverlay"),
+    briefForm: $("briefForm"),
+    briefFields: $("briefFields"),
+    briefLead: $("briefLead"),
+    briefClose: $("briefClose"),
+    briefError: $("briefError"),
     llmOverlay: $("llmOverlay"),
     llmForm: $("llmForm"),
     llmAgentFields: $("llmAgentFields"),
@@ -514,7 +520,7 @@
   function syncPhaseWhisper() {
     if (!el.phaseWhisper) return;
     if (isDraftInterview()) {
-      el.phaseWhisper.textContent = "先开口。问清之前，右边不弹出结果。";
+      el.phaseWhisper.textContent = "缺的 Brief 项在对话框里一次填。中栏不再一问一答。";
       return;
     }
     el.phaseWhisper.textContent = PHASE_WHISPER[state.stage] || PHASE_WHISPER[1];
@@ -757,24 +763,126 @@
     return key;
   }
 
-  function askNextBriefSlot() {
+  function showBriefError(msg) {
+    if (!el.briefError) return;
+    if (!msg) {
+      el.briefError.hidden = true;
+      el.briefError.textContent = "";
+      return;
+    }
+    el.briefError.hidden = false;
+    el.briefError.textContent = msg;
+  }
+
+  function closeBriefDialog() {
+    if (el.briefOverlay) el.briefOverlay.hidden = true;
+  }
+
+  function openBriefDialog() {
     const missing = missingBriefSlots();
     if (!missing.length) {
       state.briefAskKey = "";
+      closeBriefDialog();
       return false;
     }
-    const slot = missing[0];
-    state.briefAskKey = slot.key;
-    appendRun({
-      kind: "ask",
-      actor: "奎燕设计智能体",
-      title: "追问",
-      detail: slot.label,
-      status: "done",
-      html: `<p>${escapeHtml(slot.ask)}</p>
-        <p class="run-quiet">还缺「${escapeHtml(slot.label)}」。先在对话里说清楚，问清之前右边不弹出。</p>`,
-    });
+    state.briefAskKey = "";
+    const input = briefInput();
+    const showAll = missing.length === BRIEF_SLOTS.length;
+    const slots = showAll ? BRIEF_SLOTS : missing;
+    if (el.briefLead) {
+      el.briefLead.textContent = showAll
+        ? "一次收齐下面这些项。中栏不再一问一答。"
+        : `还缺 ${missing.map((s) => s.label).join(" / ")}。缺哪问哪，填完就铺短名单。`;
+    }
+    if (el.briefFields) {
+      el.briefFields.innerHTML = slots
+        .map((slot) => {
+          const val = String(input[slot.key] || "").trim();
+          return `<div class="brief-field missing">
+            <label for="brief-slot-${escapeAttr(slot.key)}">${escapeHtml(slot.label)}</label>
+            <span class="brief-ask">${escapeHtml(slot.ask)}</span>
+            <input id="brief-slot-${escapeAttr(slot.key)}" name="${escapeAttr(slot.key)}" data-brief-slot="${escapeAttr(
+              slot.key
+            )}" value="${escapeAttr(val)}" maxlength="80" required autocomplete="off" />
+          </div>`;
+        })
+        .join("");
+    }
+    showBriefError("");
+    if (el.briefOverlay) el.briefOverlay.hidden = false;
+    const first = el.briefFields && el.briefFields.querySelector("input");
+    if (first) first.focus();
     return true;
+  }
+
+  function revealAfterBriefReady() {
+    const r = currentResearch();
+    state.holdResults = false;
+    if (isPetFoodPackBrief(r) && state.bundle) attachPetFoodLockCards(state.bundle);
+    ensureShortlist();
+    const n = state.shortlistVisual.length;
+    appendRun({
+      title: "Brief 已收齐",
+      detail: n ? `短名单 ${n} 款` : "结论已开",
+      html: `<p class="run-quiet">${
+        isPetFoodPackBrief(r)
+          ? n
+            ? "093316 锁 Orijen / 皇家猫 / 皇家犬。不凑 8，不绑茶墙。"
+            : "空名单=拒收。不会从青绿 452 凑数。"
+          : n
+            ? "短名单和结论已按已落地样本铺上。"
+            : "这轮墙上还没有能进短名单的样本，结论只写缺口。"
+      }中栏不再一问一答。</p>`,
+    });
+    openDecisionLayer("shortlist", { stamp: false });
+    openDecisionLayer("report", { stamp: false });
+  }
+
+  function commitBriefDialog() {
+    const r = currentResearch();
+    if (!r) return false;
+    r.brief = r.brief || {};
+    const root = el.briefFields;
+    if (root) {
+      root.querySelectorAll("[data-brief-slot]").forEach((node) => {
+        const key = node.dataset.briefSlot;
+        const value = String(node.value || "").trim().slice(0, 80);
+        if (!key) return;
+        if (value) r.brief[key] = value;
+      });
+    }
+    if (r.custom && r.brief.product) r.title = `${r.brief.product}竞品调研`;
+    if (r.custom) persistCustomResearches();
+    state.bundle = emptyBundleFor(r);
+    if (el.researchTitle && r.title) el.researchTitle.textContent = r.title;
+    state.briefAskKey = "";
+    if (missingBriefSlots().length) {
+      openBriefDialog();
+      showBriefError("还缺几项，补完再铺短名单。");
+      return false;
+    }
+    closeBriefDialog();
+    revealAfterBriefReady();
+    return true;
+  }
+
+  function bindBriefDialog() {
+    if (!el.briefForm || el.briefForm.dataset.bound) return;
+    el.briefForm.dataset.bound = "1";
+    el.briefForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      commitBriefDialog();
+    });
+    if (el.briefClose) el.briefClose.addEventListener("click", closeBriefDialog);
+    if (el.briefOverlay) {
+      el.briefOverlay.addEventListener("click", (e) => {
+        if (e.target === el.briefOverlay) closeBriefDialog();
+      });
+    }
+  }
+
+  function askNextBriefSlot() {
+    return openBriefDialog();
   }
 
   function libraryLaneOf(it) {
@@ -1343,9 +1451,8 @@
 
   function refuseDraftReveal(why) {
     if (!isDraftInterview()) return false;
-    toast(why || "先开口问清 Brief，右边先不弹出。");
-    askNextBriefSlot();
-    if (el.composerInput) el.composerInput.focus();
+    toast(why || "缺的 Brief 项在对话框里一次填。");
+    openBriefDialog();
     return true;
   }
 
@@ -4386,28 +4493,9 @@
       !isStudioCommandText(raw) &&
       (state.briefAskKey || (currentResearch().custom && missingBriefSlots().length))
     ) {
-        const filled = absorbBriefAnswer(raw);
-        if (filled) {
-          const slot = BRIEF_SLOTS.find((s) => s.key === filled);
-          appendRun({
-            title: "记下",
-            detail: `${slot ? slot.label : filled} · ${raw.slice(0, 40)}`,
-            html: `<p>「${escapeHtml(slot ? slot.label : filled)}」记下了：${escapeHtml(raw.slice(0, 80))}。</p>`,
-          });
-        if (el.canvasBody && state.tab === "intent" && !state.holdResults) {
-          renderCanvas({ preserveScroll: true });
-        }
-        if (askNextBriefSlot()) return;
-        appendRun({
-          title: "可以检索了",
-          detail: "Brief 够用",
-          html: `<p class="run-quiet">问清的结果在右边。下一步只检索自有库，不对外网站点新爬。</p>`,
-          actions: [{ artifact: "map", label: "打开自有库" }],
-        });
-        setStage(1, { appendEvent: false });
-        revealAndSwitch("intent", { fromStage: true });
-        return;
-      }
+      openBriefDialog();
+      toast("缺的 Brief 项在对话框里一次填，中栏不再一问一答。");
+      return;
     }
 
     const t = normalizeComposerText(raw);
@@ -4596,6 +4684,7 @@
         el.briefToggle.dataset.brief = "0";
       }
     }
+    closeBriefDialog();
     if (!(r.custom && r.emptyWall)) toast(`正在打开「${r.title}」…`);
     try {
       if (r.id === "r-green") {
@@ -4647,8 +4736,8 @@
         syncQuestionMode();
         syncPhaseWhisper();
         syncResultChrome();
-        if (el.composerInput) el.composerInput.focus();
-        toast(state.holdResults ? "新任务是空白的。先开口，我再问。" : `正在打开「${r.title}」`);
+        if (state.holdResults) openBriefDialog();
+        toast(state.holdResults ? "缺的 Brief 项在对话框里填。" : `正在打开「${r.title}」`);
       } else {
         state.holdResults = false;
         state.stage = 3;
@@ -4661,7 +4750,7 @@
             detail: `${state.feedCounts.main} 张`,
             html: `<p class="run-quiet">这轮 Brief 还没录入，客群、红线都是未标注。茶礼那轮的方向卡不会跟过来。</p>`,
           });
-          askNextBriefSlot();
+          openBriefDialog();
         }
       }
     } catch (err) {
@@ -5286,6 +5375,11 @@
           closeCommandPalette();
           return;
         }
+        if (el.briefOverlay && !el.briefOverlay.hidden) {
+          e.preventDefault();
+          closeBriefDialog();
+          return;
+        }
         if (el.llmOverlay && !el.llmOverlay.hidden) {
           e.preventDefault();
           closeLlmSettings();
@@ -5366,6 +5460,7 @@
       });
     }
     bindLlmFormEvents();
+    bindBriefDialog();
 
     const attachRow = document.querySelector(".attach-row");
     if (attachRow) {

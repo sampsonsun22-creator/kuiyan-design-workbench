@@ -2096,6 +2096,109 @@ button, input, textarea, select {
 }
 .kv-edit label { font-size: 12px; color: var(--text-muted); font-weight: 700; }
 
+.brief-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(26 26 26 / 0.38);
+  z-index: 82;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.brief-overlay[hidden] { display: none !important; }
+.brief-modal {
+  width: min(560px, 100%);
+  max-height: min(86vh, 760px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgb(26 26 26 / 0.22);
+  padding: 18px 18px 16px;
+}
+.brief-modal-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.brief-modal-head h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+.brief-lead {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.brief-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: var(--surface-2);
+  cursor: pointer;
+  font-size: 18px;
+}
+.brief-fields {
+  display: grid;
+  gap: 10px;
+}
+.brief-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.brief-field .brief-ask {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+.brief-field input {
+  width: 100%;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 0 10px;
+}
+.brief-field.missing input {
+  border-color: #c48a2a;
+}
+.brief-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.brief-error {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 12px;
+  color: #9a2f32;
+}
+.brief-error[hidden] { display: none !important; }
+.brief-save {
+  margin-left: auto;
+  height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .llm-overlay {
   position: fixed;
   inset: 0;

@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KEY 视界 · 奎燕竞品分析</title>
   <link rel="icon" href="assets/brand/logo-key-lockup-on-light.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=452p22" />
+  <link rel="stylesheet" href="styles.css?v=452p35s" />
 </head>
 <body class="studio">
   <div class="app studio-app artifact-open" id="app">
@@ -241,6 +241,25 @@
     </div>
   </div>
 
+  <div class="brief-overlay" id="briefOverlay" hidden>
+    <div class="brief-modal" role="dialog" aria-modal="true" aria-labelledby="briefTitle" id="briefDialog">
+      <div class="brief-modal-head">
+        <div>
+          <h2 id="briefTitle">补齐 Brief</h2>
+          <p class="brief-lead" id="briefLead">缺哪问哪，一次收齐。中栏不再一问一答。</p>
+        </div>
+        <button type="button" class="brief-close" id="briefClose" aria-label="关闭">×</button>
+      </div>
+      <form class="brief-form" id="briefForm" novalidate>
+        <div class="brief-fields" id="briefFields"></div>
+        <div class="brief-actions">
+          <p class="brief-error" id="briefError" hidden></p>
+          <button type="submit" class="brief-save" id="briefSave">收齐并铺上短名单</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="llm-overlay" id="llmOverlay" hidden>
     <div class="llm-modal" role="dialog" aria-modal="true" aria-labelledby="llmTitle" id="llmDialog">
       <div class="llm-modal-head">
@@ -262,6 +281,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=452p22"></script>
+  <script src="app.js?v=452p35s"></script>
 </body>
 </html>

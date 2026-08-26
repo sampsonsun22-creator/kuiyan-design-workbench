@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p22`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p35s`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -405,6 +405,20 @@ async function main() {
     await page.locator("#btnNewResearch").click();
     await page.waitForFunction(() => /未命名/.test(document.getElementById("researchTitle")?.textContent || ""));
     note(
+      await page.locator("#briefOverlay:not([hidden])").count().then((n) => n === 1),
+      "new task opens brief dialog"
+    );
+    note(
+      await page.locator("#briefFields [data-brief-slot]").count().then((n) => n === 7),
+      "brief dialog collects all slots at once"
+    );
+    note(
+      await page.locator("#activityStream").innerText().then((t) => !/追问|还缺「/.test(t)),
+      "new task stream has no 追问 bubble"
+    );
+    await page.locator("#briefClose").click();
+    await page.waitForFunction(() => document.getElementById("briefOverlay")?.hidden);
+    note(
       await page.locator("#app.artifact-open").count().then((n) => n === 0),
       "new task does not pop the result pane"
     );
@@ -423,6 +437,10 @@ async function main() {
       await page.locator("#app.artifact-open").count().then((n) => n === 0),
       "slash 看库 on draft keeps artifact closed"
     );
+    if (await page.locator("#briefOverlay:not([hidden])").count()) {
+      await page.locator("#briefClose").click();
+      await page.waitForFunction(() => document.getElementById("briefOverlay")?.hidden);
+    }
     note(
       !(await page.locator("#researchTitle").innerText()).includes("看库"),
       "slash 看库 is not absorbed as product"
@@ -439,29 +457,51 @@ async function main() {
       await page.locator("#app.artifact-open").count().then((n) => n === 0),
       "@素材库 on draft keeps artifact closed"
     );
+    if (await page.locator("#briefOverlay:not([hidden])").count()) {
+      await page.locator("#briefClose").click();
+      await page.waitForFunction(() => document.getElementById("briefOverlay")?.hidden);
+    }
     await page.locator("#composerInput").fill("/筛选");
     await page.locator("#sendBtn").click();
     note(
       !(await page.locator("#researchTitle").innerText()).includes("筛选"),
       "/筛选 is not absorbed as product"
     );
+    if (await page.locator("#briefOverlay:not([hidden])").count()) {
+      await page.locator("#briefClose").click();
+      await page.waitForFunction(() => document.getElementById("briefOverlay")?.hidden);
+    }
     await page.locator("#btnToggleArtifact").click();
     note(
       await page.locator("#app.artifact-open").count().then((n) => n === 0),
       "draft 弹出结果 does not open the library"
     );
+    if (await page.locator("#briefOverlay:not([hidden])").count()) {
+      await page.locator("#briefClose").click();
+      await page.waitForFunction(() => document.getElementById("briefOverlay")?.hidden);
+    }
     await page.locator("#btnNavResult").click();
     note(
       await page.locator("#app.artifact-open").count().then((n) => n === 0),
       "素材库 on draft does not pop"
     );
+    if (await page.locator("#briefOverlay:not([hidden])").count()) {
+      await page.locator("#briefClose").click();
+      await page.waitForFunction(() => document.getElementById("briefOverlay")?.hidden);
+    }
     await page.fill("#composerInput", "青绿茶礼盒");
     await page.locator("#sendBtn").click();
-    await page.waitForFunction(() => /记下|卖给谁|人群/.test(document.getElementById("activityStream")?.textContent || ""));
+    await page.waitForSelector("#briefOverlay:not([hidden])");
     note(
       await page.locator("#app.artifact-open").count().then((n) => n === 0),
       "first chat turn still keeps results closed"
     );
+    note(
+      await page.locator("#activityStream").innerText().then((t) => !/记下/.test(t)),
+      "chat does not absorb 青绿茶礼盒 as a slot answer"
+    );
+    await page.locator("#briefClose").click();
+    await page.waitForFunction(() => document.getElementById("briefOverlay")?.hidden);
     note(
       await page.locator("#activityStream .run[data-jump]").count().then((n) => n === 0),
       "draft run rows do not jump the held pane"
@@ -495,20 +535,31 @@ async function main() {
     note(/^https?:\/\//.test(l5Href || ""), `L5 first origin ${l5Href}`);
 
     await page.locator("#btnNewResearch").click();
-    await page.waitForFunction(() => /未命名/.test(document.getElementById("researchTitle")?.textContent || ""));
-    const petAnswers = ["养宠家庭", "中高端", "电商", "宠物粮包装", "专业", "日常自用", "0-1 新包装"];
-    for (const text of petAnswers) {
-      const before = await page.locator("#activityStream .run").count();
-      await page.fill("#composerInput", text);
-      await page.locator("#sendBtn").click();
-      await page.waitForFunction((n) => document.querySelectorAll("#activityStream .run").length > n, before);
+    await page.waitForSelector("#briefOverlay:not([hidden])");
+    const petSlots = {
+      audience: "养宠家庭",
+      price_band: "中高端",
+      channel: "电商",
+      product: "宠物粮包装",
+      culture_tone: "专业",
+      occasion: "日常自用",
+      job_type: "0-1 新包装",
+    };
+    for (const [key, value] of Object.entries(petSlots)) {
+      await page.fill(`[data-brief-slot="${key}"]`, value);
     }
+    await page.locator("#briefSave").click();
+    await page.waitForFunction(() => document.getElementById("briefOverlay")?.hidden);
     note(
       (await page.locator("#researchTitle").innerText()).includes("宠物粮包装"),
       "pet brief title is 宠物粮包装"
     );
-    await page.fill("#composerInput", "/筛选");
-    await page.locator("#sendBtn").click();
+    await page.waitForSelector(".report-panel, .l4-panel");
+    const autoTab = await page.locator("#canvasBody .report-panel, #canvasBody .l4-panel").first().getAttribute("class");
+    note(/report-panel|l4-panel/.test(autoTab || ""), `brief submit auto-opens layers (${autoTab})`);
+    if (await page.locator(".report-panel").count()) {
+      await page.locator('.tab[data-tab="shortlist"]').click();
+    }
     await page.waitForSelector(".l4-panel");
     const petSl = await page.locator(".l4-panel").innerText();
     const petTitles = await page.locator(".l4-panel .sl-title").allInnerTexts();

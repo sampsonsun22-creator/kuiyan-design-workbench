@@ -134,6 +134,12 @@ def main() -> int:
             err.append("index.html missing 新建研究 label")
     if 'id="btnLlmSettings"' not in html or 'id="llmOverlay"' not in html:
         err.append("missing LLM settings UI")
+    if 'id="briefOverlay"' not in html:
+        err.append("index.html missing brief slot dialog")
+    if "function openBriefDialog" not in app or "function commitBriefDialog" not in app:
+        err.append("app.js missing brief slot dialog")
+    if "还缺「" in app and 'title: "追问"' in app:
+        err.append("center column must not trap users with 追问 bubbles")
     if "function createNewResearch" not in app:
         err.append("app.js missing createNewResearch")
     if "function openLlmSettings" not in app or "AGENT_LLM_META" not in app:
