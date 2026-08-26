@@ -855,6 +855,7 @@
     if (r.custom) persistCustomResearches();
     state.bundle = emptyBundleFor(r);
     if (el.researchTitle && r.title) el.researchTitle.textContent = r.title;
+    renderResearch();
     state.briefAskKey = "";
     if (missingBriefSlots().length) {
       openBriefDialog();
