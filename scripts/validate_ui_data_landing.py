@@ -200,12 +200,60 @@ def main() -> int:
         err.append("app.js missing 本研调研 wall after Brief product pin")
     if "passesBagFrontQc" not in app:
         err.append("app.js missing bag-front QC")
+    if "isPendingReview" not in app or "benyanBriefSpecies" not in app or "benyanShortlistFormed" not in app:
+        err.append("app.js missing 本研 pending / 猫犬 / 短名单未成立 gates")
+    if "短名单未成立" not in app:
+        err.append("app.js must report 短名单未成立")
+    if "短名单据此成立" in app or "按袋面成立" in app or "短名单按本研袋面成立" in app:
+        err.append("app.js must not claim 短名单成立 for 本研")
     if "假设 · 非完稿" not in app:
         err.append("green-tea direction cards must still stamp 假设 · 非完稿")
     if "briefs/pet_food_main_wall.jsonl" in app:
         err.append("app.js must not bind pet_food concept wall")
-    if "452p38" not in html:
-        err.append("index.html cache bust must be ?v=452p38")
+    if "452p39" not in html:
+        err.append("index.html cache bust must be ?v=452p39")
+    if "/api/pack/collect" not in app or "requestPackCollect" not in app:
+        err.append("app.js missing /api/pack/collect hook")
+    if "saveBriefFillDialog" not in app:
+        err.append("app.js missing saveBriefFillDialog alias")
+    if "benyanSessionPending" not in app:
+        err.append("app.js missing session pending ingest")
+    if "自动采" in app:
+        err.append("app.js must not say 自动采")
+    if "CONTEXT_DEV_API_KEY=" in app or "ctxt_secret_" in app:
+        err.append("app.js must not embed Context.dev secret")
+    collect_js = ROOT / "ship" / "key-vision-live" / "api" / "pack" / "collect.js"
+    if not collect_js.exists():
+        err.append("missing ship/key-vision-live/api/pack/collect.js")
+    else:
+        collect = collect_js.read_text(encoding="utf-8")
+        if "numResults: 10" not in collect and "numResults:10" not in collect:
+            err.append("collect.js must send numResults 10")
+        if "factCheck: true" not in collect:
+            err.append("collect.js missing factCheck")
+        if "maxPages: 1" not in collect or "maxDepth: 0" not in collect:
+            err.append("collect.js missing extract page/depth caps")
+        if "ctxt_secret_" in collect or "CONTEXT_DEV_API_KEY=" in collect:
+            err.append("collect.js must not embed Context.dev secret")
+        if "100121540384" in collect or "35482167913" in collect or "709835" in collect:
+            # banned IDs may appear only as a deny list
+            if "BANNED_JD" not in collect:
+                err.append("collect.js must not hardcode 093316 SKUs")
+        if "自动采" in collect:
+            err.append("collect.js must not say 自动采")
+    if "100121540384" in app or "35482167913" in app or "709835" in app:
+        err.append("app.js must not hardcode 093316 SKUs")
+    server_py = (ROOT / "scripts" / "key_vision_server.py").read_text(encoding="utf-8")
+    if "/api/pack/collect" not in server_py or "_handle_pack_collect" not in server_py:
+        err.append("key_vision_server.py missing /api/pack/collect")
+    if "自动采" in server_py:
+        err.append("key_vision_server.py must not say 自动采")
+    ship_py = (ROOT / "scripts" / "ship_key_vision.py").read_text(encoding="utf-8")
+    if "api" not in ship_py or "collect.js" not in ship_py:
+        err.append("ship_key_vision.py must copy api/pack/collect.js")
+    shipped_collect = ROOT / "ship" / "key-vision-vercel" / "api" / "pack" / "collect.js"
+    if not shipped_collect.exists():
+        err.append("ship/key-vision-vercel missing api/pack/collect.js")
 
     tonic = ROOT / "ui-shell" / "data" / "briefs" / "tonic_gift_main_wall.jsonl"
     baijiu = ROOT / "ui-shell" / "data" / "briefs" / "baijiu_gift_main_wall.jsonl"

@@ -52,6 +52,7 @@ def main() -> int:
         "assets/brand/logo-key-mark-on-dark.svg",
         "assets/brand/logo-key-mark.svg",
     ]
+    live_api = ROOT / "ship" / "key-vision-live" / "api" / "pack" / "collect.js"
     for dest in DESTS:
         for rel in files:
             src = SRC / rel
@@ -64,6 +65,8 @@ def main() -> int:
         demo = dest / "data" / "demo-bundle.json"
         if slim.exists():
             shutil.copy2(slim, demo)
+        if live_api.exists():
+            copy_file(live_api, dest / "api" / "pack" / "collect.js")
         print("shipped", dest)
     return 0
 

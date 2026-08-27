@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p38`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p39`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -46,8 +46,13 @@ function waitHttp(url, tries = 40) {
 }
 
 async function main() {
-  const server = spawn("python3", ["-m", "http.server", String(PORT), "--bind", "127.0.0.1"], {
-    cwd: SHIP,
+  const server = spawn("python3", [path.join(ROOT, "scripts/key_vision_server.py")], {
+    cwd: ROOT,
+    env: {
+      ...process.env,
+      KEY_VISION_DIR: SHIP,
+      KEY_VISION_PORT: String(PORT),
+    },
     stdio: "ignore",
   });
   const fail = [];
@@ -534,75 +539,122 @@ async function main() {
     const l5Href = await page.locator(".rp-shortlist a.rp-link").first().getAttribute("href");
     note(/^https?:\/\//.test(l5Href || ""), `L5 first origin ${l5Href}`);
 
-    await page.locator("#btnNewResearch").click();
-    await page.waitForSelector("#briefOverlay:not([hidden])");
-    const petSlots = {
-      audience: "养宠家庭",
-      price_band: "中高端",
-      channel: "电商",
-      product: "宠物粮包装",
-      culture_tone: "专业",
-      occasion: "日常自用",
-      job_type: "0-1 新包装",
+    const pinBrief = async (product) => {
+      await page.locator("#btnNewResearch").click();
+      await page.waitForSelector("#briefOverlay:not([hidden])");
+      const slots = {
+        audience: "养宠家庭",
+        price_band: "中高端",
+        channel: "电商",
+        product,
+        culture_tone: "专业",
+        occasion: "日常自用",
+        job_type: "0-1 新包装",
+      };
+      for (const [key, value] of Object.entries(slots)) {
+        await page.fill(`[data-brief-slot="${key}"]`, value);
+      }
+      await page.locator("#briefSave").click();
+      await page.waitForFunction(() => document.getElementById("briefOverlay")?.hidden);
     };
-    for (const [key, value] of Object.entries(petSlots)) {
-      await page.fill(`[data-brief-slot="${key}"]`, value);
+
+    const collectHit = await page.evaluate(async () => {
+      const res = await fetch("/api/pack/collect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product: "狗粮包装" }),
+      });
+      let body = {};
+      try {
+        body = await res.json();
+      } catch (_) {
+        body = {};
+      }
+      return { status: res.status, body };
+    });
+    note(collectHit.status !== 404, `POST /api/pack/collect status ${collectHit.status}`);
+    note([200, 422, 503].includes(collectHit.status), `POST /api/pack/collect allowed ${collectHit.status}`);
+    note(
+      collectHit.status !== 200 || Boolean(collectHit.body && collectHit.body.item && collectHit.body.item.pack_url),
+      "POST collect 200 must carry bag-front item"
+    );
+    if (collectHit.body && collectHit.body.missing_key) {
+      note(collectHit.status === 503, "missing_key surfaces as 503");
     }
-    await page.locator("#briefSave").click();
-    await page.waitForFunction(() => document.getElementById("briefOverlay")?.hidden);
+
+    await pinBrief("宠物粮包装");
     note(
       (await page.locator("#researchTitle").innerText()).includes("宠物粮包装"),
       "pet brief title is 宠物粮包装"
     );
     await page.locator('.tab[data-tab="visual"]').click();
+    await page.waitForFunction(() =>
+      /短名单未成立/.test(document.getElementById("wallCountBar")?.textContent || "")
+    );
+    note((await page.locator(".wall-card").count()) === 0, "宠物粮包装 empty subject wall");
+    note((await page.locator(".l4-panel .sl-item").count()) === 0, "宠物粮包装 0 shortlist items before tab");
+    await page.locator('.tab[data-tab="shortlist"]').click();
+    await page.waitForSelector(".l4-panel");
+    const genericSl = await page.locator(".l4-panel").innerText();
+    note((await page.locator(".l4-panel .sl-item").count()) === 0, "宠物粮包装 shortlist unformed");
+    note(/短名单未成立/.test(genericSl), "宠物粮包装 reports 短名单未成立");
+    note(/猫\/犬未分课题/.test(genericSl), "宠物粮包装 猫/犬未分课题");
+    note(!/据此成立/.test(genericSl) && !/按袋面成立/.test(genericSl), "宠物粮包装 does not claim formed");
+    await page.locator('.tab[data-tab="report"]').click();
+    await page.waitForSelector(".report-panel");
+    const genericReport = await page.locator("#canvasBody").innerText();
+    note(!/假设 · 非完稿/.test(genericReport), "本研结论不再写 假设 · 非完稿");
+    note(/短名单未成立/.test(genericReport), "本研结论 writes 短名单未成立");
+    note(!/据此成立/.test(genericReport) && !/按袋面成立/.test(genericReport), "本研结论 does not claim formed");
+    note(!/青绿新中轴/.test(genericReport), "本研 report does not reuse tea direction cards");
+
+    await pinBrief("狗粮包装");
+    note((await page.locator("#researchTitle").innerText()).includes("狗粮包装"), "dog brief title");
+    await page.locator('.tab[data-tab="visual"]').click();
     await page.waitForSelector(".wall-card img", { timeout: 15000 });
-    const petCards = page.locator(".wall-card");
-    const petCardN = await petCards.count();
-    note(petCardN >= 1, `本研 wall cards ${petCardN}`);
-    const petImgs = await page.locator(".wall-card img").evaluateAll((imgs) =>
+    const dogTitles = await page.locator(".wall-card .title").allInnerTexts();
+    note(
+      dogTitles.some((t) => /Orijen|渴望|Original/.test(t)),
+      `狗粮包装 wall ${dogTitles.join(" | ")}`
+    );
+    const dogImgs = await page.locator(".wall-card img").evaluateAll((imgs) =>
       imgs.map((img) => img.getAttribute("src") || "")
     );
     note(
-      petImgs.length >= 1 && petImgs.every((src) => /^https:\/\//.test(src)),
-      `本研 wall images ${petImgs.join(" | ").slice(0, 160)}`
+      dogImgs.length >= 1 && dogImgs.every((src) => /^https:\/\//.test(src) && !/I27_/i.test(src)),
+      "狗粮包装 bag-front https, no I27 long image"
     );
-    note(
-      petImgs.every((src) => !/I27_/i.test(src)),
-      "本研 wall drops I27 long detail image"
-    );
-    const petHrefs = await page.locator(".wall-card a.src-link").evaluateAll((as) =>
+    const dogHrefs = await page.locator(".wall-card a.src-link").evaluateAll((as) =>
       as.map((a) => a.getAttribute("href") || "")
     );
     note(
-      petHrefs.length >= 1 && petHrefs.every((h) => /^https:\/\//.test(h)),
-      `本研 wall deep links ${petHrefs.join(" | ")}`
+      dogHrefs.length >= 1 && dogHrefs.every((h) => /^https:\/\//.test(h)),
+      `狗粮包装 deep links ${dogHrefs.join(" | ")}`
     );
-    const petChip = (await page.locator('.cat-chip[data-cat="shelf"]').innerText()).trim();
-    note(/货架/.test(petChip) && /[1-9]/.test(petChip), `本研 货架 chip ${petChip}`);
-    const petBar = (await page.locator("#wallCountBar").innerText()).trim();
-    note(!/452/.test(petBar), `本研 count bar not 452: ${petBar}`);
+    const dogChip = (await page.locator('.cat-chip[data-cat="shelf"]').innerText()).trim();
+    note(/货架/.test(dogChip) && /[1-9]/.test(dogChip), `狗粮包装 货架 chip ${dogChip}`);
+    note(!/452/.test((await page.locator("#wallCountBar").innerText()).trim()), "狗粮包装 count bar not 452");
     await page.locator('.tab[data-tab="shortlist"]').click();
     await page.waitForSelector(".l4-panel");
-    const petSl = await page.locator(".l4-panel").innerText();
-    const petTitles = await page.locator(".l4-panel .sl-title").allInnerTexts();
-    const petCount = await page.locator(".l4-panel .sl-item").count();
-    note(petCount >= 1, `本研 shortlist count ${petCount}`);
-    note(
-      petTitles.some((t) => /Orijen|渴望|Original/.test(t)),
-      `本研 shortlist titles ${petTitles.join(" | ")}`
+    const dogSl = await page.locator(".l4-panel").innerText();
+    note((await page.locator(".l4-panel .sl-item").count()) === 0, "狗粮包装 shortlist still unformed");
+    note(/短名单未成立/.test(dogSl), "狗粮包装 reports 短名单未成立");
+    note(/待复核/.test(dogSl), "狗粮包装 待复核不进短名单");
+    note(!/据此成立/.test(dogSl) && !/按袋面成立/.test(dogSl), "狗粮包装 does not claim formed");
+    note(!/皇家犬/.test(dogSl), "狗粮包装 does not hardcode 皇家犬");
+    note(!/青绿|小罐茶|静奢留白|茶礼/.test(dogSl), "狗粮包装 does not use the tea wall");
+
+    await pinBrief("猫粮包装");
+    await page.locator('.tab[data-tab="visual"]').click();
+    await page.waitForFunction(() =>
+      /短名单未成立|本课题/.test(document.getElementById("wallCountBar")?.textContent || "")
     );
-    note(!/皇家犬/.test(petSl + petTitles.join(" ")), "本研 shortlist does not hardcode 皇家犬");
-    note(
-      !/青绿|小罐茶|静奢留白|茶礼/.test(petSl + petTitles.join(" ")),
-      "本研 shortlist does not use the tea wall"
-    );
-    note(!/Petbarn|Waggo|Meowly/.test(petSl), "本研 shortlist does not use concept-wall padding");
-    await page.locator('.tab[data-tab="report"]').click();
-    await page.waitForSelector(".report-panel");
-    const petReport = await page.locator("#canvasBody").innerText();
-    note(!/假设 · 非完稿/.test(petReport), "本研结论不再写 假设 · 非完稿");
-    note(/入选参考/.test(petReport), "本研结论 has 入选参考");
-    note(!/青绿新中轴/.test(petReport), "本研 report does not reuse tea direction cards");
+    const catTitles = await page.locator(".wall-card .title").allInnerTexts();
+    note(!catTitles.some((t) => /Orijen|渴望|Original/.test(t)), "猫粮包装 does not mix Orijen dog bag");
+    await page.locator('.tab[data-tab="shortlist"]').click();
+    await page.waitForSelector(".l4-panel");
+    note((await page.locator(".l4-panel .sl-item").count()) === 0, "猫粮包装 shortlist unformed");
+    note(/短名单未成立/.test(await page.locator(".l4-panel").innerText()), "猫粮包装 reports 短名单未成立");
 
     await page.locator('.research-card[data-id="r-green"]').click();
     await page.locator('.tab[data-tab="shortlist"]').click();

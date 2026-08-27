@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -107,7 +108,8 @@ class Handler(SimpleHTTPRequestHandler):
         sys.stderr.write("%s - %s %s\n" % (self.address_string(), self.command, path))
 
     def do_OPTIONS(self) -> None:
-        if self.path.startswith("/api/llm"):
+        path = self.path.split("?", 1)[0]
+        if path.startswith("/api/llm") or path == "/api/pack/collect":
             self.send_response(204)
             self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Access-Control-Allow-Headers", "content-type")
@@ -117,13 +119,27 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_error(404)
 
     def do_GET(self) -> None:
-        if self.path.split("?", 1)[0] == "/api/llm/health":
+        path = self.path.split("?", 1)[0]
+        if path == "/api/llm/health":
             self._json(200, {"ok": True, "proxy": True})
+            return
+        if path == "/api/pack/collect":
+            missing = not bool(os.environ.get("CONTEXT_DEV_API_KEY", "").strip())
+            self._json(200, {
+                "ok": True,
+                "ready": not missing,
+                "missing_key": missing,
+                "hint": "CONTEXT_DEV_API_KEY 未配置" if missing else "ready",
+            })
             return
         super().do_GET()
 
     def do_POST(self) -> None:
-        if self.path.split("?", 1)[0] != "/api/llm/chat":
+        path = self.path.split("?", 1)[0]
+        if path == "/api/pack/collect":
+            self._handle_pack_collect()
+            return
+        if path != "/api/llm/chat":
             self.send_error(404)
             return
         length = int(self.headers.get("Content-Length") or 0)
@@ -178,6 +194,54 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
+    def _handle_pack_collect(self) -> None:
+        length = int(self.headers.get("Content-Length") or 0)
+        if length > 200000:
+            self._json(413, {"ok": False, "error": "payload too large"})
+            return
+        raw = self.rfile.read(length).decode("utf-8") if length else "{}"
+        try:
+            payload = json.loads(raw or "{}")
+        except json.JSONDecodeError:
+            self._json(400, {"ok": False, "error": "invalid json"})
+            return
+        product = str(payload.get("product") or payload.get("product_name") or "").strip()
+        if not product:
+            self._json(400, {"ok": False, "error": "missing product"})
+            return
+        key = os.environ.get("CONTEXT_DEV_API_KEY", "").strip()
+        if not key:
+            self._json(
+                503,
+                {
+                    "ok": False,
+                    "missing_key": True,
+                    "error": "CONTEXT_DEV_API_KEY 未配置",
+                },
+            )
+            return
+        runner = ROOT / "scripts" / "run_pack_collect.js"
+        try:
+            cp = subprocess.run(
+                ["node", str(runner)],
+                input=json.dumps({"product": product}, ensure_ascii=False),
+                cwd=str(ROOT),
+                capture_output=True,
+                text=True,
+                timeout=55,
+                env={**os.environ, "CONTEXT_DEV_API_KEY": key},
+                check=False,
+            )
+            out = json.loads(cp.stdout or "{}")
+        except Exception as err:  # noqa: BLE001 — surface collect errors to the lab UI
+            self._json(502, {"ok": False, "error": redact_secret(str(err))[:240]})
+            return
+        if not isinstance(out, dict):
+            self._json(502, {"ok": False, "error": "collect returned non-json"})
+            return
+        code = 200 if out.get("ok") else (503 if out.get("missing_key") else 422)
+        self._json(code, out)
+
 
 def main() -> int:
     directory = Path(os.environ.get("KEY_VISION_DIR") or DEFAULT_DIR).resolve()
@@ -186,7 +250,7 @@ def main() -> int:
         return 1
     os.chdir(directory)
     httpd = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
-    print(f"KEY 视界 {directory} on :{PORT} (llm proxy /api/llm/chat)")
+    print(f"KEY 视界 {directory} on :{PORT} (llm proxy /api/llm/chat · pack /api/pack/collect)")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
