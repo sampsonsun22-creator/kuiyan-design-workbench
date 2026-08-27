@@ -194,6 +194,10 @@ def main() -> int:
         err.append("app.js must not reopen directed 061423/093316 pack bind")
     if "l2-brief-pet-food-pack-20260827T061423Z.jsonl" in app:
         err.append("app.js must not bind directed 061423 jsonl")
+    if "benyan:orijen-original-bagfront" in app or "orijenpetfoods.com" in app:
+        err.append("app.js must not hardcode Orijen directed SKU")
+    if "royalcanin.com.cn/cats/products/1639" in app:
+        err.append("app.js must not hardcode 皇家 I27 directed SKU")
     if "皇家犬" in app:
         err.append("app.js must not hardcode extra SKU 皇家犬")
     if "isBenyanResearch" not in app or "loadBenyanResearchWall" not in app:
@@ -210,8 +214,8 @@ def main() -> int:
         err.append("green-tea direction cards must still stamp 假设 · 非完稿")
     if "briefs/pet_food_main_wall.jsonl" in app:
         err.append("app.js must not bind pet_food concept wall")
-    if "452p40" not in html:
-        err.append("index.html cache bust must be ?v=452p40")
+    if "452p41" not in html:
+        err.append("index.html cache bust must be ?v=452p41")
     if "/api/pack/collect" not in app or "requestPackCollect" not in app:
         err.append("app.js missing /api/pack/collect hook")
     if 'JSON.stringify({ product_name: name })' not in app:

@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p40`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p41`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -611,28 +611,12 @@ async function main() {
     await pinBrief("狗粮包装");
     note((await page.locator("#researchTitle").innerText()).includes("狗粮包装"), "dog brief title");
     await page.locator('.tab[data-tab="visual"]').click();
-    await page.waitForSelector(".wall-card img", { timeout: 15000 });
+    await page.waitForFunction(() =>
+      /短名单未成立/.test(document.getElementById("wallCountBar")?.textContent || "")
+    );
     const dogTitles = await page.locator(".wall-card .title").allInnerTexts();
-    note(
-      dogTitles.some((t) => /Orijen|渴望|Original/.test(t)),
-      `狗粮包装 wall ${dogTitles.join(" | ")}`
-    );
-    const dogImgs = await page.locator(".wall-card img").evaluateAll((imgs) =>
-      imgs.map((img) => img.getAttribute("src") || "")
-    );
-    note(
-      dogImgs.length >= 1 && dogImgs.every((src) => /^https:\/\//.test(src) && !/I27_/i.test(src)),
-      "狗粮包装 bag-front https, no I27 long image"
-    );
-    const dogHrefs = await page.locator(".wall-card a.src-link").evaluateAll((as) =>
-      as.map((a) => a.getAttribute("href") || "")
-    );
-    note(
-      dogHrefs.length >= 1 && dogHrefs.every((h) => /^https:\/\//.test(h)),
-      `狗粮包装 deep links ${dogHrefs.join(" | ")}`
-    );
-    const dogChip = (await page.locator('.cat-chip[data-cat="shelf"]').innerText()).trim();
-    note(/货架/.test(dogChip) && /[1-9]/.test(dogChip), `狗粮包装 货架 chip ${dogChip}`);
+    note((await page.locator(".wall-card").count()) === 0, "狗粮包装 does not pre-write directed Orijen");
+    note(!dogTitles.some((t) => /Orijen|渴望|Original/.test(t)), "狗粮包装 wall has no hardcoded Orijen");
     note(!/452/.test((await page.locator("#wallCountBar").innerText()).trim()), "狗粮包装 count bar not 452");
     await page.locator('.tab[data-tab="shortlist"]').click();
     await page.waitForSelector(".l4-panel");

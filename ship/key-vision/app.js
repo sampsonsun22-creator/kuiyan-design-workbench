@@ -493,48 +493,9 @@
     return true;
   }
 
-  /** Official bag-front URLs already in-studio. No new image files. Not a directed-pack bind. */
-  function benyanOfficialBagFronts() {
-    return [
-      {
-        id: "benyan:orijen-original-bagfront",
-        title: "渴望 Orijen Original",
-        author_or_brand: "Orijen",
-        source: "orijen",
-        source_type: "shelf",
-        page_url: "https://www.orijenpetfoods.com/en-US/dogs/dog-food/original/ds-ori-original-dog.html",
-        image_url:
-          "https://www.orijenpetfoods.com/dw/image/v2/bfdw_prd/on/demandware.static/-/Sites-orijen-na-master-catalog/default/dw3a5e4059/ORI%20Dog%20Refresh%202023/Original-2023/Original%20Dog%2031lb%20Front%20EN.png?sw=1200",
-        thumbnail_url:
-          "https://www.orijenpetfoods.com/dw/image/v2/bfdw_prd/on/demandware.static/-/Sites-orijen-na-master-catalog/default/dw3a5e4059/ORI%20Dog%20Refresh%202023/Original-2023/Original%20Dog%2031lb%20Front%20EN.png?sw=1200",
-        query_used: "Orijen Original",
-        raw_tags: ["benyan-bagfront", "pet-food", "orijen"],
-        suggested_style_buckets: [],
-        structure_tags: [],
-        info_hierarchy_tags: [],
-        color_roles: [],
-        is_on_market: "yes",
-        market_region: ["global"],
-        collected_at: "2026-08-27T06:14:23Z",
-        extra: {
-          bag_front_qc: "pass",
-          aspect: 1,
-          brief_relevance_v1: "pass_brief",
-          research_seat: "benyan",
-          species: "dog",
-        },
-      },
-    ];
-  }
-
-  function benyanRowsForProduct(product) {
-    const want = benyanSpeciesOfText(product);
-    return benyanOfficialBagFronts().filter((row) => {
-      if (!passesBagFrontQc(row)) return false;
-      const got = benyanItemSpecies(row);
-      if (!want || !got || want !== got) return false;
-      return true;
-    });
+  function benyanRowsForProduct(_product) {
+    // 061423 directed 2 条（I27 + Orijen）不算产品已接。墙只收 POST /api/pack/collect 的 session pending。
+    return [];
   }
 
   function benyanEligibleItems() {
