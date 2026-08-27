@@ -190,17 +190,26 @@ def main() -> int:
         if not (ROOT / "ui-shell" / rel).exists():
             err.append(f"missing {rel}")
 
-    if "PET_FOOD_PACK_LOCK" not in app:
-        err.append("app.js missing 093316 pet-food shortlist lock")
-    for house in ("Orijen", "皇家猫", "皇家犬"):
-        if house not in app:
-            err.append(f"app.js missing pet-food lock house {house}")
+    pet_feed = ROOT / "ui-shell" / "data" / "briefs" / "l2-brief-pet-food-pack-20260827T061423Z.jsonl"
+    directed = ROOT / "L2-collector" / "directed" / "l2-brief-pet-food-pack-20260827T061423Z.jsonl"
+    if not pet_feed.exists() or not directed.exists():
+        err.append("missing directed 061423 pet-food pack")
+    else:
+        n_pet = nlines(pet_feed)
+        if n_pet != 2:
+            err.append(f"directed 061423 rows={n_pet} expected 2")
+        if "PET_FOOD_PACK_FEED" not in app or "l2-brief-pet-food-pack-20260827T061423Z.jsonl" not in app:
+            err.append("app.js must bind directed 061423 feed")
+        if "loadPetFoodDirectedWall" not in app:
+            err.append("app.js missing loadPetFoodDirectedWall")
+        if "PET_FOOD_PACK_LOCK" in app:
+            err.append("app.js still hardcodes 093316 PET_FOOD_PACK_LOCK")
+        if "皇家犬" in app:
+            err.append("app.js must not hardcode extra SKU 皇家犬")
     if "假设 · 非完稿" not in app:
         err.append("direction cards must stamp 假设 · 非完稿")
     if "briefs/pet_food_main_wall.jsonl" in app:
         err.append("app.js must not bind pet_food concept wall")
-    if "093316" not in app:
-        err.append("app.js missing 093316 lock id")
 
     tonic = ROOT / "ui-shell" / "data" / "briefs" / "tonic_gift_main_wall.jsonl"
     baijiu = ROOT / "ui-shell" / "data" / "briefs" / "baijiu_gift_main_wall.jsonl"

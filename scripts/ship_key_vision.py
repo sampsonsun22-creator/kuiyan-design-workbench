@@ -42,6 +42,7 @@ def main() -> int:
         "data/l2-pending-review.jsonl",
         "data/briefs/baijiu_gift_main_wall.jsonl",
         "data/briefs/tonic_gift_main_wall.jsonl",
+        "data/briefs/l2-brief-pet-food-pack-20260827T061423Z.jsonl",
         "assets/ref1.png",
         "assets/ref2.jpg",
         "assets/ref3.png",
