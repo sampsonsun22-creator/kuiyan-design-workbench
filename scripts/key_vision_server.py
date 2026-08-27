@@ -205,9 +205,12 @@ class Handler(SimpleHTTPRequestHandler):
         except json.JSONDecodeError:
             self._json(400, {"ok": False, "error": "invalid json"})
             return
-        product = str(payload.get("product") or payload.get("product_name") or "").strip()
+        if payload.get("url") or payload.get("product_url") or payload.get("sku"):
+            self._json(400, {"ok": False, "error": "only product_name; do not send official URL"})
+            return
+        product = str(payload.get("product_name") or "").strip()
         if not product:
-            self._json(400, {"ok": False, "error": "missing product"})
+            self._json(400, {"ok": False, "error": "missing product_name"})
             return
         key = os.environ.get("CONTEXT_DEV_API_KEY", "").strip()
         if not key:
@@ -224,7 +227,7 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             cp = subprocess.run(
                 ["node", str(runner)],
-                input=json.dumps({"product": product}, ensure_ascii=False),
+                input=json.dumps({"product_name": product}, ensure_ascii=False),
                 cwd=str(ROOT),
                 capture_output=True,
                 text=True,

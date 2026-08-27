@@ -685,7 +685,7 @@
         const res = await fetch("/api/pack/collect", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ product: name }),
+          body: JSON.stringify({ product_name: name }),
         });
         let data = {};
         try {
@@ -1204,7 +1204,7 @@
     el.briefForm.dataset.bound = "1";
     el.briefForm.addEventListener("submit", (e) => {
       e.preventDefault();
-      commitBriefDialog();
+      saveBriefFillDialog();
     });
     if (el.briefClose) el.briefClose.addEventListener("click", closeBriefDialog);
     if (el.briefOverlay) {

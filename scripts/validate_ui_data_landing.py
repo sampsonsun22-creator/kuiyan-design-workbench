@@ -210,10 +210,14 @@ def main() -> int:
         err.append("green-tea direction cards must still stamp 假设 · 非完稿")
     if "briefs/pet_food_main_wall.jsonl" in app:
         err.append("app.js must not bind pet_food concept wall")
-    if "452p39" not in html:
-        err.append("index.html cache bust must be ?v=452p39")
+    if "452p40" not in html:
+        err.append("index.html cache bust must be ?v=452p40")
     if "/api/pack/collect" not in app or "requestPackCollect" not in app:
         err.append("app.js missing /api/pack/collect hook")
+    if 'JSON.stringify({ product_name: name })' not in app:
+        err.append("app.js must POST only product_name")
+    if "saveBriefFillDialog" not in app or "saveCustomBriefFromDom" not in app:
+        err.append("app.js missing Brief pin sites")
     if "saveBriefFillDialog" not in app:
         err.append("app.js missing saveBriefFillDialog alias")
     if "benyanSessionPending" not in app:
@@ -227,6 +231,8 @@ def main() -> int:
         err.append("missing ship/key-vision-live/api/pack/collect.js")
     else:
         collect = collect_js.read_text(encoding="utf-8")
+        if "product_name" not in collect:
+            err.append("collect.js must accept product_name only")
         if "numResults: 10" not in collect and "numResults:10" not in collect:
             err.append("collect.js must send numResults 10")
         if "factCheck: true" not in collect:

@@ -1,6 +1,6 @@
 /**
  * POST /api/pack/collect
- * Body: { product } | { product_name }
+ * Body: { product_name } only. Client must not send official URLs.
  * Server-only CONTEXT_DEV_API_KEY → Context.dev web-search / extract / scrape-images.
  * Lands bag-front + clickable deep link. Does not write 452/2680 jsonl.
  *
@@ -349,9 +349,13 @@ async function handler(req, res) {
     json(res, 400, { ok: false, error: err.message || "invalid json" });
     return;
   }
-  const product = String(payload.product || payload.product_name || "").trim();
+  if (payload.url || payload.product_url || payload.sku || payload.sku_url || payload.page_url) {
+    json(res, 400, { ok: false, error: "only product_name; do not send official URL" });
+    return;
+  }
+  const product = String(payload.product_name || "").trim();
   if (!product) {
-    json(res, 400, { ok: false, error: "missing product" });
+    json(res, 400, { ok: false, error: "missing product_name" });
     return;
   }
   try {
