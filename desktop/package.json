@@ -1,0 +1,86 @@
+{
+  "name": "key-vision-desktop",
+  "productName": "KEY 视界",
+  "version": "0.6.0",
+  "private": true,
+  "description": "奎燕竞品分析智能体 · Windows / macOS 客户端",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "icon": "python3 scripts/make_icon.py",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --mac --win",
+    "dist:win": "python3 scripts/make_icon.py && electron-builder --win zip portable --publish never && bash scripts/make_nsis.sh"
+  },
+  "author": "奎燕 AI 研究室",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "electron": "^37.2.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.kuiyan.keyvision",
+    "productName": "KEY 视界",
+    "icon": "build/icon.png",
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "build/icon.png",
+      "build/icon.ico"
+    ],
+    "extraResources": [
+      {
+        "from": "../ui-shell",
+        "to": "key-vision",
+        "filter": [
+          "**/*",
+          "!**/.vercel/**",
+          "!**/*.mp4"
+        ]
+      }
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "mac": {
+      "category": "public.app-category.graphics-design",
+      "target": ["dmg", "zip"],
+      "icon": "build/icon.png"
+    },
+    "extraFiles": [
+      {
+        "from": "使用说明.txt",
+        "to": "使用说明.txt"
+      }
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "zip", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "signAndEditExecutable": false,
+      "artifactName": "KEY-Vision-${version}-win-${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "KEY-Vision-${version}-Windows.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "KEY 视界",
+      "uninstallDisplayName": "KEY 视界",
+      "installerLanguages": ["zh_CN"],
+      "language": "2052",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "KEY-Vision-Setup-${version}.exe"
+    }
+  }
+}

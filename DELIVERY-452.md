@@ -17,7 +17,7 @@
 | **待复核（交付）** | `/workspace/kuiyan-design-workbench/ui-shell/data/l2_pending_review.jsonl` |
 | tea landed | `/workspace/kuiyan-design-workbench/L3/eval/landed/brief-green-tea-gift/`（=452） |
 | 通道状态 | `/workspace/kuiyan-design-workbench/DATA-LIVE.md` |
-| 策略卡 bundle（L4 示意/非完稿） | `/workspace/kuiyan-design-workbench/ui-shell/data/demo-bundle.json` |
+| 策略卡 bundle（L4 示意/非完稿） | `/workspace/kuiyan-design-workbench/ui-shell/data/product-bundle.json` |
 | 校验 | `/workspace/kuiyan-design-workbench/scripts/assert_shell_strict.py` |
 | 交付验收 | `/workspace/kuiyan-design-workbench/scripts/validate_delivery_shell.py`（默认 expect 452） |
 

@@ -1,0 +1,18 @@
+{
+  "name": "KEY 视界",
+  "install": "python3 --version",
+  "start": "bash scripts/cloud-agent-start.sh",
+  "terminals": [
+    {
+      "name": "KEY 视界",
+      "command": "bash scripts/cloud-agent-serve.sh",
+      "description": "Static KEY 视界 client on port 8767. Web Cloud Agent cannot open 127.0.0.1; use the trycloudflare URL printed by start, or Desktop port-forward."
+    }
+  ],
+  "ports": [
+    {
+      "name": "KEY 视界",
+      "port": 8767
+    }
+  ]
+}

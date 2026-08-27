@@ -1,0 +1,88 @@
+{
+  "version": "1.0",
+  "purpose": "L3 分类拆解维度骨架。包装是举例；缺值 UI 必须写未标注，禁止模板散文冒充已拆解。",
+  "groups": [
+    {
+      "id": "visual_style",
+      "name_zh": "视觉与风格",
+      "dimensions": [
+        {
+          "id": "color",
+          "name_zh": "色彩",
+          "fields": ["color_roles", "color_palette"],
+          "ask": "主色/辅色是什么？明亮活泼还是沉稳高级？"
+        },
+        {
+          "id": "graphic_type",
+          "name_zh": "图形与排版",
+          "fields": ["info_hierarchy_tags", "info_hierarchy"],
+          "ask": "图案抽象还是具象？字体和信息层级是否清晰？"
+        },
+        {
+          "id": "form_material",
+          "name_zh": "造型与材质",
+          "fields": ["structure_tags", "structure_notes"],
+          "ask": "瓶型/盒型/袋型有何特点？烫金、覆膜、异形等工艺？"
+        },
+        {
+          "id": "style_bucket",
+          "name_zh": "风格桶",
+          "fields": ["suggested_style_buckets"],
+          "ask": "命中哪些 style-buckets-v1 桶？"
+        }
+      ]
+    },
+    {
+      "id": "experience",
+      "name_zh": "交互与体验",
+      "dimensions": [
+        {
+          "id": "unboxing",
+          "name_zh": "开箱体验",
+          "fields": ["unboxing_tags"],
+          "ask": "开启是否流畅？有无结构记忆点？",
+          "collect_status": "not_collected"
+        },
+        {
+          "id": "utility",
+          "name_zh": "功能与实用",
+          "fields": ["utility_tags"],
+          "ask": "携带、储存、复用、防滑、便携？",
+          "collect_status": "not_collected"
+        },
+        {
+          "id": "user_feedback",
+          "name_zh": "用户反馈",
+          "fields": ["review_quotes"],
+          "ask": "电商/社交对包装的槽点或好评？",
+          "collect_status": "not_collected"
+        }
+      ]
+    },
+    {
+      "id": "commerce",
+      "name_zh": "销售与成本",
+      "dimensions": [
+        {
+          "id": "shelf_impact",
+          "name_zh": "货架表现力",
+          "fields": ["source_type", "is_on_market"],
+          "ask": "在货架上是否吸睛？陈列方式？"
+        },
+        {
+          "id": "cost_position",
+          "name_zh": "成本与定位",
+          "fields": ["price_band_guess"],
+          "ask": "质感与价格带是否匹配？",
+          "collect_status": "not_collected"
+        }
+      ]
+    }
+  ],
+  "search_scopes": [
+    { "id": "same", "name_zh": "同类", "role": "primary", "note": "核心战场：主导品牌 + 设计新锐" },
+    { "id": "adjacent", "name_zh": "不同类", "role": "analogy", "note": "同行业打开视野，如果汁看茶/咖啡" },
+    { "id": "cross", "name_zh": "跨界", "role": "cross", "note": "其他行业 IP/独特风格；本轮未单列打标" },
+    { "id": "shelf", "name_zh": "货架", "role": "shelf", "note": "在售切片，服务销售与成本维度" }
+  ]
+}

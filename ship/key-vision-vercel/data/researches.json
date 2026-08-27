@@ -1,0 +1,41 @@
+{
+  "default_id": "r-green",
+  "note": "青绿茶默认读壳权威 452/2680，禁止回落到 briefs/green_tea_gift_main_wall.jsonl（184，过时口径）。运行时 RESEARCHES 写在 app.js，须与本文件 items 保持一致。",
+  "items": [
+    {
+      "id": "r-green",
+      "title": "青绿茶礼盒竞品调研",
+      "date": "2026-08-12",
+      "status": "running",
+      "question": "新品牌青绿茶礼盒：中式现代气质下，礼赠+电商渠道如何做出开箱记忆点与差异化？",
+      "feeds": {
+        "main": ["data/l2_main_wall.jsonl", "data/l2-main-wall.jsonl"],
+        "pending": ["data/l2_pending_review.jsonl", "data/l2-pending-review.jsonl"]
+      },
+      "bundle": "data/product-bundle.json",
+      "only_brief_default": true
+    },
+    {
+      "id": "r-baijiu",
+      "title": "白酒礼盒竞品调研",
+      "date": "2026-08-12",
+      "status": "done",
+      "question": "白酒礼盒：礼赠场如何做出体面开箱与货架识别，又避开金红模板？",
+      "feeds": {
+        "main": ["data/briefs/baijiu_gift_main_wall.jsonl"]
+      },
+      "only_brief_default": false
+    },
+    {
+      "id": "r-tonic",
+      "title": "滋补礼盒开箱记忆点",
+      "date": "2026-08-12",
+      "status": "done",
+      "question": "滋补礼盒：中式现代气质下，如何做出开箱记忆点与差异化？",
+      "feeds": {
+        "main": ["data/briefs/tonic_gift_main_wall.jsonl"]
+      },
+      "only_brief_default": false
+    }
+  ]
+}

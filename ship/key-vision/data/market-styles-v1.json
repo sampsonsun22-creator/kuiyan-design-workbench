@@ -1,0 +1,18 @@
+{
+  "version": "1.0",
+  "note": "面向老板的市场话术风格。只映射已有 style-buckets，不重写 452 墙。",
+  "styles": [
+    { "id": "east", "name_zh": "东方", "bucket_ids": ["chinese_modern", "chinese_ceremonial", "regional_culture"] },
+    { "id": "international", "name_zh": "国际", "bucket_ids": ["global_minimal", "swiss_international"] },
+    { "id": "foreign", "name_zh": "国外", "bucket_ids": ["global_minimal", "swiss_international"] },
+    { "id": "minimal", "name_zh": "简约", "bucket_ids": ["global_minimal", "minimal_white"] },
+    { "id": "traditional", "name_zh": "传统", "bucket_ids": ["chinese_ceremonial", "retro_nostalgia"] },
+    { "id": "fashion", "name_zh": "时尚", "bucket_ids": ["color_youth", "cartoon_ip"] },
+    { "id": "pro", "name_zh": "专业", "bucket_ids": ["efficacy_hammer", "swiss_international"] },
+    { "id": "gift", "name_zh": "礼赠", "bucket_ids": ["chinese_ceremonial"] },
+    { "id": "craft", "name_zh": "材质", "bucket_ids": ["craft_material"] },
+    { "id": "luxury", "name_zh": "奢华", "bucket_ids": ["luxury_gilt"] },
+    { "id": "natural", "name_zh": "自然", "bucket_ids": ["natural_organic"] },
+    { "id": "regional", "name_zh": "地域", "bucket_ids": ["regional_culture"] }
+  ]
+}

@@ -1,7 +1,7 @@
 # KEY 视界 · 真实数据打通方案（今日最小闭环）
 
 > Owner：奎燕数据分析专家（原 Data Crawler）  
-> 状态：**方案待奎燕确认后开跑**（本文件先交付，不擅自改 bundle）  
+> 状态：**UI 已接 452 主墙 + 3 张 L4 方向卡**（不改 jsonl 口径；Firecrawl 8 条未并进 452，避免破锁）  
 > 日期：2026-08-12
 
 ## 目标
@@ -130,10 +130,10 @@ cd /workspace/kuiyan-design-workbench/ui-shell && python3 -m http.server 8766
 
 ## 请奎燕确认（勾选即开跑）
 
-- [ ] **A** 合并 firecrawl 8 条 → 重建 demo-bundle（含去重）  
-- [ ] **B** 改源状态条 + 能力栈命名  
-- [ ] **C** Inspector 增加采集字段块  
-- [ ] **D** 货架仅保留 listing 样，不跑 Browser Use  
+- [x] **A** 公网 `product-bundle.json` 写入 3 张 L4 卡（未把 firecrawl 8 条并进 452 主墙，避免破锁）
+- [x] **B** 改源状态条：按主墙真实计数（Behance/Pinterest/花瓣/小红书已采集；淘宝/京东 listing 样）
+- [x] **C** Inspector 增加采集字段块
+- [x] **D** 货架仅保留 listing 样，不跑 Browser Use
 - [ ] **E**（可选）Browser Use 京东/淘宝各 ≤3  
 
 默认建议：**A+B+C+D**。
