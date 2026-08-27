@@ -646,7 +646,7 @@
         const res = await fetch("/api/pack/collect", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ product_name: name }),
+          body: JSON.stringify({ product: name }),
         });
         let data = {};
         try {

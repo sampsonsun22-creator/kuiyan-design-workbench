@@ -206,11 +206,11 @@ class Handler(SimpleHTTPRequestHandler):
             self._json(400, {"ok": False, "error": "invalid json"})
             return
         if payload.get("url") or payload.get("product_url") or payload.get("sku"):
-            self._json(400, {"ok": False, "error": "only product_name; do not send official URL"})
+            self._json(400, {"ok": False, "error": "only brief.product; do not send official URL"})
             return
-        product = str(payload.get("product_name") or "").strip()
+        product = str(payload.get("product") or payload.get("product_name") or "").strip()
         if not product:
-            self._json(400, {"ok": False, "error": "missing product_name"})
+            self._json(400, {"ok": False, "error": "missing product"})
             return
         key = os.environ.get("CONTEXT_DEV_API_KEY", "").strip()
         if not key:

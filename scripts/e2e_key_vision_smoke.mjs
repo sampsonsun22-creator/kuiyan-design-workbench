@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p41`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p42`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -562,7 +562,7 @@ async function main() {
       const res = await fetch("/api/pack/collect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product_name: "狗粮包装" }),
+        body: JSON.stringify({ product: "狗粮包装" }),
       });
       let body = {};
       try {
