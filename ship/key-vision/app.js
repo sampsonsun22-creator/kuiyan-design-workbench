@@ -173,14 +173,11 @@
   const SHORTLIST_MIN = 8;
 
   /**
-   * 本研宠物粮换绑 directed 061423：只读这两条，不绑 452/2680，不读概念墙，不加采。
-   * 短名单只出墙上这 2 条，不凑 8–12。空名单=拒收。
+   * 本研调研：Brief 钉产品后，墙只挂可贴 brief 的袋面（能出图、非详情长图、深链可开）。
+   * 不绑 452/2680，不重开 directed 包，不加采新图。青绿演示仍用方向假设戳。
    */
-  const PET_FOOD_PACK_FEED = {
-    id: "061423",
-    path: "data/briefs/l2-brief-pet-food-pack-20260827T061423Z.jsonl",
-  };
-  const PET_FOOD_PACK_RE = /宠物粮|猫粮|狗粮|pet\s*food/i;
+  const BENYAN_PET_RE = /宠物|猫粮|狗粮|宠物粮|pet\s*food|orijen|渴望|royal\s*canin|皇家/i;
+  const LONG_DETAIL_IMAGE_RE = /I27_%E5%AE%A4%E5%86%85|I27_室内成猫|14395/i;
   const DIR_CARD_STAMP = "假设 · 非完稿";
 
   /** analogy_plan 里明显跨行业的目标；只用于把计划标成「跨界」，不代表已采到样本。 */
@@ -419,59 +416,128 @@
     return [r && r.title, r && r.question, input.product, live.product].filter(Boolean).join(" ");
   }
 
-  function isPetFoodPackBrief(r = currentResearch()) {
-    return Boolean(r && PET_FOOD_PACK_RE.test(researchBriefBlob(r)));
+  function benyanProductText(r = currentResearch()) {
+    const input = (r && r.brief) || {};
+    const live =
+      r && r.id === state.activeResearchId && state.bundle && state.bundle.l1
+        ? state.bundle.l1.input || {}
+        : {};
+    return [input.product, live.product, r && r.title].filter(Boolean).join(" ");
   }
 
-  function petFoodDirectedItems() {
-    return (state.wallItems || []).filter((it) => imgFor(it) && !state.shortlistRemoved.has(it.id));
+  function isBenyanResearch(r = currentResearch()) {
+    if (!r || !r.custom) return false;
+    if (isDraftInterview(r)) return false;
+    return Boolean(String((r.brief && r.brief.product) || "").trim());
   }
 
-  function petFoodDirectedCards() {
-    return petFoodDirectedItems().map((it) => ({
-      card_id: `hyp-${it.id}`,
-      title: humanTitle(it.title || it.id),
-      one_liner: DIR_CARD_STAMP,
-      advantage: "本研 directed 061423 在售包装参照，不是完稿。",
-      differentiation: "",
-      recommended_style_buckets_zh: [],
-      reference_montage: [],
-      hou_decision: "pending",
-    }));
+  function isKnownLongDetailImage(url) {
+    return LONG_DETAIL_IMAGE_RE.test(String(url || ""));
   }
 
-  function attachPetFoodDirectedCards(bundle) {
-    if (!bundle) return bundle;
-    bundle.l4_cards = petFoodDirectedCards();
-    bundle.l4_cards.forEach((c) => {
-      if (!state.decisions[c.card_id]) state.decisions[c.card_id] = c.hou_decision || "pending";
+  function passesBagFrontQc(row) {
+    if (!row) return false;
+    const img = String(row.image_url || row.thumbnail_url || "");
+    const page = String(row.page_url || "");
+    if (!/^https:\/\//i.test(img) || !/^https:\/\//i.test(page)) return false;
+    if (isKnownLongDetailImage(img)) return false;
+    const aspect = Number(row.extra && row.extra.aspect);
+    if (Number.isFinite(aspect) && aspect > 0 && (aspect < 0.8 || aspect >= 3 || aspect > 2.2)) {
+      return false;
+    }
+    return true;
+  }
+
+  /** Official bag-front URLs already in-studio. No new image files. Not a directed-pack bind. */
+  function benyanOfficialBagFronts() {
+    return [
+      {
+        id: "benyan:orijen-original-bagfront",
+        title: "渴望 Orijen Original",
+        author_or_brand: "Orijen",
+        source: "orijen",
+        source_type: "shelf",
+        page_url: "https://www.orijenpetfoods.com/en-US/dogs/dog-food/original/ds-ori-original-dog.html",
+        image_url:
+          "https://www.orijenpetfoods.com/dw/image/v2/bfdw_prd/on/demandware.static/-/Sites-orijen-na-master-catalog/default/dw3a5e4059/ORI%20Dog%20Refresh%202023/Original-2023/Original%20Dog%2031lb%20Front%20EN.png?sw=1200",
+        thumbnail_url:
+          "https://www.orijenpetfoods.com/dw/image/v2/bfdw_prd/on/demandware.static/-/Sites-orijen-na-master-catalog/default/dw3a5e4059/ORI%20Dog%20Refresh%202023/Original-2023/Original%20Dog%2031lb%20Front%20EN.png?sw=1200",
+        query_used: "Orijen Original",
+        raw_tags: ["benyan-bagfront", "pet-food", "orijen"],
+        suggested_style_buckets: [],
+        structure_tags: [],
+        info_hierarchy_tags: [],
+        color_roles: [],
+        is_on_market: "yes",
+        market_region: ["global"],
+        collected_at: "2026-08-27T06:14:23Z",
+        extra: {
+          bag_front_qc: "pass",
+          aspect: 1,
+          brief_relevance_v1: "pass_brief",
+          research_seat: "benyan",
+        },
+      },
+    ];
+  }
+
+  function benyanRowsForProduct(product) {
+    const blob = String(product || "");
+    return benyanOfficialBagFronts().filter((row) => {
+      if (!passesBagFrontQc(row)) return false;
+      const hay = [row.title, row.query_used, (row.raw_tags || []).join(" "), row.author_or_brand]
+        .filter(Boolean)
+        .join(" ");
+      if (BENYAN_PET_RE.test(blob)) return BENYAN_PET_RE.test(hay);
+      const tokens = blob.split(/[\s·,，/]+/).filter((t) => t.length >= 2);
+      return tokens.some((t) => hay.toLowerCase().includes(t.toLowerCase()));
     });
-    return bundle;
   }
 
-  async function loadPetFoodDirectedWall(research) {
+  function benyanWallItems() {
+    return (state.wallItems || []).filter(
+      (it) =>
+        passesBagFrontQc(it) &&
+        imgFor(it) &&
+        pageUrlOf(it) &&
+        !state.shortlistRemoved.has(it.id)
+    );
+  }
+
+  function applyBenyanShortlist() {
+    const items = benyanWallItems();
+    setShortlist(items);
+    state.shortlistAuto = true;
+    return items.length;
+  }
+
+  async function loadBenyanResearchWall(research) {
     const r = research || currentResearch();
+    const product = benyanProductText(r);
     state.wallItems = [];
     state.pendingItems = [];
     state.feedCounts = { main: 0, pending: 0 };
-    try {
-      const res = await fetch(PET_FOOD_PACK_FEED.path, { cache: "no-store" });
-      const raw = res.ok ? parseJsonl(await res.text()) : [];
-      state.wallItems = raw
-        .map((row) => normalizeFeedItem(row, row.wall_status || "pending_review"))
-        .filter((it) => imgFor(it) || pageUrlOf(it));
-    } catch (_) {
-      state.wallItems = [];
-    }
+    state.shortlistVisual = [];
+    state.shortlistTouched = false;
+    state.shortlistReasons = {};
+    const raw = benyanRowsForProduct(product);
+    state.wallItems = raw
+      .map((row) => normalizeFeedItem(row, "main_wall"))
+      .filter((it) => passesBagFrontQc(it) && (imgFor(it) || pageUrlOf(it)));
     state.feedCounts = { main: state.wallItems.length, pending: 0 };
     state.preferredBuckets = [];
     state.wallVisibleLimit = WALL_BATCH_INITIAL;
     rebuildSourcesFromWall();
     updateWallCountBar();
-    setCap("crawler", "idle", `本研 directed ${PET_FOOD_PACK_FEED.id} · ${state.wallItems.length} 条，不绑茶墙`);
-    setCap("dotdot", "idle", state.wallItems.length ? "短名单只出本研这 2 条" : "directed 061423 还没挂上");
-    if (state.bundle) attachPetFoodDirectedCards(state.bundle);
-    if (!userArmedPending) forceProductWallDefaults("after-directed-061423");
+    setCap("crawler", "idle", `本研袋面 ${state.wallItems.length} 条 · 不绑茶墙`);
+    setCap(
+      "dotdot",
+      "idle",
+      state.wallItems.length ? "短名单按本研袋面成立" : "这轮还没有可贴 brief 的袋面"
+    );
+    if (state.bundle) state.bundle.l4_cards = [];
+    r.onlyBriefDefault = true;
+    if (!userArmedPending) forceProductWallDefaults("after-benyan-wall");
     return state.wallItems.length;
   }
 
@@ -498,7 +564,7 @@
       l3: { counts: {}, ai_recommended_buckets: [], l1_summary: {} },
       l4_cards: [],
     };
-    if (isPetFoodPackBrief(r)) attachPetFoodDirectedCards(bundle);
+    if (isBenyanResearch(r)) bundle.l4_cards = [];
     return bundle;
   }
 
@@ -772,7 +838,7 @@
     const l1 = state.bundle && state.bundle.l1 ? state.bundle.l1 : { input: {}, intent: {} };
     l1.input = { ...(l1.input || {}), [key]: value };
     if (state.bundle) state.bundle.l1 = l1;
-    if (isPetFoodPackBrief(r) && state.bundle) attachPetFoodDirectedCards(state.bundle);
+    if (isBenyanResearch(r) && state.bundle) state.bundle.l4_cards = [];
     if (el.researchTitle && r.title) el.researchTitle.textContent = r.title;
     state.briefAskKey = "";
     return key;
@@ -833,7 +899,7 @@
   function revealAfterBriefReady() {
     const r = currentResearch();
     state.holdResults = false;
-    if (isPetFoodPackBrief(r) && state.bundle) attachPetFoodDirectedCards(state.bundle);
+    if (isBenyanResearch(r) && state.bundle) state.bundle.l4_cards = [];
     ensureShortlist();
     const n = state.shortlistVisual.length;
     const wallN = (state.wallItems || []).length;
@@ -841,10 +907,10 @@
       title: "Brief 已收齐",
       detail: n ? `短名单 ${n} 款` : "结论已开",
       html: `<p class="run-quiet">${
-        isPetFoodPackBrief(r)
+        isBenyanResearch(r)
           ? n
-            ? `本研 directed ${PET_FOOD_PACK_FEED.id} · ${wallN} 条。不凑 8，不绑茶墙。`
-            : "空名单=拒收。不会从青绿 452 凑数。"
+            ? `本研袋面 ${wallN} 条，短名单据此成立。不绑茶墙，不挂方向假设。`
+            : "这轮还没有可贴 brief 的袋面，短名单不能从青绿 452 凑。"
           : n
             ? "短名单和结论已按已落地样本铺上。"
             : "这轮墙上还没有能进短名单的样本，结论只写缺口。"
@@ -878,7 +944,7 @@
       showBriefError("还缺几项，补完再铺短名单。");
       return false;
     }
-    if (isPetFoodPackBrief(r)) await loadPetFoodDirectedWall(r);
+    if (r.custom && r.brief && r.brief.product) await loadBenyanResearchWall(r);
     closeBriefDialog();
     revealAfterBriefReady();
     return true;
@@ -1008,7 +1074,7 @@
     if (/taobao|淘宝/.test(key)) return "淘宝";
     if (/dribbble/.test(key)) return "Dribbble";
     if (SOURCE_META[key]?.label) return SOURCE_META[key].label;
-    if (/093316/.test(key)) return "093316";
+    if (/benyan/.test(key)) return "本研";
     if (/^[a-z0-9_-]+$/i.test(raw)) {
       return raw.replace(/[-_]/g, " ").replace(/\b([a-z])/g, (m, ch) => ch.toUpperCase());
     }
@@ -1634,8 +1700,8 @@
 
   async function loadLiveFeeds(research) {
     const r = research || RESEARCHES.find((x) => x.id === state.activeResearchId) || RESEARCHES[0];
-    if (isPetFoodPackBrief(r)) {
-      await loadPetFoodDirectedWall(r);
+    if (isBenyanResearch(r)) {
+      await loadBenyanResearchWall(r);
       return;
     }
     const emptyWall = Boolean(r.emptyWall) || (r.feeds && Array.isArray(r.feeds.main) && r.feeds.main.length === 0);
@@ -1738,6 +1804,16 @@
     const query = String(item.query_used || "");
     const blob = [title, query, tags, String(item.category_label || "")].join(" ");
 
+    if (isBenyanResearch()) {
+      const product = benyanProductText();
+      if (isKnownLongDetailImage(imgFor(item))) return "off";
+      if (BENYAN_PET_RE.test(product) && BENYAN_PET_RE.test(blob)) return "match";
+      if (item.extra && item.extra.research_seat === "benyan" && BENYAN_PET_RE.test(product)) {
+        return "match";
+      }
+      return "off";
+    }
+
     const TEA_RE =
       /(?:茶|绿茶|青茶|红茶|白茶|乌龙|普洱|龙井|碧螺春|铁观音|茉莉花茶|matcha|green\s*tea|oolong|pu[-\s]?erh|camellia\s*sinensis|\btea\b|chá|cha\s*pack)/i;
     const PACK_RE =
@@ -1783,6 +1859,7 @@
     tonic: /滋补|阿胶|人参|膏方|保健礼|tonic|herbal\s*gift|养生/i,
     pastry: /糕点|月饼|巧克力|chocolate|饼干|bakery|点心礼/i,
     coffee: /咖啡|coffee|latte|espresso/i,
+    pet: /宠物|猫粮|狗粮|宠物粮|pet\s*food|orijen|渴望|royal\s*canin|皇家/i,
     cultural: /文创|博物馆|特产礼/i,
     cross: /香氛|香水|perfume|fragrance|美妆|护肤|cosmetic|skincare|潮玩|家居|服饰|球鞋|艺术衍生|高端水|mineral\s*water|国潮美妆/i,
   };
@@ -1818,6 +1895,12 @@
       return {
         same: LANE_LEX.tonic,
         adjacent: new RegExp(`${LANE_LEX.tea.source}|${LANE_LEX.liquor.source}|${LANE_LEX.pastry.source}`, "i"),
+      };
+    }
+    if (LANE_LEX.pet.test(blob) && !LANE_LEX.tea.test(blob)) {
+      return {
+        same: LANE_LEX.pet,
+        adjacent: new RegExp(`${LANE_LEX.tea.source}|${LANE_LEX.liquor.source}|${LANE_LEX.tonic.source}`, "i"),
       };
     }
     return {
@@ -2296,8 +2379,8 @@
         <div class="evidence-tags">
           <span>${escapeHtml(state.bundle?.l1?.brief_id || "本轮 Brief")}</span>
           <span>${escapeHtml(
-            item.extra && item.extra.directed_pack === "061423"
-              ? "本研 directed 061423"
+            item.extra && item.extra.research_seat === "benyan"
+              ? "本研调研"
               : item.wall_status === "pending_review"
                 ? "待复核 2680"
                 : "主墙 452"
@@ -2604,8 +2687,12 @@
       `必须有：${(input.must_have || []).join("、") || "未标注"}；必须避开：${(input.must_avoid || []).join("、") || "未标注"}`,
       `主墙 ${state.feedCounts.main} 张；待复核 ${state.feedCounts.pending}`,
       `按 Brief 动态分路：同类 ${lanes.same} · 不同类 ${lanes.adjacent} · 跨界 ${lanes.cross} · 货架 ${lanes.shelf}（货架是在售切片，不是第四品类）`,
-      `短名单 ${state.shortlistVisual.length} 款；方向假设卡 ${(state.bundle?.l4_cards || []).length} 张（示意·非完稿）`,
-      "铁律：不编造没采到的跨界/用户评论/开箱/成本；缺就写缺；不发起新采集；不把方向卡当完稿。",
+      isBenyanResearch()
+        ? `短名单 ${state.shortlistVisual.length} 款；本研结论按袋面成立`
+        : `短名单 ${state.shortlistVisual.length} 款；方向假设卡 ${(state.bundle?.l4_cards || []).length} 张（示意·非完稿）`,
+      isBenyanResearch()
+        ? "铁律：不编造没采到的跨界/用户评论/开箱/成本；缺就写缺；不加采新图；不绑茶墙。"
+        : "铁律：不编造没采到的跨界/用户评论/开箱/成本；缺就写缺；不发起新采集；不把方向卡当完稿。",
     ].join("\n");
   }
 
@@ -3050,16 +3137,10 @@
     });
   }
 
-  function applyPetFoodShortlist() {
-    const items = petFoodDirectedItems();
-    setShortlist(items);
-    state.shortlistAuto = true;
-  }
-
   function ensureShortlist() {
     if (state.shortlistVisual.length || state.shortlistTouched) return;
-    if (isPetFoodPackBrief()) {
-      applyPetFoodShortlist();
+    if (isBenyanResearch()) {
+      applyBenyanShortlist();
       return;
     }
     const cands = shortlistCandidates();
@@ -3159,19 +3240,19 @@
   }
 
   function applyLocalRescreen(comment) {
-    if (isPetFoodPackBrief()) {
-      applyPetFoodShortlist();
+    if (isBenyanResearch()) {
+      applyBenyanShortlist();
       state.shortlistTouched = true;
       renderCanvas();
-      toast("宠物粮短名单只出本研 directed 061423，不按批注凑墙");
+      toast("本研短名单只按袋面成立，不按批注凑茶墙");
       appendEvent({
         agent: "点点",
         time: "现在",
         tag: "按批注重筛",
         tagClass: "challenge",
         dot: "warn",
-        html: `<p>「${escapeHtml(comment.slice(0, 40))}」没有扩成 8–12。本研只挂 directed 061423 这两条；空名单拒收，不绑茶墙。</p>
-          <div class="event-note">不加采，不读 pet_food 概念墙，不写 452/2680 jsonl。</div>`,
+        html: `<p>「${escapeHtml(comment.slice(0, 40))}」没有扩成 8–12。本研短名单只收可贴 brief 的袋面，不绑茶墙。</p>
+          <div class="event-note">不加采新图，不写 452/2680 jsonl。</div>`,
       });
       return;
     }
@@ -3225,7 +3306,7 @@
   }
 
   async function rescreenWithLlm(comment, agentId) {
-    if (isPetFoodPackBrief()) {
+    if (isBenyanResearch()) {
       applyLocalRescreen(comment);
       return;
     }
@@ -3491,22 +3572,22 @@
       </div>`;
 
     if (!list.length) {
-      const petLock = isPetFoodPackBrief();
-      const cands = petLock ? 0 : shortlistCandidates().length;
+      const benyan = isBenyanResearch();
+      const cands = benyan ? 0 : shortlistCandidates().length;
       return `<section class="panel l4-panel">
         <div class="panel-head">
           <h3>L4 决策筛选 · 短名单</h3>
           <p class="panel-sub">${
-            petLock
-              ? "本研只挂 directed 061423 这两条。空名单=拒收，不凑 8–12，不绑茶墙。"
+            benyan
+              ? "本研短名单只按可贴 brief 的袋面成立。不凑 8–12，不绑茶墙。"
               : `从主墙里收 ${SHORTLIST_MIN}–${SHORTLIST_TARGET} 款给你拍板，不是 452 张全甩过来。`
           }</p>
         </div>
         ${commentBox}
         <div class="empty"><div class="slogan">短名单现在是空的</div>
         <p class="hint">${
-          petLock
-            ? "空名单=拒收。不会从青绿 452 或 pet_food 概念墙凑数。"
+          benyan
+            ? "还没有可贴 brief 的袋面。不会从青绿 452 或概念墙凑数。"
             : cands
             ? `墙上还有 ${cands} 张能进短名单。要我按 Brief 命中 + 风格桶多样性再收一轮吗？`
             : currentResearch().onlyBriefDefault !== false
@@ -3563,8 +3644,8 @@
       <div class="panel-head">
         <h3>L4 决策筛选 · 短名单 ${list.length} 款</h3>
         <p class="panel-sub">${
-          isPetFoodPackBrief()
-            ? "本研 directed 061423 两条。不凑 8–12，不用茶墙。"
+          isBenyanResearch()
+            ? "本研短名单按袋面成立。不凑 8–12，不用茶墙。"
             : state.shortlistAuto
             ? "先按 Brief 命中 + 风格桶多样性替你收了一轮，留哪个、拿掉哪个你说了算。"
             : "这是你自己从墙上勾进来的。"
@@ -3620,7 +3701,11 @@
           <div class="lane-row${counts.cross ? "" : " lane-zero"}"><span class="lane-zh">跨界</span><span class="lane-n">${counts.cross}</span><span class="lane-note">本轮未单列采集与打标</span></div>
           <div class="lane-row${counts.shelf ? "" : " lane-zero"}"><span class="lane-zh">货架</span><span class="lane-n">${counts.shelf}</span><span class="lane-note">在售 listing 样，深采未开通</span></div>
         </div>
-        <p class="rp-note">主墙 ${mainN} 张已上墙，其中花瓣 ${expiredHuabanCount()} 张图链已过期（点不开图，字段还在）。待复核 ${pendN} 张没算进结论。三路里只有同类算铺开了，不同类和跨界都不够，别把这份报告当「全市场扫描」。</p>
+        <p class="rp-note">${
+          isBenyanResearch()
+            ? `本研墙 ${mainN} 张袋面。只按 Brief 钉的产品挂可贴 brief 的袋面，不绑茶墙 452，也不把这份报告当全市场扫描。`
+            : `主墙 ${mainN} 张已上墙，其中花瓣 ${expiredHuabanCount()} 张图链已过期（点不开图，字段还在）。待复核 ${pendN} 张没算进结论。三路里只有同类算铺开了，不同类和跨界都不够，别把这份报告当「全市场扫描」。`
+        }</p>
       </section>`;
 
     const covRows = cov
@@ -3680,15 +3765,35 @@
       : `<section class="rp-sec">
           <h4><span class="rp-n">4</span>入选参考</h4>
           <p class="rp-warn">${
-            isPetFoodPackBrief()
-              ? "空名单=拒收。宠物粮包装不会从青绿 452 或概念墙凑 8–12。"
+            isBenyanResearch()
+              ? "短名单还空着。本研不会从青绿 452 或概念墙凑 8–12。"
               : "短名单是空的，这一段没有入选款。先去 L4 收 8–12 款，或点「重新收一轮」。在那之前，不要把这份报告当成已经选完。"
           }</p>
           <button type="button" class="empty-cta" data-empty-action="open-shortlist">去 L4 收短名单</button>
         </section>`;
 
     const contrastGaps = honestContrastGaps(counts);
-    const sec5 = `
+    const benyan = isBenyanResearch();
+    const sec5 = benyan
+      ? `
+      <section class="rp-sec">
+        <h4><span class="rp-n">5</span>差异化机会</h4>
+        <p class="rp-note">这一段只写短名单袋面里能看见的差异。没有样本就不假装有对照，也不挂方向假设卡。</p>
+        <ul class="rp-risk">${contrastGaps.map((g) => `<li>${escapeHtml(g)}</li>`).join("")}</ul>
+        ${
+          list.length
+            ? `<ul class="rp-risk">${list
+                .map(
+                  (it) =>
+                    `<li><b>${escapeHtml(humanTitle(it.title || it.id))}</b>：官网袋面可出图，深链 ${escapeHtml(
+                      pageHost(pageUrlOf(it)) || "可开"
+                    )}。按已见袋面写，不升格成完稿方向。</li>`
+                )
+                .join("")}</ul>`
+            : `<p class="muted">短名单还空，这一段只记覆盖缺口。</p>`
+        }
+      </section>`
+      : `
       <section class="rp-sec">
         <h4><span class="rp-n">5</span>差异化机会</h4>
         <p class="rp-note">这一段只写能从样本结构数出来的空白。没有样本就不假装有对照。</p>
@@ -3708,7 +3813,18 @@
 
     const typeN = covBy.graphic_type || 0;
 
-    const sec6 = `
+    const sec6 = benyan
+      ? `
+      <section class="rp-sec">
+        <h4><span class="rp-n">6</span>风险与下一步</h4>
+        <ul class="rp-risk">
+          <li><b>样本薄</b>：本研只按已见袋面写，${mainN} 张，不够谈全市场。</li>
+          <li><b>跨界 ${counts.cross}</b>：${counts.cross ? "按已落地样本写。" : "样本 0，不做对照。"}</li>
+          <li><b>用户反馈 / 开箱 / 成本</b>：本轮未采，不做对照。</li>
+        </ul>
+        <p class="rp-note">下一步按缺口补袋面和货架主色。本页结论按短名单袋面成立，不写方向假设。</p>
+      </section>`
+      : `
       <section class="rp-sec">
         <h4><span class="rp-n">6</span>风险与下一步</h4>
         <ul class="rp-risk">
@@ -3729,7 +3845,11 @@
       <div class="panel-head rp-head-row">
         <div>
           <h3>L5 结论报告 · 差异化机会</h3>
-          <p class="panel-sub">可复核的决策备忘：只用已落地的主墙 ${mainN} 张和你定的短名单，没有新采集，也没有补数。</p>
+          <p class="panel-sub">${
+            benyan
+              ? `本研结论按短名单 ${list.length} 款袋面成立，不绑茶墙，不加采。`
+              : `可复核的决策备忘：只用已落地的主墙 ${mainN} 张和你定的短名单，没有新采集，也没有补数。`
+          }</p>
         </div>
         <button type="button" class="rp-copy" data-report-action="copy">复制本页要点</button>
         <button type="button" class="rp-download" data-report-action="download">下载报告</button>
@@ -4181,8 +4301,8 @@
       );
       return false;
     }
-    const petLock = isPetFoodPackBrief();
-    if (!petLock && currentResearch().emptyWall && !(state.wallItems || []).length) {
+    const benyan = isBenyanResearch();
+    if (!benyan && currentResearch().emptyWall && !(state.wallItems || []).length) {
       toast(tab === "shortlist" ? "墙还是空的，短名单没有样本可收。" : "墙还是空的，结论没有样本可写。");
       return false;
     }
@@ -4196,8 +4316,8 @@
         appendRun({
           title: "L4 决策筛选",
           detail: n ? `短名单 ${n} 款` : "短名单是空的",
-          html: petLock
-            ? `<p class="run-quiet">${n ? `本研 directed ${PET_FOOD_PACK_FEED.id} · ${n} 条，不凑 8–12，不绑茶墙。` : "空名单=拒收。不会从青绿 452 凑数。"}不加采。</p>`
+          html: benyan
+            ? `<p class="run-quiet">${n ? `本研袋面短名单 ${n} 款，不凑 8–12，不绑茶墙。` : "还没有可贴 brief 的袋面。不会从青绿 452 凑数。"}不加采新图。</p>`
             : `<p class="run-quiet">只从已落地 ${state.feedCounts.main || 0} 张主墙收 8–12 款。跨界 ${lanes.cross}，不加采。</p>`,
           actions: [{ artifact: "shortlist", label: "打开短名单" }],
         });
@@ -4726,7 +4846,7 @@
       }
       await loadLiveFeeds(r);
       if (r.id === "r-green") ensureShortlist();
-      else if (isPetFoodPackBrief(r) && !isDraftInterview(r)) ensureShortlist();
+      else if (isBenyanResearch(r) && !isDraftInterview(r)) ensureShortlist();
       setCap("orchestrator", "online", `正在看「${r.title}」`);
       seedStream();
       if (r.custom) {
@@ -4938,8 +5058,8 @@
           ensureShortlist();
           renderCanvas();
           toast(
-            isPetFoodPackBrief()
-              ? `短名单 ${state.shortlistVisual.length} 款 · directed 061423，不凑茶墙`
+            isBenyanResearch()
+              ? `短名单 ${state.shortlistVisual.length} 款 · 本研袋面，不凑茶墙`
               : `又收了 ${state.shortlistVisual.length} 款 · 还是那 452 张墙`
           );
         }
@@ -5019,8 +5139,8 @@
         return;
       }
       if (act === "shortlist") {
-        if (isPetFoodPackBrief()) {
-          toast("宠物粮短名单只出本研 directed 061423，不从茶墙凑");
+        if (isBenyanResearch()) {
+          toast("本研短名单只按袋面成立，不从茶墙凑");
           return;
         }
         ensureShortlist();

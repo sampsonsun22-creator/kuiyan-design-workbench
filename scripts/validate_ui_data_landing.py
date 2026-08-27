@@ -190,26 +190,22 @@ def main() -> int:
         if not (ROOT / "ui-shell" / rel).exists():
             err.append(f"missing {rel}")
 
-    pet_feed = ROOT / "ui-shell" / "data" / "briefs" / "l2-brief-pet-food-pack-20260827T061423Z.jsonl"
-    directed = ROOT / "L2-collector" / "directed" / "l2-brief-pet-food-pack-20260827T061423Z.jsonl"
-    if not pet_feed.exists() or not directed.exists():
-        err.append("missing directed 061423 pet-food pack")
-    else:
-        n_pet = nlines(pet_feed)
-        if n_pet != 2:
-            err.append(f"directed 061423 rows={n_pet} expected 2")
-        if "PET_FOOD_PACK_FEED" not in app or "l2-brief-pet-food-pack-20260827T061423Z.jsonl" not in app:
-            err.append("app.js must bind directed 061423 feed")
-        if "loadPetFoodDirectedWall" not in app:
-            err.append("app.js missing loadPetFoodDirectedWall")
-        if "PET_FOOD_PACK_LOCK" in app:
-            err.append("app.js still hardcodes 093316 PET_FOOD_PACK_LOCK")
-        if "皇家犬" in app:
-            err.append("app.js must not hardcode extra SKU 皇家犬")
+    if "PET_FOOD_PACK_FEED" in app or "loadPetFoodDirectedWall" in app or "PET_FOOD_PACK_LOCK" in app:
+        err.append("app.js must not reopen directed 061423/093316 pack bind")
+    if "l2-brief-pet-food-pack-20260827T061423Z.jsonl" in app:
+        err.append("app.js must not bind directed 061423 jsonl")
+    if "皇家犬" in app:
+        err.append("app.js must not hardcode extra SKU 皇家犬")
+    if "isBenyanResearch" not in app or "loadBenyanResearchWall" not in app:
+        err.append("app.js missing 本研调研 wall after Brief product pin")
+    if "passesBagFrontQc" not in app:
+        err.append("app.js missing bag-front QC")
     if "假设 · 非完稿" not in app:
-        err.append("direction cards must stamp 假设 · 非完稿")
+        err.append("green-tea direction cards must still stamp 假设 · 非完稿")
     if "briefs/pet_food_main_wall.jsonl" in app:
         err.append("app.js must not bind pet_food concept wall")
+    if "452p38" not in html:
+        err.append("index.html cache bust must be ?v=452p38")
 
     tonic = ROOT / "ui-shell" / "data" / "briefs" / "tonic_gift_main_wall.jsonl"
     baijiu = ROOT / "ui-shell" / "data" / "briefs" / "baijiu_gift_main_wall.jsonl"

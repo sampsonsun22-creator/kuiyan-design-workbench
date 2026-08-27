@@ -25,7 +25,7 @@ if (!pwRoot) {
 const { chromium } = createRequire(path.join(pwRoot, "package.json"))("playwright");
 const SHIP = path.join(ROOT, "ship", "key-vision");
 const PORT = Number(process.env.E2E_PORT || 8767);
-const BASE = `http://127.0.0.1:${PORT}/?v=452p37`;
+const BASE = `http://127.0.0.1:${PORT}/?v=452p38`;
 
 function waitHttp(url, tries = 40) {
   return new Promise((resolve, reject) => {
@@ -558,50 +558,51 @@ async function main() {
     await page.waitForSelector(".wall-card img", { timeout: 15000 });
     const petCards = page.locator(".wall-card");
     const petCardN = await petCards.count();
-    note(petCardN === 2, `pet directed wall cards ${petCardN}`);
+    note(petCardN >= 1, `本研 wall cards ${petCardN}`);
     const petImgs = await page.locator(".wall-card img").evaluateAll((imgs) =>
       imgs.map((img) => img.getAttribute("src") || "")
     );
     note(
-      petImgs.length === 2 && petImgs.every((src) => /^https?:\/\//.test(src)),
-      `pet wall images ${petImgs.join(" | ").slice(0, 160)}`
+      petImgs.length >= 1 && petImgs.every((src) => /^https:\/\//.test(src)),
+      `本研 wall images ${petImgs.join(" | ").slice(0, 160)}`
+    );
+    note(
+      petImgs.every((src) => !/I27_/i.test(src)),
+      "本研 wall drops I27 long detail image"
     );
     const petHrefs = await page.locator(".wall-card a.src-link").evaluateAll((as) =>
       as.map((a) => a.getAttribute("href") || "")
     );
     note(
-      petHrefs.length === 2 && petHrefs.every((h) => /^https?:\/\//.test(h)),
-      `pet wall deep links ${petHrefs.join(" | ")}`
+      petHrefs.length >= 1 && petHrefs.every((h) => /^https:\/\//.test(h)),
+      `本研 wall deep links ${petHrefs.join(" | ")}`
     );
     const petChip = (await page.locator('.cat-chip[data-cat="shelf"]').innerText()).trim();
-    note(/货架/.test(petChip) && /2/.test(petChip), `pet 货架 chip ${petChip}`);
+    note(/货架/.test(petChip) && /[1-9]/.test(petChip), `本研 货架 chip ${petChip}`);
     const petBar = (await page.locator("#wallCountBar").innerText()).trim();
-    note(!/452/.test(petBar), `pet count bar not 452: ${petBar}`);
-    if (await page.locator(".report-panel, .l4-panel").count()) {
-      await page.locator('.tab[data-tab="shortlist"]').click();
-    } else {
-      await page.locator('.tab[data-tab="shortlist"]').click();
-    }
+    note(!/452/.test(petBar), `本研 count bar not 452: ${petBar}`);
+    await page.locator('.tab[data-tab="shortlist"]').click();
     await page.waitForSelector(".l4-panel");
     const petSl = await page.locator(".l4-panel").innerText();
     const petTitles = await page.locator(".l4-panel .sl-title").allInnerTexts();
     const petCount = await page.locator(".l4-panel .sl-item").count();
-    note(petCount === 2, `pet-food shortlist count ${petCount}`);
+    note(petCount >= 1, `本研 shortlist count ${petCount}`);
     note(
-      petTitles.some((t) => /I27|室内成猫|皇家/.test(t)) && petTitles.some((t) => /Orijen|渴望|Original/.test(t)),
-      `pet-food directed titles ${petTitles.join(" | ")}`
+      petTitles.some((t) => /Orijen|渴望|Original/.test(t)),
+      `本研 shortlist titles ${petTitles.join(" | ")}`
     );
-    note(!/皇家犬/.test(petSl + petTitles.join(" ")), "pet-food shortlist does not hardcode extra 皇家犬");
+    note(!/皇家犬/.test(petSl + petTitles.join(" ")), "本研 shortlist does not hardcode 皇家犬");
     note(
       !/青绿|小罐茶|静奢留白|茶礼/.test(petSl + petTitles.join(" ")),
-      "pet-food shortlist does not use the tea wall"
+      "本研 shortlist does not use the tea wall"
     );
-    note(!/Petbarn|Waggo|Meowly/.test(petSl), "pet-food shortlist does not use concept-wall padding");
+    note(!/Petbarn|Waggo|Meowly/.test(petSl), "本研 shortlist does not use concept-wall padding");
     await page.locator('.tab[data-tab="report"]').click();
     await page.waitForSelector(".report-panel");
     const petReport = await page.locator("#canvasBody").innerText();
-    note(/假设 · 非完稿/.test(petReport), "pet direction cards stamp 假设 · 非完稿");
-    note(!/青绿新中轴/.test(petReport), "pet report does not reuse tea direction cards");
+    note(!/假设 · 非完稿/.test(petReport), "本研结论不再写 假设 · 非完稿");
+    note(/入选参考/.test(petReport), "本研结论 has 入选参考");
+    note(!/青绿新中轴/.test(petReport), "本研 report does not reuse tea direction cards");
 
     await page.locator('.research-card[data-id="r-green"]').click();
     await page.locator('.tab[data-tab="shortlist"]').click();
