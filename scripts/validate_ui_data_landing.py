@@ -210,12 +210,16 @@ def main() -> int:
         err.append("app.js must report 短名单未成立")
     if "短名单据此成立" in app or "按袋面成立" in app or "短名单按本研袋面成立" in app:
         err.append("app.js must not claim 短名单成立 for 本研")
-    if "假设 · 非完稿" not in app:
-        err.append("green-tea direction cards must still stamp 假设 · 非完稿")
+    if "假设 · 非完稿" in app or "假设·非完稿" in app:
+        err.append("L5/direction cards must not stamp 假设·非完稿")
+    if 'collect_method === "api_pack_collect"' not in app:
+        err.append("app.js shortlist must require extra.collect_method===api_pack_collect")
+    if 'PET_FOOD_DIRECTED = ""' not in app and "PET_FOOD_DIRECTED=\"\"" not in app:
+        err.append("app.js must keep PET_FOOD_DIRECTED empty")
     if "briefs/pet_food_main_wall.jsonl" in app:
         err.append("app.js must not bind pet_food concept wall")
-    if "452p42" not in html:
-        err.append("index.html cache bust must be ?v=452p42")
+    if "452p47" not in html:
+        err.append("index.html cache bust must be ?v=452p47")
     if "/api/pack/collect" not in app or "requestPackCollect" not in app:
         err.append("app.js missing /api/pack/collect hook")
     if 'JSON.stringify({ product: name })' not in app:
@@ -232,6 +236,8 @@ def main() -> int:
         err.append("app.js must not say 自动采")
     if "CONTEXT_DEV_API_KEY=" in app or "ctxt_secret_" in app:
         err.append("app.js must not embed Context.dev secret")
+    if "TAVILY_API_KEY=" in app or "tvly-" in app:
+        err.append("app.js must not embed Tavily secret")
     collect_js = ROOT / "ship" / "key-vision-live" / "api" / "pack" / "collect.js"
     if not collect_js.exists():
         err.append("missing ship/key-vision-live/api/pack/collect.js")
@@ -239,20 +245,31 @@ def main() -> int:
         collect = collect_js.read_text(encoding="utf-8")
         if "payload.product" not in collect:
             err.append("collect.js must read brief.product")
-        if "numResults: 10" not in collect and "numResults:10" not in collect:
-            err.append("collect.js must send numResults 10")
-        if "factCheck: true" not in collect:
-            err.append("collect.js missing factCheck")
-        if "maxPages: 1" not in collect or "maxDepth: 0" not in collect:
-            err.append("collect.js missing extract page/depth caps")
+        if "api.tavily.com/search" not in collect or "api.tavily.com/extract" not in collect:
+            err.append("collect.js must call Tavily search/extract")
+        if "TAVILY_API_KEY" not in collect:
+            err.append("collect.js must read TAVILY_API_KEY")
+        if 'PET_FOOD_DIRECTED = ""' not in collect:
+            err.append("collect.js must keep PET_FOOD_DIRECTED empty")
+        if 'channel: "playwright"' in collect or "playwright_official" in collect:
+            err.append("collect.js must not impersonate playwright")
+        if "STAPLES" in collect or "gG2W7r" in collect or "pxmshare" in collect:
+            err.append("collect.js must not hardcode STAPLES / pxmshare bag URLs")
+        if "ds-ori-original" in collect or "PNG_2000" in collect:
+            err.append("collect.js must not hardcode Orijen/Hills bag URLs")
+        if "localhost" in collect or "vercel.app" in collect:
+            err.append("collect.js must not hardcode preview hosts")
         if "ctxt_secret_" in collect or "CONTEXT_DEV_API_KEY=" in collect:
             err.append("collect.js must not embed Context.dev secret")
+        if "tvly-" in collect:
+            err.append("collect.js must not embed Tavily secret")
         if "100121540384" in collect or "35482167913" in collect or "709835" in collect:
-            # banned IDs may appear only as a deny list
             if "BANNED_JD" not in collect:
                 err.append("collect.js must not hardcode 093316 SKUs")
         if "自动采" in collect:
             err.append("collect.js must not say 自动采")
+        if "no_truncate" not in collect:
+            err.append("collect.js must reject short product names with no_truncate")
     if "100121540384" in app or "35482167913" in app or "709835" in app:
         err.append("app.js must not hardcode 093316 SKUs")
     server_py = (ROOT / "scripts" / "key_vision_server.py").read_text(encoding="utf-8")
