@@ -574,6 +574,15 @@
     return String(product || "").trim().slice(0, 80);
   }
 
+  function productNameFromBrief(r) {
+    return packCollectKey(r && r.brief && r.brief.product);
+  }
+
+  function isShortProductName(name) {
+    const product_name = packCollectKey(name);
+    return !product_name || product_name.length < 4 || product_name === "宠物" || product_name === "粮" || product_name === "粮包";
+  }
+
   function sourceFromCollectUrl(url) {
     const h = String(url || "").toLowerCase();
     if (h.includes("orijen")) return "orijen";
@@ -640,10 +649,26 @@
   let packCollectInflight = "";
   const packCollectTried = new Set();
 
+  async function collectPackOnPin(r, opts) {
+    const product_name = typeof r === "string" ? packCollectKey(r) : productNameFromBrief(r);
+    if (!product_name) return { ok: false, reason: "empty_name" };
+    if (isShortProductName(product_name)) {
+      toast("产品词过短，不按品类硬收");
+      setCap("crawler", "idle", "产品词过短");
+      return { ok: false, reason: "no_truncate", no_truncate: true, no_sku: true, query: product_name };
+    }
+    return requestPackCollect(product_name, opts);
+  }
+
   async function requestPackCollect(product, opts) {
     const name = packCollectKey(product);
     const immediate = Boolean(opts && opts.immediate);
     if (!name) return null;
+    if (isShortProductName(name)) {
+      toast("产品词过短，不按品类硬收");
+      setCap("crawler", "idle", "产品词过短");
+      return { ok: false, reason: "no_truncate", no_truncate: true, no_sku: true, query: name };
+    }
     const run = async () => {
       if (packCollectInflight === name) return null;
       if (packCollectTried.has(name) && !immediate) return null;
@@ -654,7 +679,7 @@
         const res = await fetch("/api/pack/collect", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ product: name }),
+          body: JSON.stringify({ product_name: name }),
         });
         let data = {};
         try {
@@ -1165,7 +1190,7 @@
       return false;
     }
     if (r.custom && r.brief && r.brief.product) {
-      await requestPackCollect(r.brief.product, { immediate: true });
+      await collectPackOnPin(r, { immediate: true });
       await loadBenyanResearchWall(r);
     }
     closeBriefDialog();
@@ -3166,7 +3191,7 @@
   async function askAgent(agentId, userText) {
     const pinned = currentResearch();
     if (pinned && pinned.brief && pinned.brief.product) {
-      requestPackCollect(pinned.brief.product);
+      collectPackOnPin(pinned);
     }
     const history = state.chatTurns.slice(-8);
     const messages = [
@@ -3237,7 +3262,7 @@
     persistCustomResearches();
     renderResearch();
     if (el.researchTitle) el.researchTitle.textContent = r.title;
-    if (r.brief.product) requestPackCollect(r.brief.product);
+    if (r.brief.product) collectPackOnPin(r);
   }
 
   /* ---------- L4 决策筛选：只在已落地主墙上收短名单 ---------- */
@@ -4042,7 +4067,7 @@
         <h4><span class="rp-n">5</span>差异化机会</h4>
         <p class="rp-note">${
           list.length
-            ? "这一段只写短名单袋面里能看见的差异。没有样本就不假装有对照，也不挂方向假设卡。"
+            ? "这一段只写短名单袋面里能看见的差异。没有样本就不假装有对照，也不挂方向卡。"
             : escapeHtml(benyanGapSentences().join(""))
         }</p>
         <ul class="rp-risk">${contrastGaps.map((g) => `<li>${escapeHtml(g)}</li>`).join("")}</ul>
@@ -4510,7 +4535,7 @@
           title: "结论报告",
           detail: kept ? `${kept} 款短名单` : "缺口报告",
           html: kept
-            ? `<p class="run-quiet">六段结论。差异化是方向假设，不是完稿；跨界 0、用户反馈未采都写在最后。</p>`
+            ? `<p class="run-quiet">六段结论。跨界 0、用户反馈未采都写在最后。</p>`
             : `<p class="run-quiet">短名单空着，这份只能算覆盖缺口报告。</p>`,
           actions: [{ artifact: kept ? "report" : "shortlist", label: kept ? "看结论" : "先去收短名单" }],
         });
@@ -4530,17 +4555,17 @@
     const title = card?.title || cardId;
     toast(
       decision === "keep"
-        ? `留下方向假设「${title}」· 记在结论报告里`
+        ? `留下方向卡「${title}」· 记在结论报告里`
         : `先放下「${title}」· 以后还能翻回来`
     );
     if (decision === "keep") {
       appendEvent({
         agent: "奎燕设计智能体",
         time: "现在",
-        tag: "L5 方向假设",
+        tag: "L5 方向卡",
         tagClass: "consensus",
         dot: "ok",
-        html: `<p>留下方向假设「${escapeHtml(title)}」。它只是结论报告里的一条假设，还得靠短名单和后面补的货架/反馈数据顶住。</p>
+        html: `<p>留下方向卡「${escapeHtml(title)}」。记在结论报告里，还得靠短名单和后面补的货架/反馈数据顶住。</p>
           <div class="chips-row"><button type="button" class="artifact-link" data-artifact="report">回结论报告</button></div>`,
       });
     } else {
@@ -4905,7 +4930,7 @@
 
     const pinnedSend = currentResearch();
     if (pinnedSend && pinnedSend.brief && pinnedSend.brief.product) {
-      requestPackCollect(pinnedSend.brief.product);
+      collectPackOnPin(pinnedSend);
     }
 
     if (
@@ -5995,7 +6020,7 @@
       } catch (bundleErr) {
         console.warn("product bundle", bundleErr);
         state.bundle = { l4_cards: [], l1: {}, l3: { counts: {} } };
-        toast("Brief 与方向假设暂时读不到，先看主墙");
+        toast("Brief 与方向卡暂时读不到，先看主墙");
       }
       state._greenBundle = state.bundle;
       (state.bundle.l4_cards || []).forEach((c) => {

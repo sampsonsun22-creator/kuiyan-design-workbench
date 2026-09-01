@@ -212,6 +212,10 @@ def main() -> int:
         err.append("app.js must not claim 短名单成立 for 本研")
     if "假设 · 非完稿" in app or "假设·非完稿" in app:
         err.append("L5/direction cards must not stamp 假设·非完稿")
+    if "示意 · 非完稿" in app or "示意·非完稿" in app:
+        err.append("L5/direction cards must not stamp 示意·非完稿")
+    if "方向假设 · 非完稿" in app:
+        err.append("L5/direction cards must not stamp 方向假设 · 非完稿")
     if 'collect_method === "api_pack_collect"' not in app:
         err.append("app.js shortlist must require extra.collect_method===api_pack_collect")
     if 'PET_FOOD_DIRECTED = ""' not in app and "PET_FOOD_DIRECTED=\"\"" not in app:
@@ -220,10 +224,10 @@ def main() -> int:
         err.append("app.js must not bind pet_food concept wall")
     if "452p47" not in html:
         err.append("index.html cache bust must be ?v=452p47")
-    if "/api/pack/collect" not in app or "requestPackCollect" not in app:
-        err.append("app.js missing /api/pack/collect hook")
-    if 'JSON.stringify({ product: name })' not in app:
-        err.append("app.js must POST brief.product only")
+    if "/api/pack/collect" not in app or "collectPackOnPin" not in app:
+        err.append("app.js missing collectPackOnPin /api/pack/collect hook")
+    if "JSON.stringify({ product_name })" not in app and "JSON.stringify({ product_name: name })" not in app:
+        err.append("app.js must POST product_name only")
     if "ensurePetFoodDirectedWall" in app:
         err.append("app.js must not call ensurePetFoodDirectedWall")
     if "saveBriefFillDialog" not in app or "saveCustomBriefFromDom" not in app:

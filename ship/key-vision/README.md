@@ -6,6 +6,7 @@
 - 方向卡：青绿新中轴 / 静奢留白 / 开箱仪式
 - **现在就能打开（点一次 Open the page）：** https://raw.githack.com/sampsonsun22-creator/kuiyan-design-workbench/cursor/kuiyan-ui-data-landing-65bd/ship/key-vision/index.html
 - `http://127.0.0.1:8767` 只存在于云端虚拟机内部。网页版 Cloud Agent 的浏览器连的是你自己的电脑，所以会 `refused to connect`。
+- 前端锁：p45 壳 + `?v=452p47`（YES）。p43/p44 不算。p48/p49/p50 作废。参考预览 `https://kv-p21-preview-n3bgtx9ph-grok6.vercel.app/?v=452p47`
 - Cursor 桌面版：先点编辑器右上角插头图标，把 8767 转到本机，再开 `http://127.0.0.1:8767/?v=452p47`
 - 旧站 https://key-vision.vercel.app 仍是三页签旧壳，不要覆盖生产（p36 / alias / `--prod` 不动）。本分支只做预览。
 - 对话层要用模型时，不要用上面的静态 `http.server`，改用：`python3 scripts/key_vision_server.py`（本地转发，Key 不落盘）
@@ -13,7 +14,7 @@
 
 ## 袋面现拉（预览）
 
-钉 Brief 产品词后，客户端只 `POST /api/pack/collect`（相对路径，body 只带 `product` / `product_name`）。
+钉 Brief 产品词后，`collectPackOnPin` 只 `POST /api/pack/collect`（相对路径，body 只带 `product_name`）。
 
 Vercel Preview 环境变量（Production / p36 不要改）：
 
