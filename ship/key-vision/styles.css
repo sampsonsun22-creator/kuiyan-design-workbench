@@ -1622,9 +1622,7 @@ button, input, textarea, select {
   left: 2px;
 }
 .sc-disclaimer {
-  margin: 10px 0 0;
-  font-size: 10.5px;
-  color: #8a867c;
+  display: none;
 }
 
 /* ---------------------------------------------------------------

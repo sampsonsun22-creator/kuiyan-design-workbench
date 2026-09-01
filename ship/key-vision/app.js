@@ -698,19 +698,25 @@
           setCap("crawler", "idle", "产品词过短");
           return data;
         }
-        if (data.missing_key && (!data.ok || !data.item)) {
+        const rawItems = Array.isArray(data.items) && data.items.length
+          ? data.items
+          : data.item
+            ? [data.item]
+            : [];
+        const usable = rawItems.filter((it) => it && it.pack_url);
+        if (data.missing_key && (!data.ok || !usable.length)) {
           packCollectTried.delete(name);
           toast("TAVILY_API_KEY 未配置，官网降级未收到袋面");
           setCap("crawler", "idle", "袋面通道缺钥");
           return data;
         }
-        if (!data.ok || !data.item || !data.item.pack_url) {
+        if (!data.ok || !usable.length) {
           packCollectTried.delete(name);
           toast(data.error || "空袋面");
           setCap("crawler", "idle", "空袋面");
           return data;
         }
-        ingestPackCollectItem(name, data.item);
+        usable.forEach((it) => ingestPackCollectItem(name, it));
         const r = currentResearch();
         if (r && r.custom && r.brief && packCollectKey(r.brief.product) === name) {
           await loadBenyanResearchWall(r);
@@ -782,6 +788,7 @@
     );
     if (state.bundle) state.bundle.l4_cards = [];
     r.onlyBriefDefault = true;
+    applyBenyanShortlist();
     if (!userArmedPending) forceProductWallDefaults("after-benyan-wall");
     return state.wallItems.length;
   }
@@ -1281,7 +1288,7 @@
 
   function downloadReportNotes() {
     const panel = el.canvasBody && el.canvasBody.querySelector(".report-panel");
-    const text = panel ? String(panel.innerText || "").replace(/\n{3,}/g, "\n\n").trim() : "";
+    const text = panel ? stripConclusionStamp(String(panel.innerText || "").replace(/\n{3,}/g, "\n\n")) : "";
     if (!text) {
       toast("报告还没出来");
       return;
@@ -1902,6 +1909,14 @@
     return false;
   }
 
+  function stripConclusionStamp(text) {
+    return String(text || "")
+      .replace(/[^。\n]{0,12}非完稿/g, "")
+      .replace(/[ \t]{2,}/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
   function sanitizeBundle(j) {
     const out = normalizeBundle(j);
     if (out.item_catalog) delete out.item_catalog;
@@ -1909,6 +1924,15 @@
     if (out.l3 && out.l3.walls && out.l3.walls.pending_review && Array.isArray(out.l3.walls.pending_review.items)) {
       out.l3.walls.pending_review.items = [];
     }
+    if (out.l5 && out.l5.footer) out.l5.footer = stripConclusionStamp(out.l5.footer);
+    if (out.meta && out.meta.footer) out.meta.footer = stripConclusionStamp(out.meta.footer);
+    (out.l4_cards || []).forEach((c) => {
+      if (!c || typeof c !== "object") return;
+      if (c.demo_disclaimer) delete c.demo_disclaimer;
+      ["title", "one_liner", "advantage", "differentiation"].forEach((k) => {
+        if (typeof c[k] === "string") c[k] = stripConclusionStamp(c[k]);
+      });
+    });
     return out;
   }
 
@@ -2897,12 +2921,12 @@
         <article class="strategy-card ${d === "keep" ? "keep" : d === "kill" ? "kill" : ""}" data-card-id="${c.card_id}">
           <div class="sc-img-big" style="background-image:url('${escapeAttr(img)}')"></div>
           <div class="sc-body">
-            <h4>${escapeHtml(c.title)}</h4>
-            <p class="one-liner">${escapeHtml(c.one_liner || "")}</p>
-            <p class="adv">${escapeHtml(c.advantage || "")}</p>
+            <h4>${escapeHtml(stripConclusionStamp(c.title))}</h4>
+            <p class="one-liner">${escapeHtml(stripConclusionStamp(c.one_liner || ""))}</p>
+            <p class="adv">${escapeHtml(stripConclusionStamp(c.advantage || ""))}</p>
             ${
               c.differentiation
-                ? `<p class="diff">${escapeHtml(c.differentiation)}</p>`
+                ? `<p class="diff">${escapeHtml(stripConclusionStamp(c.differentiation))}</p>`
                 : ""
             }
             <div class="sc-tags">
@@ -3286,6 +3310,7 @@
   }
 
   function shortlistCandidates() {
+    if (isBenyanResearch()) return benyanEligibleItems();
     const briefGate = currentResearch().onlyBriefDefault !== false;
     return state.wallItems.filter((it) => {
       if (isPendingReview(it)) return false;
@@ -5212,7 +5237,7 @@
 
   function copyReportNotes() {
     const panel = el.canvasBody.querySelector(".report-panel");
-    const text = panel ? String(panel.innerText || "").replace(/\n{3,}/g, "\n\n").trim() : "";
+    const text = panel ? stripConclusionStamp(String(panel.innerText || "").replace(/\n{3,}/g, "\n\n")) : "";
     if (!text) {
       toast("报告还没出来");
       return;

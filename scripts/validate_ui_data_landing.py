@@ -216,6 +216,16 @@ def main() -> int:
         err.append("L5/direction cards must not stamp 示意·非完稿")
     if "方向假设 · 非完稿" in app:
         err.append("L5/direction cards must not stamp 方向假设 · 非完稿")
+    if "demo_disclaimer" in app and "delete c.demo_disclaimer" not in app:
+        err.append("app.js must strip demo_disclaimer, not render it")
+    if "sc-disclaimer" in app:
+        err.append("app.js must not render sc-disclaimer on conclusion cards")
+    if "petFoodTitleStaple" in app or "PET_STAPLE_TITLE" in app:
+        err.append("app.js must not gate shortlist on Chinese staple titles")
+    if "data.items" not in app:
+        err.append("app.js collectPackOnPin must ingest data.items")
+    if "stripConclusionStamp" not in app:
+        err.append("app.js must strip conclusion draft stamps at render/copy")
     if 'collect_method === "api_pack_collect"' not in app:
         err.append("app.js shortlist must require extra.collect_method===api_pack_collect")
     if 'PET_FOOD_DIRECTED = ""' not in app and "PET_FOOD_DIRECTED=\"\"" not in app:
