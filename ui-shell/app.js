@@ -622,8 +622,11 @@
   }
 
   function sessionPendingForProduct(product) {
-    const key = packCollectKey(product);
-    return (state.benyanSessionPending || []).filter((it) => it._collect_product === key);
+    const r = currentResearch();
+    const keys = new Set(
+      [packCollectKey(product), packCollectKey(r && r.brief && r.brief.product)].filter(Boolean)
+    );
+    return (state.benyanSessionPending || []).filter((it) => keys.has(it._collect_product));
   }
 
   function ingestPackCollectItem(product, item) {
@@ -642,7 +645,8 @@
     const immediate = Boolean(opts && opts.immediate);
     if (!name) return null;
     const run = async () => {
-      if (packCollectTried.has(name) || packCollectInflight === name) return null;
+      if (packCollectInflight === name) return null;
+      if (packCollectTried.has(name) && !immediate) return null;
       packCollectTried.add(name);
       packCollectInflight = name;
       setCap("crawler", "working", "按品名收袋面");
@@ -659,6 +663,7 @@
           data = {};
         }
         if (res.status === 404) {
+          packCollectTried.delete(name);
           toast("按品名收袋面通道未接上");
           setCap("crawler", "idle", "按品名收袋面未接上");
           return data;
@@ -669,13 +674,15 @@
           return data;
         }
         if (data.missing_key && (!data.ok || !data.item)) {
+          packCollectTried.delete(name);
           toast("TAVILY_API_KEY 未配置，官网降级未收到袋面");
           setCap("crawler", "idle", "袋面通道缺钥");
           return data;
         }
         if (!data.ok || !data.item || !data.item.pack_url) {
+          packCollectTried.delete(name);
           toast(data.error || "空袋面");
-          setCap("crawler", "idle", data.error || "空袋面");
+          setCap("crawler", "idle", "空袋面");
           return data;
         }
         ingestPackCollectItem(name, data.item);
@@ -688,6 +695,7 @@
         setCap("crawler", "idle", "按品名收袋面 · 待复核");
         return data;
       } catch (err) {
+        packCollectTried.delete(name);
         toast("按品名收袋面未打通");
         setCap("crawler", "idle", "按品名收袋面未打通");
         return { ok: false, error: String(err && err.message ? err.message : err) };
