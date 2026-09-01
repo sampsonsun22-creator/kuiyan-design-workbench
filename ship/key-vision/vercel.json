@@ -1,6 +1,11 @@
 {
   "cleanUrls": false,
   "trailingSlash": false,
+  "functions": {
+    "api/pack/collect.js": {
+      "maxDuration": 60
+    }
+  },
   "headers": [
     {
       "source": "/index.html",

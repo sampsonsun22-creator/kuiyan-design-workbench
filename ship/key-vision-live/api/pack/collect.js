@@ -1,23 +1,29 @@
 /**
  * POST /api/pack/collect
  * Body: { product } | { product_name } from brief.product. No official URLs.
- * Server-only CONTEXT_DEV_API_KEY → Context.dev web-search / extract / scrape-images.
- * Lands bag-front + clickable deep link. Does not write 452/2680 jsonl.
- *
- * Context.dev MCP schema (verified, not hardcoded SKUs):
- * - web-search: query, numResults ≥10 (32602 if lower), country cn|us
- * - web-extract: url, schema, instructions, factCheck, maxPages, maxDepth
- * - web-scrape-images: url, enrichment{classification,hostedUrl,resolution}, dedupe, maxAgeMs
+ * Tavily search + extract (TAVILY_API_KEY). No bag/PDP URLs live in this file.
+ * Tavily 429/432/no key → brand-site HTML search. Never Firecrawl / Apify / browser automation.
+ * Does not write 452 / 093316 jsonl. PET_FOOD_DIRECTED stays empty.
  */
-const CONTEXT_API = "https://api.context.dev/v1";
+const PET_FOOD_DIRECTED = "";
+const TAVILY_SEARCH = "https://api.tavily.com/search";
+const TAVILY_EXTRACT = "https://api.tavily.com/extract";
 const BANNED_JD = new Set(["100121540384", "35482167913", "709835"]);
-const PREFER_HOSTS = ["orijenpetfoods.com", "royalcanin.com.cn", "royalcanin.com"];
-const DROP_HOST = /zhihu|weibo|xiaohongshu|facebook|instagram|pinterest|tiktok|sitemap/i;
+const SHORT_PRODUCT = new Set(["宠物", "粮", "粮包"]);
+const BRAND_SITES = [
+  { re: /orijen|渴望/i, hosts: ["orijenpetfoods.com"] },
+  { re: /acana|爱肯拿/i, hosts: ["acana.com"] },
+  { re: /royal\s*canin|皇家/i, hosts: ["royalcanin.com.cn", "royalcanin.com"] },
+];
+const DROP_HOST =
+  /zhihu|weibo|xiaohongshu|facebook|instagram|pinterest|tiktok|taobao|tmall|wikipedia|wikimedia|sitemap/i;
 const DROP_PATH = /\/(faq|help|support|list|search|category|categories|collections|sitemap)(\/|$)/i;
-const SKU_PATH = /\/products\/\d+|\/(dog-food|cat-food)\/[^/?#]+|\/(cats|dogs)\/products\/\d+/i;
+const SKU_PATH =
+  /\/products\/\d+|\/ds-[a-z0-9-]+|\/dog-food\/[^/?#]+|\/cat-food\/[^/?#]+/i;
 const JD_RE = /item\.jd\.com\/(\d+)\.html/i;
-const LONG_NAME = /详情|长图|_1000px|lifestyle|喂养|成分|对比|人宠/i;
-const BAG_NAME = /front|袋|pack|31lb|hero/i;
+const DROP_IMAGE =
+  /logo|academy|menu|lifestyle|生活场|人宠|喂养|详情|长图|_1000px|成分|对比|favicon|sprite/i;
+const BAG_HINT = /front|袋|pack|hero|master-catalog|sw=1200|\.png(?:$|\?)/i;
 
 function json(res, code, body) {
   res.statusCode = code;
@@ -52,14 +58,16 @@ function readBody(req) {
   });
 }
 
-function hasHan(s) {
-  return /[\u4e00-\u9fff]/.test(String(s || ""));
+function tavilyKey() {
+  return String(process.env.TAVILY_API_KEY || "").trim();
 }
 
-function searchQuery(product) {
+function isTooShort(product) {
   const name = String(product || "").trim();
-  if (hasHan(name)) return name;
-  return `${name} dry food`;
+  if (!name) return true;
+  if (name.length < 4) return true;
+  if (SHORT_PRODUCT.has(name)) return true;
+  return false;
 }
 
 function hostOf(url) {
@@ -71,22 +79,42 @@ function hostOf(url) {
 }
 
 function isBannedUrl(url) {
-  const m = String(url || "").match(JD_RE);
+  const s = String(url || "");
+  const m = s.match(JD_RE);
   if (m && BANNED_JD.has(m[1])) return true;
-  if (/100121540384|35482167913|709835/.test(String(url || ""))) return true;
+  if (/100121540384|35482167913|709835/.test(s)) return true;
+  if (/wikipedia\.|wikimedia\.|upload\.wikimedia/i.test(s)) return true;
   return false;
+}
+
+function decodeHtml(s) {
+  return String(s || "")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
+function productTokens(product) {
+  return String(product || "")
+    .toLowerCase()
+    .split(/[^a-z0-9\u4e00-\u9fff]+/)
+    .filter((t) => t.length >= 3 && !/^(the|and|dog|cat|food|dry|pet|for)$/i.test(t));
 }
 
 function isSkuPage(url) {
   try {
     const u = new URL(url);
-    const host = u.hostname;
     const path = u.pathname || "/";
-    if (DROP_HOST.test(host) || DROP_PATH.test(path)) return false;
+    if (DROP_HOST.test(u.hostname) || DROP_PATH.test(path)) return false;
     if (path === "/" || path === "") return false;
+    if (/\/(puppy|adult|senior|grain-free|grain-inclusive|small-breed|large-breed|healthy-weight)\/?$/i.test(path) && !/\/ds-/.test(path)) {
+      return false;
+    }
     if (JD_RE.test(url) && !isBannedUrl(url)) return true;
     if (SKU_PATH.test(path)) return true;
-    if (/\/dogs\/dog-food\/|\/cats\/cat-food\//i.test(path) && path.split("/").filter(Boolean).length >= 3) {
+    if (/\/dogs\/dog-food\/|\/cats\/cat-food\//i.test(path) && path.split("/").filter(Boolean).length >= 5) {
       return true;
     }
     return false;
@@ -95,56 +123,102 @@ function isSkuPage(url) {
   }
 }
 
-function skuScore(url) {
-  const host = hostOf(url);
+function skuScore(url, product) {
   let s = 0;
-  if (PREFER_HOSTS.some((h) => host.endsWith(h))) s += 6;
+  const host = hostOf(url);
+  const path = decodeURIComponent(String((() => {
+    try {
+      return new URL(url).pathname;
+    } catch (_) {
+      return url;
+    }
+  })()) || "").toLowerCase();
+  if (BRAND_SITES.some((b) => b.hosts.some((h) => host.endsWith(h)))) s += 6;
   if (SKU_PATH.test(url)) s += 4;
+  if (/\/ds-[a-z0-9-]+/i.test(path)) s += 5;
   if (/\/dogs\/dog-food\/|\/cats\/cat-food\//i.test(url)) s += 3;
   if (JD_RE.test(url) && !isBannedUrl(url)) s += 2;
+  const tokens = productTokens(product);
+  tokens.forEach((t) => {
+    if (path.includes(t)) s += 6;
+  });
+  if (/freeze-dried|treat|fdt|fdf|medallion/i.test(path) && !/freeze|treat|冻干|零食/.test(String(product || ""))) {
+    s -= 4;
+  }
+  const last = (path.split("/").pop() || "").replace(/\.html$/, "");
+  const extra = last.split(/[-_]/).filter((p) => p && !tokens.includes(p) && !/^(ds|ori|dog|cat|html)$/i.test(p));
+  s -= extra.length;
   return s;
 }
 
-function pickSku(results) {
-  const rows = (results || [])
-    .map((r) => r && r.url)
-    .filter((u) => u && !isBannedUrl(u) && isSkuPage(u));
-  rows.sort((a, b) => skuScore(b) - skuScore(a));
+function pickSku(urls, product) {
+  const rows = [...new Set((urls || []).filter((u) => u && !isBannedUrl(u) && isSkuPage(u)))];
+  rows.sort((a, b) => skuScore(b, product) - skuScore(a, product));
   return rows[0] || "";
 }
 
-function pickJd(results, extraUrls) {
-  const pool = []
-    .concat((results || []).map((r) => r && r.url))
-    .concat(extraUrls || []);
-  for (const u of pool) {
-    const m = String(u || "").match(JD_RE);
-    if (m && !BANNED_JD.has(m[1])) return `https://item.jd.com/${m[1]}.html`;
+function collectUrls(value, out) {
+  if (!value) return;
+  if (typeof value === "string") {
+    if (/^https?:\/\//i.test(value)) out.push(value);
+    return;
   }
-  return "";
+  if (Array.isArray(value)) {
+    value.forEach((v) => collectUrls(v, out));
+    return;
+  }
+  if (typeof value === "object") {
+    collectUrls(value.url || value.src || value.image || value.href, out);
+  }
 }
 
-async function contextFetch(path, { method, body, query } = {}) {
-  const key = process.env.CONTEXT_DEV_API_KEY || "";
-  const url = new URL(CONTEXT_API + path);
-  if (query) {
-    Object.entries(query).forEach(([k, v]) => {
-      if (v == null || v === "") return;
-      if (typeof v === "object") {
-        Object.entries(v).forEach(([ck, cv]) => url.searchParams.set(`${k}[${ck}]`, String(cv)));
-      } else {
-        url.searchParams.set(k, String(v));
-      }
-    });
-  }
-  const res = await fetch(url, {
-    method: method || "GET",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: body ? JSON.stringify(body) : undefined,
+function extractUrlsFromText(text) {
+  const out = [];
+  const blob = String(text || "");
+  const re = /https?:\/\/[^\s"'<>\\)]+/gi;
+  let m;
+  while ((m = re.exec(blob))) out.push(m[0].replace(/[),.;]+$/, ""));
+  return out;
+}
+
+function brandHostsFor(product) {
+  const name = String(product || "");
+  const hosts = [];
+  BRAND_SITES.forEach((b) => {
+    if (b.re.test(name)) hosts.push(...b.hosts);
   });
+  return [...new Set(hosts)];
+}
+
+function brandSearchUrls(host, query) {
+  const q = encodeURIComponent(query);
+  return [
+    `https://www.${host}/search?q=${q}`,
+    `https://www.${host}/en-US/search?q=${q}`,
+    `https://${host}/search?q=${q}`,
+  ];
+}
+
+function fetchTimeout(url, opts, ms) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms || 12000);
+  return fetch(url, { ...opts, signal: ctrl.signal, redirect: "follow" }).finally(() => clearTimeout(timer));
+}
+
+async function tavilyPost(path, body) {
+  const key = tavilyKey();
+  const res = await fetchTimeout(
+    path,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ...body, api_key: key }),
+    },
+    20000
+  );
   const text = await res.text();
   let data = {};
   try {
@@ -153,12 +227,17 @@ async function contextFetch(path, { method, body, query } = {}) {
     data = { message: text.slice(0, 240) };
   }
   if (!res.ok) {
-    const err = new Error(data.message || data.error || `context ${res.status}`);
+    const err = new Error(data.message || data.error || `tavily ${res.status}`);
     err.status = res.status;
     err.data = data;
     throw err;
   }
   return data;
+}
+
+function isTavilyBackoff(err) {
+  const status = Number(err && err.status);
+  return status === 429 || status === 432;
 }
 
 function parseAspect(buf) {
@@ -182,147 +261,320 @@ function parseAspect(buf) {
       i += 2 + len;
     }
   }
+  if (buf.toString("ascii", 0, 4) === "RIFF" && buf.toString("ascii", 8, 12) === "WEBP") {
+    const chunk = buf.toString("ascii", 12, 16);
+    if (chunk === "VP8X" && buf.length >= 30) {
+      const width = 1 + buf.readUIntLE(24, 3);
+      const height = 1 + buf.readUIntLE(27, 3);
+      if (width > 0 && height > 0) return { width, height, ratio: height / width };
+    }
+    if (chunk === "VP8 " && buf.length >= 30) {
+      const width = buf.readUInt16LE(26) & 0x3fff;
+      const height = buf.readUInt16LE(28) & 0x3fff;
+      if (width > 0 && height > 0) return { width, height, ratio: height / width };
+    }
+    if (chunk === "VP8L" && buf.length >= 25) {
+      const bits = buf.readUInt32LE(21);
+      const width = (bits & 0x3fff) + 1;
+      const height = ((bits >> 14) & 0x3fff) + 1;
+      if (width > 0 && height > 0) return { width, height, ratio: height / width };
+    }
+  }
   return null;
-}
-
-async function probeImage(url) {
-  const res = await fetch(url, {
-    method: "GET",
-    headers: { Range: "bytes=0-65535" },
-    redirect: "follow",
-  });
-  if (!res.ok && res.status !== 206) return null;
-  const buf = Buffer.from(await res.arrayBuffer());
-  return parseAspect(buf);
 }
 
 function nameScore(url) {
   const s = String(url || "");
   let n = 0;
-  if (BAG_NAME.test(s)) n += 2;
-  if (LONG_NAME.test(s)) n -= 4;
+  if (BAG_HINT.test(s)) n += 3;
+  if (/master-catalog|Front/i.test(s)) n += 3;
+  if (/[?&]sw=1200\b/i.test(s)) n += 2;
+  if (DROP_IMAGE.test(s)) n -= 6;
   return n;
 }
 
-function keepBag(meta) {
+function keepBag(meta, minSide) {
   if (!meta || !meta.ratio) return false;
   if (meta.ratio >= 3) return false;
   if (meta.ratio < 0.8 || meta.ratio > 2.2) return false;
+  const side = Math.min(meta.width || 0, meta.height || 0);
+  if (side < minSide) return false;
   return true;
 }
 
-async function chooseBag(urls) {
-  const ranked = [...new Set((urls || []).filter((u) => /^https:\/\//i.test(u) && !isBannedUrl(u)))].sort(
-    (a, b) => nameScore(b) - nameScore(a)
+async function probeImage(url) {
+  const res = await fetchTimeout(
+    url,
+    {
+      method: "GET",
+      headers: {
+        Range: "bytes=0-65535",
+        Accept: "image/*,*/*",
+        "User-Agent": "Mozilla/5.0 (compatible; KeyVisionPack/1.0)",
+      },
+    },
+    10000
   );
+  if (!res.ok && res.status !== 206) return null;
+  const buf = Buffer.from(await res.arrayBuffer());
+  const meta = parseAspect(buf);
+  if (!meta) return null;
+  const len = Number(res.headers.get("content-length") || 0);
+  return { url, ...meta, bytes: len || buf.length };
+}
+
+async function chooseBag(urls) {
+  const ranked = [
+    ...new Set(
+      (urls || [])
+        .map((u) => decodeHtml(u))
+        .filter((u) => /^https:\/\//i.test(u) && !isBannedUrl(u) && !DROP_IMAGE.test(u))
+    ),
+  ].sort((a, b) => nameScore(b) - nameScore(a));
   const measured = [];
-  for (const url of ranked.slice(0, 8)) {
+  for (const url of ranked.slice(0, 10)) {
     try {
       const meta = await probeImage(url);
       if (!meta) continue;
-      measured.push({ url, ...meta });
+      measured.push(meta);
     } catch (_) {}
   }
-  const longN = measured.filter((m) => m.ratio > 2.2).length;
+  const longN = measured.filter((m) => m.ratio >= 3).length;
   if (longN >= 3) return { item: null, longN, measured };
-  const bag = measured.find((m) => keepBag(m) && nameScore(m.url) >= 0) || measured.find(keepBag);
-  return { item: bag || null, longN, measured };
+  const pick = (minSide) =>
+    measured.find((m) => keepBag(m, minSide) && nameScore(m.url) >= 0) || measured.find((m) => keepBag(m, minSide));
+  return { item: pick(400) || pick(200) || null, longN, measured };
+}
+
+function htmlHrefs(html, base) {
+  const out = [];
+  const re = /(?:href|src)=["']([^"']+)["']/gi;
+  let m;
+  while ((m = re.exec(String(html || "")))) {
+    try {
+      out.push(new URL(decodeHtml(m[1]), base).href);
+    } catch (_) {}
+  }
+  const srcset = /srcset=["']([^"']+)["']/gi;
+  while ((m = srcset.exec(String(html || "")))) {
+    String(m[1])
+      .split(",")
+      .forEach((part) => {
+        const u = decodeHtml(part.trim().split(/\s+/)[0]);
+        if (!u) return;
+        try {
+          out.push(new URL(u, base).href);
+        } catch (_) {}
+      });
+  }
+  return out;
+}
+
+async function fetchHtml(url) {
+  const res = await fetchTimeout(
+    url,
+    {
+      method: "GET",
+      headers: {
+        Accept: "text/html,application/xhtml+xml,*/*",
+        "User-Agent": "Mozilla/5.0 (compatible; KeyVisionPack/1.0)",
+      },
+    },
+    12000
+  );
+  if (!res.ok) return "";
+  const ctype = String(res.headers.get("content-type") || "");
+  if (ctype && !/html|xml|text/i.test(ctype)) return "";
+  return await res.text();
+}
+
+function titleFromHtml(html, fallback) {
+  const blob = String(html || "");
+  const og = blob.match(/property=["']og:title["'][^>]*content=["']([^"']+)/i) || blob.match(/content=["']([^"']+)["'][^>]*property=["']og:title["']/i);
+  if (og && og[1] && !/meta data/i.test(og[1])) return decodeHtml(og[1]).replace(/\s+/g, " ").trim().slice(0, 80);
+  const h1 = blob.match(/<h1[^>]*>([^<]+)/i);
+  if (h1 && h1[1]) return decodeHtml(h1[1]).replace(/\s+/g, " ").trim().slice(0, 80);
+  const m = blob.match(/<title[^>]*>([^<]+)/i);
+  if (m && m[1] && !/meta data/i.test(m[1])) return decodeHtml(m[1]).replace(/\s+/g, " ").trim().slice(0, 80);
+  return fallback;
+}
+
+async function collectViaTavily(product) {
+  const query = `${product} pack bag front`;
+  const search = await tavilyPost(TAVILY_SEARCH, {
+    query,
+    include_images: true,
+    search_depth: "basic",
+    max_results: 10,
+  });
+  const pageUrls = [];
+  const imageUrls = [];
+  (search.results || []).forEach((r) => {
+    collectUrls(r && r.url, pageUrls);
+    collectUrls(r && r.images, imageUrls);
+    extractUrlsFromText(r && r.content).forEach((u) => {
+      if (/\.(png|jpe?g|webp)(\?|$)/i.test(u)) imageUrls.push(u);
+      else pageUrls.push(u);
+    });
+  });
+  collectUrls(search.images, imageUrls);
+
+  let sku = pickSku(pageUrls, product);
+  let pageTitle = product;
+  if (sku) {
+    const extracted = await tavilyPost(TAVILY_EXTRACT, {
+      urls: [sku],
+      include_images: true,
+      extract_depth: "basic",
+    });
+    const rows = extracted.results || extracted.data || [];
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    if (row) {
+      collectUrls(row.images, imageUrls);
+      extractUrlsFromText(row.raw_content || row.content).forEach((u) => {
+        if (/\.(png|jpe?g|webp)(\?|$)/i.test(u)) imageUrls.push(u);
+      });
+      if (row.url && isSkuPage(row.url)) sku = row.url;
+    }
+  }
+  if (!sku) sku = pickSku(pageUrls.concat(imageUrls), product);
+  const picked = await chooseBag(imageUrls);
+  if (!picked.item || !sku) {
+    return {
+      ok: false,
+      channel: "tavily",
+      error: picked.longN >= 3 ? "同一页长图过多，整项丢" : "no_sku",
+      no_sku: !sku,
+    };
+  }
+  return {
+    ok: true,
+    channel: "tavily",
+    item: {
+      name: pageTitle,
+      pack_url: decodeHtml(picked.item.url),
+      deep_link: sku,
+      width: picked.item.width,
+      height: picked.item.height,
+      ratio: Number(picked.item.ratio.toFixed(3)),
+      bytes: picked.item.bytes || 0,
+    },
+    items: [picked.item].map((im) => ({
+      name: pageTitle,
+      pack_url: decodeHtml(im.url),
+      deep_link: sku,
+      width: im.width,
+      height: im.height,
+      ratio: Number(im.ratio.toFixed(3)),
+      bytes: im.bytes || 0,
+    })),
+  };
+}
+
+async function collectViaBrandSite(product) {
+  const hosts = brandHostsFor(product);
+  if (!hosts.length) {
+    return { ok: false, channel: "brand_site", error: "no_sku", no_sku: true };
+  }
+  const rest = String(product)
+    .replace(/orijen|渴望|acana|爱肯拿|royal\s*canin|皇家/gi, " ")
+    .trim() || product;
+  const pageUrls = [];
+  const imageUrls = [];
+  let pageHtml = "";
+  let sku = "";
+  for (const host of hosts) {
+    for (const searchUrl of brandSearchUrls(host, rest)) {
+      try {
+        const html = await fetchHtml(searchUrl);
+        if (!html) continue;
+        htmlHrefs(html, searchUrl).forEach((u) => pageUrls.push(u));
+      } catch (_) {}
+    }
+    sku = pickSku(pageUrls, product);
+    if (sku) break;
+  }
+  if (!sku) {
+    return { ok: false, channel: "brand_site", error: "no_sku", no_sku: true };
+  }
+  try {
+    pageHtml = await fetchHtml(sku);
+    htmlHrefs(pageHtml, sku).forEach((u) => {
+      if (/\.(png|jpe?g|webp)(\?|$)/i.test(u) || /image|media|cdn|catalog/i.test(u)) imageUrls.push(u);
+    });
+  } catch (_) {}
+  const picked = await chooseBag(imageUrls);
+  if (!picked.item) {
+    return {
+      ok: false,
+      channel: "brand_site",
+      error: picked.longN >= 3 ? "同一页长图过多，整项丢" : "空袋面",
+      no_sku: false,
+    };
+  }
+  const name = titleFromHtml(pageHtml, product);
+  return {
+    ok: true,
+    channel: "brand_site",
+    item: {
+      name,
+      pack_url: decodeHtml(picked.item.url),
+      deep_link: sku,
+      width: picked.item.width,
+      height: picked.item.height,
+      ratio: Number(picked.item.ratio.toFixed(3)),
+      bytes: picked.item.bytes || 0,
+    },
+    items: [
+      {
+        name,
+        pack_url: decodeHtml(picked.item.url),
+        deep_link: sku,
+        width: picked.item.width,
+        height: picked.item.height,
+        ratio: Number(picked.item.ratio.toFixed(3)),
+        bytes: picked.item.bytes || 0,
+      },
+    ],
+  };
 }
 
 async function collectPack(product) {
   const name = String(product || "").trim().slice(0, 80);
   if (!name) return { ok: false, error: "missing product" };
-  if (!process.env.CONTEXT_DEV_API_KEY) {
-    return { ok: false, missing_key: true, error: "CONTEXT_DEV_API_KEY 未配置" };
+  if (isTooShort(name)) {
+    return { ok: false, error: "no_truncate", no_truncate: true, no_sku: true };
   }
+  void PET_FOOD_DIRECTED;
 
-  const query = searchQuery(name);
-  const country = hasHan(name) ? "cn" : "us";
-  const search = await contextFetch("/web/search", {
-    method: "POST",
-    body: { query, numResults: 10, country, timeoutMS: 30000 },
-  });
-  const sku = pickSku(search.results || []);
-  if (!sku) {
-    return { ok: false, error: "没有官网商品页", query };
+  const key = tavilyKey();
+  if (key) {
+    try {
+      const viaTavily = await collectViaTavily(name);
+      if (viaTavily.ok) return viaTavily;
+      if (viaTavily.error && viaTavily.error !== "no_sku") return viaTavily;
+    } catch (err) {
+      if (!isTavilyBackoff(err)) {
+        try {
+          return await collectViaBrandSite(name);
+        } catch (_) {
+          return { ok: false, channel: "tavily", error: String(err.message || err).slice(0, 240) };
+        }
+      }
+    }
   }
-
-  const extracted = await contextFetch("/web/extract", {
-    method: "POST",
-    body: {
-      url: sku,
-      maxPages: 1,
-      maxDepth: 0,
-      factCheck: true,
-      instructions:
-        "Extract the official product pack/bag front image. Prefer the hero pack shot of the bag, not lifestyle photos.",
-      schema: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          product_name: { type: "string" },
-          product_url: { type: "string" },
-          pack_image_urls: { type: "array", items: { type: "string" } },
-          hero_image_url: { type: "string" },
-        },
-      },
-    },
-  });
-  const data = extracted.data || extracted.result || {};
-  let urls = []
-    .concat(data.hero_image_url || [])
-    .concat(data.pack_image_urls || [])
-    .filter(Boolean);
-
-  if (urls.length < 2) {
-    const qs = new URLSearchParams({
-      url: sku,
-      dedupe: "true",
-      maxAgeMs: "0",
-      "enrichment[classification]": "true",
-      "enrichment[hostedUrl]": "true",
-      "enrichment[resolution]": "true",
-    });
-    const imgs = await contextFetch(`/web/scrape/images?${qs.toString()}`, { method: "GET" });
-    (imgs.images || []).forEach((im) => {
-      const en = im && im.enrichment ? im.enrichment : {};
-      const src = (en && (en.hostedUrl || en.url)) || (im && (im.src || im.url));
-      if (src) urls.push(src);
-    });
-  }
-
-  const picked = await chooseBag(urls);
-  if (!picked.item) {
+  const fallback = await collectViaBrandSite(name);
+  if (fallback.ok) return fallback;
+  if (!key) {
     return {
       ok: false,
-      error: picked.longN >= 3 ? "同一页长图过多，整项丢" : "空袋面",
-      sku,
+      channel: "brand_site",
+      missing_key: true,
+      error: fallback.error || "TAVILY_API_KEY 未配置，官网降级未收到袋面",
+      no_sku: Boolean(fallback.no_sku),
     };
   }
-
-  let deep = pickJd(search.results || [], [data.product_url, sku]);
-  if (!deep) {
-    const jdSearch = await contextFetch("/web/search", {
-      method: "POST",
-      body: { query: `${name} site:item.jd.com`, numResults: 10, country, timeoutMS: 20000 },
-    });
-    deep = pickJd(jdSearch.results || [], []);
-  }
-  if (deep && isBannedUrl(deep)) deep = "";
-  const deepLink = deep || sku;
-
-  return {
-    ok: true,
-    item: {
-      name: data.product_name || name,
-      pack_url: picked.item.url,
-      deep_link: deepLink,
-      product_url: data.product_url || sku,
-      width: picked.item.width,
-      height: picked.item.height,
-      ratio: Number(picked.item.ratio.toFixed(3)),
-    },
-  };
+  return fallback;
 }
 
 async function handler(req, res) {
@@ -333,8 +585,9 @@ async function handler(req, res) {
   if (req.method === "GET") {
     json(res, 200, {
       ok: true,
-      ready: Boolean(process.env.CONTEXT_DEV_API_KEY),
-      missing_key: !process.env.CONTEXT_DEV_API_KEY,
+      ready: Boolean(tavilyKey()),
+      missing_key: !tavilyKey(),
+      channel: "tavily",
     });
     return;
   }
@@ -360,9 +613,10 @@ async function handler(req, res) {
   }
   try {
     const out = await collectPack(product);
-    json(res, out.ok ? 200 : out.missing_key ? 503 : 422, out);
+    const code = out.ok ? 200 : out.missing_key ? 503 : 422;
+    json(res, code, out);
   } catch (err) {
-    json(res, err.status || 502, {
+    json(res, err.status && err.status < 600 ? err.status : 502, {
       ok: false,
       error: String(err.message || err).slice(0, 240),
     });
@@ -372,4 +626,11 @@ async function handler(req, res) {
 handler.collectPack = collectPack;
 module.exports = handler;
 module.exports.collectPack = collectPack;
+module.exports.isTooShort = isTooShort;
+module.exports.isSkuPage = isSkuPage;
+module.exports.isBannedUrl = isBannedUrl;
+module.exports.pickSku = pickSku;
+module.exports.parseAspect = parseAspect;
+module.exports.keepBag = keepBag;
+module.exports.PET_FOOD_DIRECTED = PET_FOOD_DIRECTED;
 module.exports.config = { maxDuration: 60 };

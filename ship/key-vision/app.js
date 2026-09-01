@@ -174,15 +174,15 @@
   const SHORTLIST_MIN = 8;
 
   /**
-   * 本研调研：Brief 钉产品后，墙只挂本课题库内袋面。
-   * 先复核过线再入选；猫/犬分课题，有几收几不凑 8；短名单未成立只报缺口，不当选型。
-   * 不绑 452/2680，不重开 directed 包，不加采。青绿演示仍用方向假设戳。
+   * 本研调研：Brief 钉产品后，墙只挂 POST /api/pack/collect 的 session 袋面。
+   * 短名单只认 extra.collect_method==="api_pack_collect"；英文标题也过。
+   * 不绑 452/2680，不重开 directed 包。PET_FOOD_DIRECTED 保持空。
    */
+  const PET_FOOD_DIRECTED = "";
   const BENYAN_PET_RE = /宠物|猫粮|狗粮|宠物粮|pet\s*food|orijen|渴望|royal\s*canin|皇家/i;
   const BENYAN_CAT_RE = /猫粮|猫主粮|成猫|幼猫|室内猫|猫罐|猫零食|cat\s*food|\bcats?\b|feline/i;
   const BENYAN_DOG_RE = /狗粮|犬粮|成犬|幼犬|狗主粮|犬主粮|dog\s*food|\bdogs?\b|canine/i;
   const LONG_DETAIL_IMAGE_RE = /I27_%E5%AE%A4%E5%86%85|I27_室内成猫|14395/i;
-  const DIR_CARD_STAMP = "假设 · 非完稿";
 
   /** analogy_plan 里明显跨行业的目标；只用于把计划标成「跨界」，不代表已采到样本。 */
   const CROSS_TARGET_RE = /美妆|护肤|香氛|香水|潮玩|家居|服饰|数码|球鞋|艺术衍生/i;
@@ -494,25 +494,35 @@
   }
 
   function benyanRowsForProduct(_product) {
-    // 061423 directed 2 条（I27 + Orijen）不算产品已接。墙只收 POST /api/pack/collect 的 session pending。
+    // directed 包不接。PET_FOOD_DIRECTED 必须保持空。墙只收 POST /api/pack/collect。
+    void PET_FOOD_DIRECTED;
     return [];
+  }
+
+  function isApiPackCollect(it) {
+    return Boolean(it && it.extra && it.extra.collect_method === "api_pack_collect");
   }
 
   function benyanEligibleItems() {
     const want = benyanBriefSpecies();
-    return (state.wallItems || []).filter((it) => {
-      if (isPendingReview(it)) return false;
-      if (!passesBagFrontQc(it)) return false;
-      if (!imgFor(it) || !pageUrlOf(it)) return false;
-      if (state.shortlistRemoved.has(it.id)) return false;
+    const seen = new Set();
+    const pool = [];
+    (state.wallItems || []).concat(state.pendingItems || []).forEach((it) => {
+      if (!it || seen.has(it.id)) return;
+      seen.add(it.id);
+      if (!isApiPackCollect(it)) return;
+      if (!passesBagFrontQc(it)) return;
+      if (!imgFor(it) || !pageUrlOf(it)) return;
+      if (state.shortlistRemoved.has(it.id)) return;
       const got = benyanItemSpecies(it);
-      if (!want || !got || want !== got) return false;
-      return true;
+      if (want && got && want !== got) return;
+      pool.push(it);
     });
+    return pool;
   }
 
   function benyanShortlistFormed() {
-    return Boolean(benyanBriefSpecies()) && benyanEligibleItems().length >= SHORTLIST_MIN;
+    return benyanEligibleItems().length > 0;
   }
 
   function benyanGapState() {
@@ -540,17 +550,11 @@
 
   function benyanGapSentences(g = benyanGapState()) {
     const lines = [];
-    if (!g.species) {
-      lines.push("短名单未成立：猫/犬未分课题，不混收。");
-    } else {
-      lines.push(
-        `短名单未成立：本课题${g.speciesLabel}，库内过线 ${g.passedN}，待复核 ${g.pendingN} 不进短名单。`
-      );
-      lines.push(
-        `缺口：过线未满 ${SHORTLIST_MIN}–${SHORTLIST_TARGET}，还差 ${g.deficit}，库里有几收几，不凑 8。`
-      );
+    if (!g.formed) {
+      lines.push("短名单未成立：墙上还没有 api 采回袋面。");
+      lines.push("不凑 8，不报产品过。");
     }
-    lines.push("不当选型，不挂方向假设。");
+    lines.push("不当选型，不挂方向卡戳。");
     return lines;
   }
 
@@ -568,6 +572,15 @@
 
   function packCollectKey(product) {
     return String(product || "").trim().slice(0, 80);
+  }
+
+  function productNameFromBrief(r) {
+    return packCollectKey(r && r.brief && r.brief.product);
+  }
+
+  function isShortProductName(name) {
+    const product_name = packCollectKey(name);
+    return !product_name || product_name.length < 4 || product_name === "宠物" || product_name === "粮" || product_name === "粮包";
   }
 
   function sourceFromCollectUrl(url) {
@@ -601,14 +614,14 @@
       is_on_market: "yes",
       collected_at: new Date().toISOString(),
       extra: {
-        bag_front_qc: "pass",
+        bag_front_qc: "pending",
         aspect: item.ratio,
         width: item.width,
         height: item.height,
-        brief_relevance_v1: "pass_brief",
         research_seat: "benyan",
         species: species || undefined,
         pack_collect: true,
+        collect_method: "api_pack_collect",
         qc_status: "pending_review",
       },
       wall_status: "pending_review",
@@ -618,8 +631,11 @@
   }
 
   function sessionPendingForProduct(product) {
-    const key = packCollectKey(product);
-    return (state.benyanSessionPending || []).filter((it) => it._collect_product === key);
+    const r = currentResearch();
+    const keys = new Set(
+      [packCollectKey(product), packCollectKey(r && r.brief && r.brief.product)].filter(Boolean)
+    );
+    return (state.benyanSessionPending || []).filter((it) => keys.has(it._collect_product));
   }
 
   function ingestPackCollectItem(product, item) {
@@ -633,12 +649,29 @@
   let packCollectInflight = "";
   const packCollectTried = new Set();
 
+  async function collectPackOnPin(r, opts) {
+    const product_name = typeof r === "string" ? packCollectKey(r) : productNameFromBrief(r);
+    if (!product_name) return { ok: false, reason: "empty_name" };
+    if (isShortProductName(product_name)) {
+      toast("产品词过短，不按品类硬收");
+      setCap("crawler", "idle", "产品词过短");
+      return { ok: false, reason: "no_truncate", no_truncate: true, no_sku: true, query: product_name };
+    }
+    return requestPackCollect(product_name, opts);
+  }
+
   async function requestPackCollect(product, opts) {
     const name = packCollectKey(product);
     const immediate = Boolean(opts && opts.immediate);
     if (!name) return null;
+    if (isShortProductName(name)) {
+      toast("产品词过短，不按品类硬收");
+      setCap("crawler", "idle", "产品词过短");
+      return { ok: false, reason: "no_truncate", no_truncate: true, no_sku: true, query: name };
+    }
     const run = async () => {
-      if (packCollectTried.has(name) || packCollectInflight === name) return null;
+      if (packCollectInflight === name) return null;
+      if (packCollectTried.has(name) && !immediate) return null;
       packCollectTried.add(name);
       packCollectInflight = name;
       setCap("crawler", "working", "按品名收袋面");
@@ -646,7 +679,7 @@
         const res = await fetch("/api/pack/collect", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ product: name }),
+          body: JSON.stringify({ product_name: name }),
         });
         let data = {};
         try {
@@ -655,21 +688,35 @@
           data = {};
         }
         if (res.status === 404) {
+          packCollectTried.delete(name);
           toast("按品名收袋面通道未接上");
           setCap("crawler", "idle", "按品名收袋面未接上");
           return data;
         }
-        if (data.missing_key) {
-          toast("CONTEXT_DEV_API_KEY 未配置，袋面通道待命");
+        if (data.no_truncate) {
+          toast("产品词过短，不按品类硬收");
+          setCap("crawler", "idle", "产品词过短");
+          return data;
+        }
+        const rawItems = Array.isArray(data.items) && data.items.length
+          ? data.items
+          : data.item
+            ? [data.item]
+            : [];
+        const usable = rawItems.filter((it) => it && it.pack_url);
+        if (data.missing_key && (!data.ok || !usable.length)) {
+          packCollectTried.delete(name);
+          toast("TAVILY_API_KEY 未配置，官网降级未收到袋面");
           setCap("crawler", "idle", "袋面通道缺钥");
           return data;
         }
-        if (!data.ok || !data.item || !data.item.pack_url) {
+        if (!data.ok || !usable.length) {
+          packCollectTried.delete(name);
           toast(data.error || "空袋面");
-          setCap("crawler", "idle", data.error || "空袋面");
+          setCap("crawler", "idle", "空袋面");
           return data;
         }
-        ingestPackCollectItem(name, data.item);
+        usable.forEach((it) => ingestPackCollectItem(name, it));
         const r = currentResearch();
         if (r && r.custom && r.brief && packCollectKey(r.brief.product) === name) {
           await loadBenyanResearchWall(r);
@@ -679,6 +726,7 @@
         setCap("crawler", "idle", "按品名收袋面 · 待复核");
         return data;
       } catch (err) {
+        packCollectTried.delete(name);
         toast("按品名收袋面未打通");
         setCap("crawler", "idle", "按品名收袋面未打通");
         return { ok: false, error: String(err && err.message ? err.message : err) };
@@ -720,7 +768,7 @@
     const seen = new Set(state.wallItems.map((it) => it.id));
     state.pendingItems.forEach((it) => {
       if (seen.has(it.id)) return;
-      if (!(it.extra && it.extra.pack_collect)) return;
+      if (!(it.extra && (it.extra.pack_collect || it.extra.collect_method === "api_pack_collect"))) return;
       seen.add(it.id);
       state.wallItems.push(it);
     });
@@ -735,11 +783,12 @@
       "dotdot",
       "idle",
       gap.formed
-        ? `本课题过线 ${gap.passedN} 款入选，不凑数`
-        : `短名单未成立 · 过线 ${gap.passedN} · 待复核 ${gap.pendingN} 不进短名单`
+        ? `采回袋面 ${gap.passedN} 款入选，待复核，不报产品过`
+        : `短名单未成立 · 采回 ${gap.passedN} · 待复核 ${gap.pendingN}`
     );
     if (state.bundle) state.bundle.l4_cards = [];
     r.onlyBriefDefault = true;
+    applyBenyanShortlist();
     if (!userArmedPending) forceProductWallDefaults("after-benyan-wall");
     return state.wallItems.length;
   }
@@ -1112,7 +1161,7 @@
       html: `<p class="run-quiet">${
         gap
           ? gap.formed
-            ? `本课题${gap.speciesLabel}过线 ${gap.passedN} 款入选，不凑数，不绑茶墙。`
+            ? `采回袋面 ${gap.passedN} 款入选，待复核，不报产品过，不绑茶墙。`
             : `${benyanGapSentences(gap).join("")}不绑茶墙。`
           : n
             ? "短名单和结论已按已落地样本铺上。"
@@ -1148,7 +1197,7 @@
       return false;
     }
     if (r.custom && r.brief && r.brief.product) {
-      await requestPackCollect(r.brief.product, { immediate: true });
+      await collectPackOnPin(r, { immediate: true });
       await loadBenyanResearchWall(r);
     }
     closeBriefDialog();
@@ -1239,7 +1288,7 @@
 
   function downloadReportNotes() {
     const panel = el.canvasBody && el.canvasBody.querySelector(".report-panel");
-    const text = panel ? String(panel.innerText || "").replace(/\n{3,}/g, "\n\n").trim() : "";
+    const text = panel ? stripConclusionStamp(String(panel.innerText || "").replace(/\n{3,}/g, "\n\n")) : "";
     if (!text) {
       toast("报告还没出来");
       return;
@@ -1860,6 +1909,14 @@
     return false;
   }
 
+  function stripConclusionStamp(text) {
+    return String(text || "")
+      .replace(/[^。\n]{0,12}非完稿/g, "")
+      .replace(/[ \t]{2,}/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
   function sanitizeBundle(j) {
     const out = normalizeBundle(j);
     if (out.item_catalog) delete out.item_catalog;
@@ -1867,6 +1924,15 @@
     if (out.l3 && out.l3.walls && out.l3.walls.pending_review && Array.isArray(out.l3.walls.pending_review.items)) {
       out.l3.walls.pending_review.items = [];
     }
+    if (out.l5 && out.l5.footer) out.l5.footer = stripConclusionStamp(out.l5.footer);
+    if (out.meta && out.meta.footer) out.meta.footer = stripConclusionStamp(out.meta.footer);
+    (out.l4_cards || []).forEach((c) => {
+      if (!c || typeof c !== "object") return;
+      if (c.demo_disclaimer) delete c.demo_disclaimer;
+      ["title", "one_liner", "advantage", "differentiation"].forEach((k) => {
+        if (typeof c[k] === "string") c[k] = stripConclusionStamp(c[k]);
+      });
+    });
     return out;
   }
 
@@ -2002,6 +2068,11 @@
   /** Mirror L3/brief_relevance_v1.py → 'match' | 'low' | 'off' (pass_brief / low / offtopic). */
   function scoreBriefRelevance(item) {
     if (!item) return "off";
+    if (item.extra && item.extra.collect_method === "api_pack_collect") {
+      if (isKnownLongDetailImage(imgFor(item))) return "off";
+      if (!passesBagFrontQc(item)) return "off";
+      return "match";
+    }
     const pre = item.extra && item.extra.brief_relevance_v1;
     if (pre === "pass_brief" || pre === "keep_core" || pre === "keep_analogy") return "match";
     if (pre === "pending_low_relevance" || pre === "soft_pack_only") return "low";
@@ -2838,7 +2909,7 @@
   function renderStrategy() {
     const cards = state.bundle?.l4_cards || [];
     if (!cards.length) {
-      return `<p class="muted">这轮还没有方向假设卡。青绿茶礼盒那轮有三张（${DIR_CARD_STAMP}）。</p>`;
+      return `<p class="muted">这轮还没有方向卡。青绿茶礼盒那轮有三张。</p>`;
     }
     return `<div class="strategy-list">${cards
       .map((c) => {
@@ -2850,12 +2921,12 @@
         <article class="strategy-card ${d === "keep" ? "keep" : d === "kill" ? "kill" : ""}" data-card-id="${c.card_id}">
           <div class="sc-img-big" style="background-image:url('${escapeAttr(img)}')"></div>
           <div class="sc-body">
-            <h4>${escapeHtml(c.title)}</h4>
-            <p class="one-liner">${escapeHtml(c.one_liner || "")}</p>
-            <p class="adv">${escapeHtml(c.advantage || "")}</p>
+            <h4>${escapeHtml(stripConclusionStamp(c.title))}</h4>
+            <p class="one-liner">${escapeHtml(stripConclusionStamp(c.one_liner || ""))}</p>
+            <p class="adv">${escapeHtml(stripConclusionStamp(c.advantage || ""))}</p>
             ${
               c.differentiation
-                ? `<p class="diff">${escapeHtml(c.differentiation)}</p>`
+                ? `<p class="diff">${escapeHtml(stripConclusionStamp(c.differentiation))}</p>`
                 : ""
             }
             <div class="sc-tags">
@@ -2871,7 +2942,6 @@
                     .join("")}</ul>`
                 : ""
             }
-            <p class="sc-disclaimer">${escapeHtml(DIR_CARD_STAMP)}</p>
           </div>
           <div class="sc-actions">
             <button type="button" class="keep-btn ${d === "keep" ? "active-keep" : ""}" data-decide="keep" data-card-id="${c.card_id}">留下</button>
@@ -2911,12 +2981,12 @@
       `按 Brief 动态分路：同类 ${lanes.same} · 不同类 ${lanes.adjacent} · 跨界 ${lanes.cross} · 货架 ${lanes.shelf}（货架是在售切片，不是第四品类）`,
       isBenyanResearch()
         ? benyanShortlistFormed()
-          ? `短名单 ${state.shortlistVisual.length} 款；本课题过线入选，不当假设`
+          ? `短名单 ${state.shortlistVisual.length} 款；按采回袋面入选，待复核，不报产品过`
           : benyanGapSentences().join(" ")
-        : `短名单 ${state.shortlistVisual.length} 款；方向假设卡 ${(state.bundle?.l4_cards || []).length} 张（示意·非完稿）`,
+        : `短名单 ${state.shortlistVisual.length} 款；方向卡 ${(state.bundle?.l4_cards || []).length} 张`,
       isBenyanResearch()
-        ? "铁律：先复核过线再入选；猫/犬分课题；短名单未成立只报缺口；不加采；不绑茶墙。"
-        : "铁律：不编造没采到的跨界/用户评论/开箱/成本；缺就写缺；不发起新采集；不把方向卡当完稿。",
+        ? "铁律：短名单只认 api_pack_collect；英文标题也过；短名单未成立只报缺口；不绑茶墙。"
+        : "铁律：不编造没采到的跨界/用户评论/开箱/成本；缺就写缺；不发起新采集。",
     ].join("\n");
   }
 
@@ -3145,7 +3215,7 @@
   async function askAgent(agentId, userText) {
     const pinned = currentResearch();
     if (pinned && pinned.brief && pinned.brief.product) {
-      requestPackCollect(pinned.brief.product);
+      collectPackOnPin(pinned);
     }
     const history = state.chatTurns.slice(-8);
     const messages = [
@@ -3216,7 +3286,7 @@
     persistCustomResearches();
     renderResearch();
     if (el.researchTitle) el.researchTitle.textContent = r.title;
-    if (r.brief.product) requestPackCollect(r.brief.product);
+    if (r.brief.product) collectPackOnPin(r);
   }
 
   /* ---------- L4 决策筛选：只在已落地主墙上收短名单 ---------- */
@@ -3240,6 +3310,7 @@
   }
 
   function shortlistCandidates() {
+    if (isBenyanResearch()) return benyanEligibleItems();
     const briefGate = currentResearch().onlyBriefDefault !== false;
     return state.wallItems.filter((it) => {
       if (isPendingReview(it)) return false;
@@ -3473,7 +3544,7 @@
       applyBenyanShortlist();
       state.shortlistTouched = true;
       renderCanvas();
-      toast(benyanShortlistFormed() ? "本课题过线入选，不按批注凑茶墙" : "短名单未成立，只报缺口");
+      toast(benyanShortlistFormed() ? "按采回袋面入选，待复核，不报产品过" : "短名单未成立，只报缺口");
       appendEvent({
         agent: "点点",
         time: "现在",
@@ -3811,7 +3882,7 @@
           <h3>L4 决策筛选 · 短名单</h3>
           <p class="panel-sub">${
             benyan
-              ? "短名单未成立只报缺口。先复核过线再入选，猫/犬分课题，不凑 8，不当选型。"
+              ? "短名单未成立只报缺口。只认 api 采回袋面，英文标题也过，不凑 8，不当选型。"
               : `从主墙里收 ${SHORTLIST_MIN}–${SHORTLIST_TARGET} 款给你拍板，不是 452 张全甩过来。`
           }</p>
         </div>
@@ -3879,7 +3950,7 @@
         <h3>L4 决策筛选 · 短名单 ${list.length} 款</h3>
         <p class="panel-sub">${
           isBenyanResearch()
-            ? "本课题过线入选，库里有几收几，不凑 8，不用茶墙。"
+            ? "按采回袋面入选，待复核，不报产品过，不凑 8，不用茶墙。"
             : state.shortlistAuto
             ? "先按 Brief 命中 + 风格桶多样性替你收了一轮，留哪个、拿掉哪个你说了算。"
             : "这是你自己从墙上勾进来的。"
@@ -3941,7 +4012,7 @@
         <p class="rp-note">${
           isBenyanResearch()
             ? escapeHtml(
-                `本课题${benyanGapState().speciesLabel} 库内 ${benyanGapState().libraryN} 条，过线 ${benyanGapState().passedN}，待复核 ${benyanGapState().pendingN} 不进短名单。不绑茶墙，也不把这份报告当全市场扫描。`
+                `本课题${benyanGapState().speciesLabel} 库内 ${benyanGapState().libraryN} 条，采回 ${benyanGapState().passedN}，待复核可进短名单（只认 api_pack_collect）。不绑茶墙，也不把这份报告当全市场扫描。`
               )
             : `主墙 ${mainN} 张已上墙，其中花瓣 ${expiredHuabanCount()} 张图链已过期（点不开图，字段还在）。待复核 ${pendN} 张没算进结论。三路里只有同类算铺开了，不同类和跨界都不够，别把这份报告当「全市场扫描」。`
         }</p>
@@ -4021,7 +4092,7 @@
         <h4><span class="rp-n">5</span>差异化机会</h4>
         <p class="rp-note">${
           list.length
-            ? "这一段只写短名单袋面里能看见的差异。没有样本就不假装有对照，也不挂方向假设卡。"
+            ? "这一段只写短名单袋面里能看见的差异。没有样本就不假装有对照，也不挂方向卡。"
             : escapeHtml(benyanGapSentences().join(""))
         }</p>
         <ul class="rp-risk">${contrastGaps.map((g) => `<li>${escapeHtml(g)}</li>`).join("")}</ul>
@@ -4045,8 +4116,8 @@
         <ul class="rp-risk">${contrastGaps.map((g) => `<li>${escapeHtml(g)}</li>`).join("")}</ul>
         ${
           cards.length
-            ? `<p class="rp-note">下面三张是<strong>${DIR_CARD_STAMP}</strong>方向卡，挂在结论层，不是 L4 短名单，也不是货架/跨界对照。</p><div class="rp-cards">${renderStrategy()}</div>`
-            : `<p class="muted">本轮没有方向假设卡。能交付的是 L4 短名单和上面的覆盖缺口；不会在这里编一套「还没生成」的完稿。</p>`
+            ? `<p class="rp-note">下面三张是方向卡，挂在结论层，不是 L4 短名单，也不是货架/跨界对照。</p><div class="rp-cards">${renderStrategy()}</div>`
+            : `<p class="muted">本轮没有方向卡。能交付的是 L4 短名单和上面的覆盖缺口。</p>`
         }
       </section>`;
 
@@ -4068,14 +4139,14 @@
               ? ""
               : benyanGapSentences().map((g) => `<li>${escapeHtml(g)}</li>`).join("")
           }
-          <li><b>样本薄</b>：本课题${benyanGapState().speciesLabel} 过线 ${benyanGapState().passedN}，不够谈全市场。</li>
+          <li><b>样本薄</b>：本课题${benyanGapState().speciesLabel} 采回 ${benyanGapState().passedN}，不够谈全市场。</li>
           <li><b>跨界 ${counts.cross}</b>：${counts.cross ? "按已落地样本写。" : "样本 0，不做对照。"}</li>
           <li><b>用户反馈 / 开箱 / 成本</b>：本轮未采，不做对照。</li>
         </ul>
         <p class="rp-note">${
           list.length
-            ? "下一步按缺口补本课题过线袋面。不挂方向假设。"
-            : "下一步按缺口补本课题过线袋面。短名单未成立就不写选型，也不挂方向假设。"
+            ? "下一步按缺口补本课题采回袋面。不挂方向卡戳。"
+            : "下一步按缺口补本课题采回袋面。短名单未成立就不写选型。"
         }</p>
       </section>`
       : `
@@ -4102,7 +4173,7 @@
           <p class="panel-sub">${
             benyan
               ? benyanShortlistFormed()
-                ? `本课题过线入选 ${list.length} 款，不绑茶墙，不加采。`
+                ? `按采回袋面入选 ${list.length} 款，待复核，不报产品过，不绑茶墙。`
                 : "短名单未成立，只报缺口。不绑茶墙，不加采，不当选型。"
               : `可复核的决策备忘：只用已落地的主墙 ${mainN} 张和你定的短名单，没有新采集，也没有补数。`
           }</p>
@@ -4419,9 +4490,9 @@
       .join("");
     if (cardLines) {
       appendRun({
-        title: "方向假设 · 非完稿",
+        title: "方向卡",
         detail: `${cards.length} 张`,
-        html: `<p class="run-quiet">到报告为止还不会有设计完稿。青绿茶这轮挂了三张方向假设：</p><ul>${cardLines}</ul>`,
+        html: `<p class="run-quiet">青绿茶这轮挂了三张方向卡：</p><ul>${cardLines}</ul>`,
         actions: [
           { artifact: "shortlist", label: "先收一版给老板" },
           { artifact: "report", label: "打开结论" },
@@ -4489,7 +4560,7 @@
           title: "结论报告",
           detail: kept ? `${kept} 款短名单` : "缺口报告",
           html: kept
-            ? `<p class="run-quiet">六段结论。差异化是方向假设，不是完稿；跨界 0、用户反馈未采都写在最后。</p>`
+            ? `<p class="run-quiet">六段结论。跨界 0、用户反馈未采都写在最后。</p>`
             : `<p class="run-quiet">短名单空着，这份只能算覆盖缺口报告。</p>`,
           actions: [{ artifact: kept ? "report" : "shortlist", label: kept ? "看结论" : "先去收短名单" }],
         });
@@ -4509,17 +4580,17 @@
     const title = card?.title || cardId;
     toast(
       decision === "keep"
-        ? `留下方向假设「${title}」· 记在结论报告里`
+        ? `留下方向卡「${title}」· 记在结论报告里`
         : `先放下「${title}」· 以后还能翻回来`
     );
     if (decision === "keep") {
       appendEvent({
         agent: "奎燕设计智能体",
         time: "现在",
-        tag: "L5 方向假设",
+        tag: "L5 方向卡",
         tagClass: "consensus",
         dot: "ok",
-        html: `<p>留下方向假设「${escapeHtml(title)}」。它只是结论报告里的一条假设，还得靠短名单和后面补的货架/反馈数据顶住。</p>
+        html: `<p>留下方向卡「${escapeHtml(title)}」。记在结论报告里，还得靠短名单和后面补的货架/反馈数据顶住。</p>
           <div class="chips-row"><button type="button" class="artifact-link" data-artifact="report">回结论报告</button></div>`,
       });
     } else {
@@ -4575,7 +4646,7 @@
           html: benyan
             ? `<p class="run-quiet">${
                 benyanShortlistFormed()
-                  ? `本课题过线入选 ${n} 款，不凑数，不绑茶墙。`
+                  ? `按采回袋面入选 ${n} 款，待复核，不报产品过，不绑茶墙。`
                   : `${benyanGapSentences().join("")}不加采新图。`
               }</p>`
             : `<p class="run-quiet">只从已落地 ${state.feedCounts.main || 0} 张主墙收 8–12 款。跨界 ${lanes.cross}，不加采。</p>`,
@@ -4884,7 +4955,7 @@
 
     const pinnedSend = currentResearch();
     if (pinnedSend && pinnedSend.brief && pinnedSend.brief.product) {
-      requestPackCollect(pinnedSend.brief.product);
+      collectPackOnPin(pinnedSend);
     }
 
     if (
@@ -4965,12 +5036,12 @@
       setStage(5);
       revealAndSwitch("report", { fromStage: true });
       appendRun({
-        title: "方向假设 · 非完稿",
+        title: "方向卡",
         detail: cards.length ? cardNames : "这轮还没有",
         status: cards.length ? "warn" : "done",
         html: cards.length
           ? `<p class="run-quiet">挂在结论第 5 段「差异化机会」里，先看样本结构再决定留哪张。</p>`
-          : `<p class="run-quiet">青绿茶礼盒那轮有三张方向假设。</p>`,
+          : `<p class="run-quiet">青绿茶礼盒那轮有三张方向卡。</p>`,
       });
       return;
     }
@@ -5166,7 +5237,7 @@
 
   function copyReportNotes() {
     const panel = el.canvasBody.querySelector(".report-panel");
-    const text = panel ? String(panel.innerText || "").replace(/\n{3,}/g, "\n\n").trim() : "";
+    const text = panel ? stripConclusionStamp(String(panel.innerText || "").replace(/\n{3,}/g, "\n\n")) : "";
     if (!text) {
       toast("报告还没出来");
       return;
@@ -5329,7 +5400,7 @@
           toast(
             isBenyanResearch()
               ? benyanShortlistFormed()
-                ? `本课题过线入选 ${state.shortlistVisual.length} 款，不凑数`
+                ? `按采回袋面入选 ${state.shortlistVisual.length} 款，待复核，不报产品过`
                 : "短名单未成立，只报缺口"
               : `又收了 ${state.shortlistVisual.length} 款 · 还是那 452 张墙`
           );
@@ -5413,8 +5484,8 @@
         if (isBenyanResearch()) {
           toast(
             benyanShortlistFormed()
-              ? "本课题过线才入选，不从茶墙凑"
-              : "短名单未成立：待复核不进短名单，不当选型"
+              ? "短名单只认 api 采回袋面，不从茶墙凑"
+              : "短名单未成立：墙上还没有 api 采回袋面，不当选型"
           );
           return;
         }
@@ -5974,7 +6045,7 @@
       } catch (bundleErr) {
         console.warn("product bundle", bundleErr);
         state.bundle = { l4_cards: [], l1: {}, l3: { counts: {} } };
-        toast("Brief 与方向假设暂时读不到，先看主墙");
+        toast("Brief 与方向卡暂时读不到，先看主墙");
       }
       state._greenBundle = state.bundle;
       (state.bundle.l4_cards || []).forEach((c) => {
