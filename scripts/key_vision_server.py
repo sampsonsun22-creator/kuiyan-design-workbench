@@ -24,6 +24,7 @@ PORT = int(os.environ.get("KEY_VISION_PORT", "8767"))
 def redact_secret(text: str) -> str:
     t = str(text or "")
     t = re.sub(r"sk-[A-Za-z0-9_-]{6,}", "sk-***", t)
+    t = re.sub(r"tvly-[A-Za-z0-9_-]{6,}", "tvly-***", t)
     t = re.sub(r"(?i)(api[_-]?key|authorization)\s*[:=]\s*['\"]?[^\\s,'\"]+", r"\1=***", t)
     return t
 
@@ -124,12 +125,13 @@ class Handler(SimpleHTTPRequestHandler):
             self._json(200, {"ok": True, "proxy": True})
             return
         if path == "/api/pack/collect":
-            missing = not bool(os.environ.get("CONTEXT_DEV_API_KEY", "").strip())
+            missing = not bool(os.environ.get("TAVILY_API_KEY", "").strip())
             self._json(200, {
                 "ok": True,
                 "ready": not missing,
                 "missing_key": missing,
-                "hint": "CONTEXT_DEV_API_KEY 未配置" if missing else "ready",
+                "channel": "tavily",
+                "hint": "TAVILY_API_KEY 未配置，将降级 brand-site" if missing else "ready",
             })
             return
         super().do_GET()
@@ -212,17 +214,6 @@ class Handler(SimpleHTTPRequestHandler):
         if not product:
             self._json(400, {"ok": False, "error": "missing product"})
             return
-        key = os.environ.get("CONTEXT_DEV_API_KEY", "").strip()
-        if not key:
-            self._json(
-                503,
-                {
-                    "ok": False,
-                    "missing_key": True,
-                    "error": "CONTEXT_DEV_API_KEY 未配置",
-                },
-            )
-            return
         runner = ROOT / "scripts" / "run_pack_collect.js"
         try:
             cp = subprocess.run(
@@ -232,7 +223,7 @@ class Handler(SimpleHTTPRequestHandler):
                 capture_output=True,
                 text=True,
                 timeout=55,
-                env={**os.environ, "CONTEXT_DEV_API_KEY": key},
+                env={**os.environ},
                 check=False,
             )
             out = json.loads(cp.stdout or "{}")
